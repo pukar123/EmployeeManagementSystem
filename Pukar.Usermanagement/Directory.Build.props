@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Authors>Pukar</Authors>
+    <Company>Pukar</Company>
+    <Product>Pukar.Usermanagement</Product>
+    <Version>1.0.0</Version>
+    <PackageProjectUrl>https://github.com/pukar123/Pukar.Usermanagement</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/pukar123/Pukar.Usermanagement.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Description>JWT authentication, refresh tokens, and user persistence (Domain / Application / Infrastructure / API).</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+</Project>
