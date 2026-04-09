@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/providers/AuthProvider";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { resolveOrganizationLogoUrl } from "@/shared/utils/organization-logo-url";
 import { cn } from "@/shared/utils/cn";
@@ -20,7 +21,14 @@ function isActive(pathname: string, href: string): boolean {
 
 export function AppNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout, user } = useAuth();
   const { needsSetup, currentOrganization } = useOrganizationContext();
+
+  async function handleSignOut() {
+    await logout();
+    router.replace("/login");
+  }
   const logoSrc = resolveOrganizationLogoUrl(currentOrganization?.logoRelativePath);
 
   if (needsSetup) {
@@ -52,6 +60,18 @@ export function AppNav() {
           >
             Create organization
           </Link>
+          <span className="ml-auto flex items-center gap-2">
+            {user ? (
+              <span className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:inline">{user.email}</span>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+            >
+              Sign out
+            </button>
+          </span>
         </nav>
       </header>
     );
@@ -105,6 +125,18 @@ export function AppNav() {
         >
           Organization
         </Link>
+        <span className="ml-auto flex items-center gap-2">
+          {user ? (
+            <span className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:inline">{user.email}</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+          >
+            Sign out
+          </button>
+        </span>
       </nav>
     </header>
   );

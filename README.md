@@ -22,6 +22,14 @@ Backend API for employee and organization directory data. The solution uses a la
 
 Cursor rules for layering and naming live in [`.cursor/rules/`](.cursor/rules/).
 
+## Authentication
+
+The API uses **JWT Bearer** authentication ([Pukar.Usermanagement](Pukar.Usermanagement/README.md)). EMS endpoints require an `Authorization: Bearer <token>` header except **`/api/auth/*`** (login, register, refresh, revoke) and **`/health`**. OpenAPI (`/openapi/v1.json`) is anonymous in Development only.
+
+In **Development**, [`appsettings.Development.json`](EMS.API/appsettings.Development.json) can **seed a default admin** when `SeedAdmin` is enabled (email `admin@localhost`, password `Admin123!` unless you change it). For other environments, set `SeedAdmin:Password` via user secrets or environment variables, or disable seeding (`SeedAdmin:Enabled` false).
+
+The **ems-web** client signs in at **`/login`** and stores tokens in the browser. Point `NEXT_PUBLIC_API_BASE_URL` at the API (see [ems-web/README.md](ems-web/README.md)).
+
 ## Docker Compose (SQL Server, MongoDB, Redis, Mongo Express, Next.js)
 
 - **[docker-compose.yml](docker-compose.yml)** — infrastructure plus **`ems-web`** (production Next.js image on port **3000**).

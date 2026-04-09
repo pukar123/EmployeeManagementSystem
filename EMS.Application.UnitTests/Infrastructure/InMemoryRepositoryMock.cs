@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using EMS.Domain.Repositories.Interface;
 using Microsoft.EntityFrameworkCore.Storage;
-using MockQueryable.EntityFrameworkCore;
+using MockQueryable;
 using Moq;
 
 namespace EMS.Application.UnitTests.Infrastructure;
@@ -28,22 +28,22 @@ public sealed class InMemoryRepositoryMock<T> where T : class
         var mock = new Mock<IBaseRepository<T>>();
 
         mock.Setup(r => r.GetQueryable()).Returns(() => _items.BuildMock());
-        mock.Setup(r => r.GetAllAsync()).ReturnsAsync(() => _items.ToList());
-        mock.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync((int id) => _items.FirstOrDefault(x => _getId(x) == id));
-        mock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<T, bool>>>()))
-            .Returns((Expression<Func<T, bool>> pred) =>
+        mock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => _items.ToList());
+        mock.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int id, CancellationToken _) => _items.FirstOrDefault(x => _getId(x) == id));
+        mock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<T, bool>>>(), It.IsAny<CancellationToken>()))
+            .Returns((Expression<Func<T, bool>> pred, CancellationToken _) =>
             {
                 var compiled = pred.Compile();
                 return Task.FromResult<IEnumerable<T>>(_items.Where(compiled).ToList());
             });
-        mock.Setup(r => r.AddAsync(It.IsAny<T>()))
+        mock.Setup(r => r.AddAsync(It.IsAny<T>(), It.IsAny<CancellationToken>()))
             .Callback<T>(e => _items.Add(e))
             .Returns(Task.CompletedTask);
-        mock.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<T>>()))
+        mock.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<T>>(), It.IsAny<CancellationToken>()))
             .Callback<IEnumerable<T>>(e => _items.AddRange(e))
             .Returns(Task.CompletedTask);
-        mock.Setup(r => r.SaveChangesAsync()).Returns(() =>
+        mock.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>())).Returns(() =>
         {
             var next = _items.Count == 0 ? 1 : _items.Max(_getId) + 1;
             foreach (var e in _items.Where(x => _getId(x) == 0).ToList())
@@ -58,7 +58,7 @@ public sealed class InMemoryRepositoryMock<T> where T : class
                 foreach (var e in range.ToList())
                     _items.Remove(e);
             });
-        mock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(() => CreateTransaction().Object);
+        mock.Setup(r => r.BeginTransactionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => CreateTransaction().Object);
 
         return mock;
     }

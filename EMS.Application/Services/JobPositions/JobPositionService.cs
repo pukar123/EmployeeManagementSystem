@@ -35,14 +35,14 @@ public sealed class JobPositionService : IJobPositionService
             throw new BusinessRuleException("A job position with this code already exists in the organization.");
 
         var entity = JobPositionMapper.ToEntity(request);
-        await _repository.AddAsync(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.AddAsync(entity, cancellationToken);
+        await _repository.SaveChangesAsync(cancellationToken);
         return JobPositionMapper.ToResponse(entity);
     }
 
     public async Task<JobPositionResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         return entity is null ? null : JobPositionMapper.ToResponse(entity);
     }
 
@@ -56,7 +56,7 @@ public sealed class JobPositionService : IJobPositionService
 
     public async Task<JobPositionResponseModel?> UpdateAsync(int id, UpdateJobPositionRequestModel request, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return null;
 
@@ -73,13 +73,13 @@ public sealed class JobPositionService : IJobPositionService
 
         JobPositionMapper.ApplyUpdate(entity, request);
         _repository.Update(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return JobPositionMapper.ToResponse(entity);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return false;
 
@@ -87,7 +87,7 @@ public sealed class JobPositionService : IJobPositionService
             throw new BusinessRuleException("Cannot delete a job position that is assigned to employees. Unassign employees first.");
 
         _repository.Remove(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return true;
     }
 

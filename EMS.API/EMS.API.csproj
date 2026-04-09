@@ -30,6 +30,7 @@
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj" />
     <ProjectReference Include="..\EMS.Infrastructure\EMS.Infrastructure.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.API\Pukar.Usermanagement.API.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Domain\Pukar.Usermanagement.Domain.csproj" />
   </ItemGroup>
 
 </Project>

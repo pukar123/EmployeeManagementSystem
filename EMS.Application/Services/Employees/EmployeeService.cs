@@ -40,27 +40,27 @@ public sealed class EmployeeService : IEmployeeService
         entity.CreatedAtUtc = now;
         entity.UpdatedAtUtc = now;
 
-        await _repository.AddAsync(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.AddAsync(entity, cancellationToken);
+        await _repository.SaveChangesAsync(cancellationToken);
 
         return EmployeeMapper.ToResponse(entity);
     }
 
     public async Task<EmployeeResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         return entity is null ? null : EmployeeMapper.ToResponse(entity);
     }
 
     public async Task<IReadOnlyList<EmployeeResponseModel>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var list = await _repository.GetAllAsync();
+        var list = await _repository.GetAllAsync(cancellationToken);
         return list.Select(EmployeeMapper.ToResponse).ToList();
     }
 
     public async Task<EmployeeResponseModel?> UpdateAsync(int id, UpdateEmployeeRequestModel request, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return null;
 
@@ -74,19 +74,19 @@ public sealed class EmployeeService : IEmployeeService
         entity.UpdatedAtUtc = DateTime.UtcNow;
 
         _repository.Update(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
 
         return EmployeeMapper.ToResponse(entity);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return false;
 
         _repository.Remove(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return true;
     }
 

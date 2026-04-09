@@ -1,4 +1,6 @@
+using EMS.API.Bootstrap;
 using EMS.API.Middleware;
+using EMS.API.Options;
 using EMS.API.Services;
 using EMS.Application.Services.Departments;
 using EMS.Application.Services.Employees;
@@ -8,6 +10,8 @@ using EMS.Application.Services.Organizations;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
 using EMS.Infrastructure.Repositories.Implementations;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using Pukar.Usermanagement.API.Extensions;
@@ -44,7 +48,15 @@ try
         });
     });
 
-    builder.Services.AddControllers().AddPukarUserManagementControllers();
+    builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection(SeedAdminOptions.SectionName));
+    builder.Services.AddHostedService<AdminUserSeedHostedService>();
+
+    builder.Services.AddControllers(options =>
+        {
+            options.Filters.Add(
+                new AuthorizeFilter(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()));
+        })
+        .AddPukarUserManagementControllers();
     builder.Services.AddOpenApi();
 
     builder.Services.AddPukarUserManagementApi(builder.Configuration);
@@ -80,7 +92,7 @@ try
 
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
+        app.MapOpenApi().AllowAnonymous();
     }
 
     app.UseMiddleware<CorrelationIdMiddleware>();
@@ -108,7 +120,7 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    app.MapHealthChecks("/health");
+    app.MapHealthChecks("/health").AllowAnonymous();
     app.MapControllers();
 
     Log.Information("EMS.API starting ({Environment})", app.Environment.EnvironmentName);

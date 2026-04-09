@@ -18,7 +18,7 @@ public sealed class OrganizationService : IOrganizationService
 
     public async Task<OrganizationDTO> CreateAsync(OrganizationDTO dto, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _repository.BeginTransactionAsync();
+        await using var transaction = await _repository.BeginTransactionAsync(cancellationToken);
         try
         {
             if (await _repository.GetQueryable().AnyAsync(cancellationToken))
@@ -39,36 +39,36 @@ public sealed class OrganizationService : IOrganizationService
             var entity = new Organization();
             MapDtoToEntity(dto, entity);
 
-            await _repository.AddAsync(entity);
-            await _repository.SaveChangesAsync();
+            await _repository.AddAsync(entity, cancellationToken);
+            await _repository.SaveChangesAsync(cancellationToken);
 
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
             dto.Id = entity.Id;
             dto.LogoRelativePath = entity.LogoRelativePath;
             return dto;
         }
         catch
         {
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
     }
 
     public async Task<OrganizationResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         return entity is null ? null : OrganizationMapper.ToResponse(entity);
     }
 
     public async Task<IReadOnlyList<OrganizationResponseModel>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var list = await _repository.GetAllAsync();
+        var list = await _repository.GetAllAsync(cancellationToken);
         return list.Select(OrganizationMapper.ToResponse).ToList();
     }
 
     public async Task<OrganizationResponseModel?> UpdateAsync(int id, UpdateOrganizationRequestModel request, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return null;
 
@@ -79,18 +79,18 @@ public sealed class OrganizationService : IOrganizationService
 
         OrganizationMapper.ApplyUpdate(entity, request);
         _repository.Update(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return OrganizationMapper.ToResponse(entity);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return false;
 
         _repository.Remove(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return true;
     }
 
@@ -113,13 +113,13 @@ public sealed class OrganizationService : IOrganizationService
         string logoRelativePath,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return null;
 
         entity.LogoRelativePath = logoRelativePath;
         _repository.Update(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return OrganizationMapper.ToResponse(entity);
     }
 

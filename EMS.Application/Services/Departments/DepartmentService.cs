@@ -18,7 +18,7 @@ public sealed class DepartmentService : IDepartmentService
 
     public async Task<DepartmentDTO> CreateAsync(DepartmentDTO dto, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _repository.BeginTransactionAsync();
+        await using var transaction = await _repository.BeginTransactionAsync(cancellationToken);
         try
         {
             dto.Name = StringHelper.NormalizeRequired(dto.Name);
@@ -33,7 +33,7 @@ public sealed class DepartmentService : IDepartmentService
 
             if (dto.ParentDepartmentId is int parentId)
             {
-                var parent = await _repository.GetByIdAsync(parentId);
+                var parent = await _repository.GetByIdAsync(parentId, cancellationToken);
                 if (parent is null)
                     throw new BusinessRuleException("Parent department was not found.");
 
@@ -44,35 +44,35 @@ public sealed class DepartmentService : IDepartmentService
             var entity = new Department();
             MapDtoToEntity(dto, entity);
 
-            await _repository.AddAsync(entity);
-            await _repository.SaveChangesAsync();
+            await _repository.AddAsync(entity, cancellationToken);
+            await _repository.SaveChangesAsync(cancellationToken);
 
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
             dto.Id = entity.Id;
             return dto;
         }
         catch
         {
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
     }
 
     public async Task<DepartmentResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         return entity is null ? null : DepartmentMapper.ToResponse(entity);
     }
 
     public async Task<IReadOnlyList<DepartmentResponseModel>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var list = await _repository.GetAllAsync();
+        var list = await _repository.GetAllAsync(cancellationToken);
         return list.Select(DepartmentMapper.ToResponse).ToList();
     }
 
     public async Task<DepartmentResponseModel?> UpdateAsync(int id, UpdateDepartmentRequestModel request, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return null;
 
@@ -81,18 +81,18 @@ public sealed class DepartmentService : IDepartmentService
 
         DepartmentMapper.ApplyUpdate(entity, request);
         _repository.Update(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return DepartmentMapper.ToResponse(entity);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id);
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return false;
 
         _repository.Remove(entity);
-        await _repository.SaveChangesAsync();
+        await _repository.SaveChangesAsync(cancellationToken);
         return true;
     }
 

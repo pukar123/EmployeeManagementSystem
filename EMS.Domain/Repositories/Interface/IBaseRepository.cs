@@ -1,24 +1,19 @@
 using Microsoft.EntityFrameworkCore.Storage;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-namespace EMS.Domain.Repositories.Interface
+
+namespace EMS.Domain.Repositories.Interface;
+
+public interface IBaseRepository<T> where T : class
 {
-    public interface IBaseRepository<T> where T : class
-    {
-        Task<T?> GetByIdAsync(int id);
-        Task<IEnumerable<T>> GetAllAsync();
-        Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
-        Task AddAsync(T entity);
-        Task AddRangeAsync(IEnumerable<T> entities);
-        void Update(T entity);
-        void Remove(T entity);
-        void RemoveRange(IEnumerable<T> entities);
-        Task SaveChangesAsync();
-        IQueryable<T> GetQueryable();
-        Task<IDbContextTransaction> BeginTransactionAsync();
-    }
+    Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
+    Task AddAsync(T entity, CancellationToken cancellationToken = default);
+    Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default);
+    void Update(T entity);
+    void Remove(T entity);
+    void RemoveRange(IEnumerable<T> entities);
+    Task SaveChangesAsync(CancellationToken cancellationToken = default);
+    IQueryable<T> GetQueryable();
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }
