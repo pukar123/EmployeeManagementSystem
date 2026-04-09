@@ -5,7 +5,7 @@ using Pukar.Usermanagement.Application.Options;
 using Pukar.Usermanagement.Application.Services.Jwt;
 using Pukar.Usermanagement.Application.Services.Password;
 using Pukar.Usermanagement.Domain.DbModels;
-using Pukar.Usermanagement.Domain.Helpers;
+using Pukar.Shared;
 using Pukar.Usermanagement.Domain.Repositories.Interface;
 
 namespace Pukar.Usermanagement.Application.Services.Auth;

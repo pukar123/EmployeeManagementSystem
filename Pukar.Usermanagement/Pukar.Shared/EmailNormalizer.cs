@@ -1,4 +1,4 @@
-namespace Pukar.Usermanagement.Domain.Helpers;
+namespace Pukar.Shared;
 
 public static class EmailNormalizer
 {

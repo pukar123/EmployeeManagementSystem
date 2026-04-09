@@ -8,6 +8,7 @@ Layered JWT authentication with refresh-token rotation, BCrypt passwords, and SQ
 
 | Project | Role |
 |---------|------|
+| `Pukar.Shared` | Shared `StringHelper`, `BusinessRuleException`, `DuplicateEmailException`, `EmailNormalizer` (also referenced by EMS) |
 | `Pukar.Usermanagement.Domain` | Entities, `UserManagementDbContext`, migrations, repository interfaces |
 | `Pukar.Usermanagement.Application` | DTOs, `AuthService`, options |
 | `Pukar.Usermanagement.Infrastructure` | EF repositories, JWT signing, BCrypt, `AddPukarUserManagement` |

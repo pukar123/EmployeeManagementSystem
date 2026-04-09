@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Pukar.Shared\Pukar.Shared.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement.Domain\Pukar.Usermanagement.Domain.csproj" />
   </ItemGroup>
 

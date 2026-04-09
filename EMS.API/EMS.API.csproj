@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\EMS.Application\EMS.Application.csproj" />
     <ProjectReference Include="..\EMS.Domain\EMS.Domain.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj" />
     <ProjectReference Include="..\EMS.Infrastructure\EMS.Infrastructure.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.API\Pukar.Usermanagement.API.csproj" />
   </ItemGroup>

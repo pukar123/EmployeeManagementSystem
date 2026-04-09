@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EMS.Domain\EMS.Domain.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

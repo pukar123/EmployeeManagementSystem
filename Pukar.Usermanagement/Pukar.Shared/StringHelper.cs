@@ -1,8 +1,6 @@
-using System;
-using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace EMS.Domain.Helpers;
+namespace Pukar.Shared;
 
 public static class StringHelper
 {

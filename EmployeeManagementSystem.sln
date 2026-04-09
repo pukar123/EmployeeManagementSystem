@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Usermanagement.Infras
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Usermanagement.API", "Pukar.Usermanagement\Pukar.Usermanagement.API\Pukar.Usermanagement.API.csproj", "{9F20C98E-92CA-4B00-AA5B-E6421DEAB576}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Shared", "Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj", "{549D9157-90DD-4636-BBBC-0B353A1001DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -141,6 +143,18 @@ Global
 		{9F20C98E-92CA-4B00-AA5B-E6421DEAB576}.Release|x64.Build.0 = Release|Any CPU
 		{9F20C98E-92CA-4B00-AA5B-E6421DEAB576}.Release|x86.ActiveCfg = Release|Any CPU
 		{9F20C98E-92CA-4B00-AA5B-E6421DEAB576}.Release|x86.Build.0 = Release|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Debug|x64.Build.0 = Debug|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Debug|x86.Build.0 = Debug|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|x64.ActiveCfg = Release|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|x64.Build.0 = Release|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|x86.ActiveCfg = Release|Any CPU
+		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

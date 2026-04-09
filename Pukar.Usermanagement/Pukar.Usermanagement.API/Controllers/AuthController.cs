@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Usermanagement.Application.DTOs.Auth;
 using Pukar.Usermanagement.Application.Services.Auth;
-using Pukar.Usermanagement.Domain.Helpers;
+using Pukar.Shared;
 
 namespace Pukar.Usermanagement.API.Controllers;
 
