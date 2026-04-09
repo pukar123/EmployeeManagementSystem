@@ -5,7 +5,7 @@ alwaysApply: true
 
 # EMS architecture (layers)
 
-Full narrative and diagrams live in [docs/architecture.md](docs/architecture.md). Follow these boundaries when adding or changing code.
+Full cross-project narrative (Pukar, `Pukar.Shared`, EMS, `ems-web`, Git) lives in [docs/ARCHITECTURE_AND_PATTERNS.md](../../docs/ARCHITECTURE_AND_PATTERNS.md). EMS diagrams and request-flow overview: [docs/architecture.md](../../docs/architecture.md). Follow these boundaries when adding or changing code.
 
 ## Projects
 

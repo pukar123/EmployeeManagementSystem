@@ -2,6 +2,8 @@
 
 Backend API for employee and organization directory data. The solution uses a layered structure: **Domain** (entities, EF Core context, migrations), **Application** (DTOs, services, mapping), **Infrastructure** (repository implementations), and **API** (HTTP endpoints, hosting).
 
+**Architecture, patterns, and methods (shared across projects):** [docs/ARCHITECTURE_AND_PATTERNS.md](docs/ARCHITECTURE_AND_PATTERNS.md). For an EMS-only diagram and request flow, see [docs/architecture.md](docs/architecture.md).
+
 ## Prerequisites
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download)
@@ -17,8 +19,6 @@ Backend API for employee and organization directory data. The solution uses a la
 | `EMS.Infrastructure` | `BaseRepository<T>` and other infrastructure implementations |
 | `EMS.API` | ASP.NET Core host, controllers, DI wiring, Serilog, health checks |
 | `ems-web` | Next.js (App Router) frontend — [quick start](ems-web/README.md), [full frontend guide](ems-web/docs/FRONTEND.md) |
-
-More detail: [docs/architecture.md](docs/architecture.md).
 
 Cursor rules for layering and naming live in [`.cursor/rules/`](.cursor/rules/).
 
