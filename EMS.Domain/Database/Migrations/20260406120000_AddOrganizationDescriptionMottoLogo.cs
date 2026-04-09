@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EMS.Domain.Database.Migrations;
 
 /// <inheritdoc />
-public class AddOrganizationDescriptionMottoLogo : Migration
+public partial class AddOrganizationDescriptionMottoLogo : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

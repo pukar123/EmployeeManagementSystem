@@ -79,6 +79,13 @@ public sealed class DepartmentService : IDepartmentService
         request.Name = StringHelper.NormalizeRequired(request.Name);
         request.Code = StringHelper.NormalizeOptional(request.Code);
 
+        if (await NameAlreadyExistsInOrgAsync(entity.OrganizationId, request.Name, cancellationToken, entity.Id))
+            throw new BusinessRuleException("A department with this name already exists in the organization.");
+
+        if (!string.IsNullOrWhiteSpace(request.Code) &&
+            await CodeAlreadyExistsInOrgAsync(entity.OrganizationId, request.Code, cancellationToken, entity.Id))
+            throw new BusinessRuleException("A department with this code already exists in the organization.");
+
         DepartmentMapper.ApplyUpdate(entity, request);
         _repository.Update(entity);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -96,21 +103,34 @@ public sealed class DepartmentService : IDepartmentService
         return true;
     }
 
-    private async Task<bool> NameAlreadyExistsInOrgAsync(int organizationId, string name, CancellationToken cancellationToken)
+    private async Task<bool> NameAlreadyExistsInOrgAsync(
+        int organizationId,
+        string name,
+        CancellationToken cancellationToken,
+        int? excludeDepartmentId = null)
     {
         var key = name.Trim().ToLowerInvariant();
         return await _repository.GetQueryable()
             .AnyAsync(
-                d => d.OrganizationId == organizationId && d.Name.Trim().ToLower() == key,
+                d => d.OrganizationId == organizationId &&
+                     d.Name.Trim().ToLower() == key &&
+                     (!excludeDepartmentId.HasValue || d.Id != excludeDepartmentId.Value),
                 cancellationToken);
     }
 
-    private async Task<bool> CodeAlreadyExistsInOrgAsync(int organizationId, string code, CancellationToken cancellationToken)
+    private async Task<bool> CodeAlreadyExistsInOrgAsync(
+        int organizationId,
+        string code,
+        CancellationToken cancellationToken,
+        int? excludeDepartmentId = null)
     {
         var key = code.Trim();
         return await _repository.GetQueryable()
             .AnyAsync(
-                d => d.OrganizationId == organizationId && d.Code != null && d.Code.Trim() == key,
+                d => d.OrganizationId == organizationId &&
+                     d.Code != null &&
+                     d.Code.Trim() == key &&
+                     (!excludeDepartmentId.HasValue || d.Id != excludeDepartmentId.Value),
                 cancellationToken);
     }
 
