@@ -2,6 +2,8 @@
 
 Layered JWT authentication with refresh-token rotation, BCrypt passwords, and SQL Server persistence (schema `um`). Intended as a reusable module for multiple applications.
 
+**Cursor / VS Code:** clone this repository, open the repo folder (or open `Pukar.Usermanagement.sln` directly). `.vscode/settings.json` sets `dotnet.defaultSolution` so the solution is picked up automatically.
+
 ## Projects
 
 | Project | Role |
