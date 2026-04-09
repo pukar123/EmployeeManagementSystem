@@ -134,6 +134,10 @@ $RECYCLE.BIN/
 # VS Code
 .vscode/
 
+# Pukar.Usermanagement: allow shared editor solution hint (Cursor / VS Code)
+!Pukar.Usermanagement/.vscode/
+!Pukar.Usermanagement/.vscode/settings.json
+
 # Docker Compose local overrides (may contain URLs / build args)
 .env
 
