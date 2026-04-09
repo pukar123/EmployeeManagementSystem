@@ -65,6 +65,8 @@ Migrations are in **EMS.Domain** (same assembly as `AppDbContext`). Apply them u
 dotnet ef database update --project EMS.Domain --startup-project EMS.API
 ```
 
+If the web app shows **Could not load organization** and the API logs report SQL **`Invalid column name`** (for example on `Description`, `LogoRelativePath`, or `Motto`), your database is behind the code: run the command above so pending migrations apply. If `dotnet ef` fails to **build** because **EMS.API is running** (file lock on DLLs), stop the API process, run the command again, or build only `EMS.Domain` and run `dotnet ef database update --project EMS.Domain --startup-project EMS.API --no-build` using a configuration that already built successfully.
+
 Add a new migration after model changes:
 
 ```bash
@@ -138,6 +140,7 @@ REST-style CRUD under `api/{resource}`:
 | Departments | `GET/POST /api/Departments`, `GET/PUT/DELETE /api/Departments/{id}` |
 | Locations | `GET/POST /api/Locations`, `GET/PUT/DELETE /api/Locations/{id}` |
 | Job positions | `GET /api/JobPositions?organizationId={id}`, `GET/POST/PUT/DELETE /api/JobPositions/{id}` |
+| Documents | `GET /api/Documents/types`, `GET /api/Documents?employeeId={id}`, `GET/PUT/DELETE /api/Documents/{id}`, `POST /api/Documents` (multipart: file + metadata), `GET /api/Documents/{id}/file` (download). PDF, Word, or images; files under `wwwroot/uploads/documents/`. `EmployeeId` on a document is nullable for future associations. |
 
 **Employees** may reference an optional **`jobPositionId`** (nullable) pointing at a row in **`org.JobPositions`**. Job positions are scoped per organization (`organizationId` on create; title and optional code are unique within the org). This replaces an older two-level Role/Job model so the name **JobPosition** stays distinct from application **user roles** (e.g. identity/authorization).
 

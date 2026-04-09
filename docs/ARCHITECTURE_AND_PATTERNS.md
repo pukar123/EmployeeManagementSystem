@@ -94,6 +94,7 @@ Infrastructure  →  Domain (implements interfaces; uses DbContext)
 
 - **Interface** `IBaseRepository<T>` in **Domain** (generic CRUD + `GetQueryable()` + transactions as needed).
 - **Implementation** `BaseRepository<T>` in **Infrastructure**, bound to `DbContext`.
+- **Async methods** on `IBaseRepository<T>` take **`CancellationToken cancellationToken = default`**; implementations forward it to EF Core. Application services should **pass through** the token from controller actions so request cancellation reaches the database layer.
 - Register in **API** `Program.cs`: `AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>))` (or equivalent).
 
 ---

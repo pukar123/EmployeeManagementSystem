@@ -3,6 +3,7 @@ using EMS.API.Middleware;
 using EMS.API.Options;
 using EMS.API.Services;
 using EMS.Application.Services.Departments;
+using EMS.Application.Services.Documents;
 using EMS.Application.Services.Employees;
 using EMS.Application.Services.JobPositions;
 using EMS.Application.Services.Locations;
@@ -67,7 +68,9 @@ try
     builder.Services.AddScoped<IDepartmentService, DepartmentService>();
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<IJobPositionService, JobPositionService>();
+    builder.Services.AddScoped<IDocumentService, DocumentService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
+    builder.Services.AddScoped<LocalDocumentFileStorage>();
 
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(
@@ -112,6 +115,7 @@ try
 
     var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
     Directory.CreateDirectory(Path.Combine(webRootPath, "uploads", "organizations"));
+    Directory.CreateDirectory(Path.Combine(webRootPath, "uploads", "documents"));
 
     app.UseStaticFiles();
 

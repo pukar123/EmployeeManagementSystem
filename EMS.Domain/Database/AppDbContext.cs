@@ -13,6 +13,8 @@ namespace EMS.Domain.Database
 
         public DbSet<DbModels.Employee> Employees { get; set; }
         public DbSet<DbModels.JobPosition> JobPositions { get; set; }
+        public DbSet<DbModels.Document> Documents { get; set; }
+        public DbSet<DbModels.DocumentType> DocumentTypes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

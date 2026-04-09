@@ -30,4 +30,6 @@ public class Employee
     public JobPosition? JobPosition { get; set; }
     public Employee? Manager { get; set; }
     public ICollection<Employee> DirectReports { get; set; } = new List<Employee>();
+
+    public ICollection<Document> Documents { get; set; } = new List<Document>();
 }

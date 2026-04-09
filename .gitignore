@@ -141,3 +141,4 @@ $RECYCLE.BIN/
 # Docker Compose local overrides (may contain URLs / build args)
 .env
 
+EMS.API/wwwroot/uploads/organizations/1/logo-ae0ac118eee9436aa8585202ae42da94.png
