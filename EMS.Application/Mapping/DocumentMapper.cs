@@ -10,7 +10,10 @@ internal static class DocumentMapper
         return new DocumentResponseModel
         {
             Id = entity.Id,
-            EmployeeId = entity.EmployeeId,
+            EmployeeId = entity.EmployeeDocuments
+                .Where(ed => ed.IsActive && !ed.IsDeleted)
+                .Select(ed => (int?)ed.EmployeeId)
+                .FirstOrDefault(),
             DocumentTypeId = entity.DocumentTypeId,
             DocumentTypeName = entity.DocumentType?.Name ?? string.Empty,
             Name = entity.Name,

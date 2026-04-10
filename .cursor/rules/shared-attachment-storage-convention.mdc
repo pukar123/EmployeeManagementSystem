@@ -1,0 +1,48 @@
+---
+description: Reusable attachment storage convention for any project
+globs: "**/*"
+alwaysApply: false
+---
+
+# Shared attachment storage convention
+
+Use this rule in any backend project that accepts file uploads.
+
+## Goals
+
+- Keep uploads organized under one root folder.
+- Avoid committing user files to git.
+- Keep database records small by storing paths, not binary file content.
+
+## Required pattern
+
+- Use a single upload root folder named `attachments` under your static/public web root.
+  - Example: `wwwroot/attachments/` (ASP.NET)
+  - Equivalent in other frameworks is acceptable if it is the public static folder.
+- Create subfolders by domain/entity/resource name, for example:
+  - `attachments/Employee/`
+  - `attachments/Organization/`
+  - `attachments/Department/`
+- If needed, add one more level for identifiers or file types:
+  - `attachments/Employee/{id}/Documents/`
+  - `attachments/Organization/{id}/`
+
+## API and persistence guidance
+
+- Save files on disk/object storage; do not store raw file bytes in relational tables unless there is a strict requirement.
+- Persist only a relative path or storage key in the database.
+- Return this relative path in API responses so clients can compose a full URL from environment-specific base URLs.
+
+## Git hygiene (mandatory)
+
+- Add upload folders to `.gitignore`.
+- Ignore the entire upload root, not individual files.
+  - Preferred: `**/attachments/`
+  - If project-specific: `YourApi/wwwroot/attachments/`
+- If migrating from older folders like `uploads`, ignore those too until fully retired.
+
+## Operational checks
+
+- Ensure upload directories are created at app startup when required.
+- Validate file size and extension/content type before saving.
+- Use safe delete logic that prevents path traversal (only delete inside the configured root).

@@ -44,11 +44,6 @@ public sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.Property(x => x.UpdatedAtUtc)
             .HasDefaultValueSql("GETUTCDATE()");
 
-        builder.HasOne(x => x.Employee)
-            .WithMany(x => x.Documents)
-            .HasForeignKey(x => x.EmployeeId)
-            .OnDelete(DeleteBehavior.SetNull);
-
         builder.HasOne(x => x.DocumentType)
             .WithMany(x => x.Documents)
             .HasForeignKey(x => x.DocumentTypeId)

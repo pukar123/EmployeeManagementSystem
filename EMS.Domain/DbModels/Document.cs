@@ -3,15 +3,11 @@ using EMS.Domain.Enums;
 namespace EMS.Domain.DbModels;
 
 /// <summary>
-/// Stored employee-related file metadata. <see cref="EmployeeId"/> is nullable so documents can be
-/// linked to other entities later without schema churn.
+/// Stored file metadata. Ownership/association is modeled via link tables (e.g. EmployeeDocument).
 /// </summary>
 public class Document
 {
     public int Id { get; set; }
-
-    /// <summary>Optional link to an employee; null when not (yet) associated.</summary>
-    public int? EmployeeId { get; set; }
 
     public int DocumentTypeId { get; set; }
 
@@ -37,7 +33,7 @@ public class Document
 
     public DateTime UpdatedAtUtc { get; set; }
 
-    public Employee? Employee { get; set; }
+    public ICollection<EmployeeDocument> EmployeeDocuments { get; set; } = new List<EmployeeDocument>();
 
     public DocumentType DocumentType { get; set; } = null!;
 }

@@ -9,8 +9,16 @@ alwaysApply: false
 ## Storage model
 
 - **Do not** store image bytes in the database for organization logos.
-- Persist only a **web-relative path** (e.g. `/uploads/organizations/{id}/logo-….png`) in `Organization.LogoRelativePath`.
-- Save files on the **server filesystem** under the web root (e.g. `wwwroot/uploads/organizations/{id}/`), served via static files middleware.
+- Persist only a **web-relative path** (e.g. `/attachments/Organization/{id}/logo-....png`) in `Organization.LogoRelativePath`.
+- Save files on the **server filesystem** under the web root (e.g. `wwwroot/attachments/Organization/{id}/`), served via static files middleware.
+
+## Folder convention (project standard)
+
+- Keep all uploaded files under a single root: `wwwroot/attachments/`.
+- Use clear subfolders by domain/entity, such as:
+  - `attachments/Organization/...`
+  - `attachments/Employee/...`
+- Add `wwwroot/attachments/` to `.gitignore` so user uploads are never committed.
 
 ## API
 

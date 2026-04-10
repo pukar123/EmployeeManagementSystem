@@ -31,5 +31,5 @@ public class Employee
     public Employee? Manager { get; set; }
     public ICollection<Employee> DirectReports { get; set; } = new List<Employee>();
 
-    public ICollection<Document> Documents { get; set; } = new List<Document>();
+    public ICollection<EmployeeDocument> EmployeeDocuments { get; set; } = new List<EmployeeDocument>();
 }
