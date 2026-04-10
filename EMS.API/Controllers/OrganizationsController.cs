@@ -62,7 +62,7 @@ public class OrganizationsController : ControllerBase
         return updated is null ? NotFound() : Ok(updated);
     }
 
-    /// <summary>Upload a logo image; file is stored on disk under wwwroot/uploads. Only the relative URL path is saved in the database.</summary>
+    /// <summary>Upload a logo image; file is stored on disk under wwwroot/attachments/Organization. Only the relative URL path is saved in the database.</summary>
     [HttpPost("{id:int}/logo")]
     [RequestSizeLimit(6 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 6 * 1024 * 1024)]

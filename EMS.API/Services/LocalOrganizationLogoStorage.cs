@@ -1,7 +1,7 @@
 namespace EMS.API.Services;
 
 /// <summary>
-/// Persists organization logos under wwwroot/uploads; database stores only the web-relative path.
+/// Persists organization logos under wwwroot/attachments/Organization; database stores only the web-relative path.
 /// </summary>
 public sealed class LocalOrganizationLogoStorage
 {
@@ -21,7 +21,7 @@ public sealed class LocalOrganizationLogoStorage
     }
 
     /// <summary>
-    /// Saves the file and returns a path starting with /uploads/ suitable for static file middleware.
+    /// Saves the file and returns a path starting with /attachments/ suitable for static file middleware.
     /// </summary>
     public async Task<string> SaveLogoAsync(int organizationId, IFormFile file, CancellationToken cancellationToken = default)
     {
@@ -36,7 +36,7 @@ public sealed class LocalOrganizationLogoStorage
 
         var webRoot = _environment.WebRootPath
                       ?? throw new InvalidOperationException("WebRootPath is not set. Ensure wwwroot exists.");
-        var orgDir = Path.Combine(webRoot, "uploads", "organizations", organizationId.ToString());
+        var orgDir = Path.Combine(webRoot, "attachments", "Organization", organizationId.ToString());
         Directory.CreateDirectory(orgDir);
 
         var fileName = $"logo-{Guid.NewGuid():N}{ext}";
@@ -48,14 +48,16 @@ public sealed class LocalOrganizationLogoStorage
             await file.CopyToAsync(stream, cancellationToken);
         }
 
-        var relative = $"/uploads/organizations/{organizationId}/{fileName}".Replace('\\', '/');
+        var relative = $"/attachments/Organization/{organizationId}/{fileName}".Replace('\\', '/');
         _logger.LogInformation("Saved organization logo for org {OrgId} at {Path}", organizationId, relative);
         return relative;
     }
 
     public void TryDeleteFile(string? webRelativePath)
     {
-        if (string.IsNullOrWhiteSpace(webRelativePath) || !webRelativePath.StartsWith("/uploads/", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(webRelativePath) ||
+            (!webRelativePath.StartsWith("/attachments/", StringComparison.Ordinal) &&
+             !webRelativePath.StartsWith("/uploads/", StringComparison.Ordinal)))
             return;
 
         var webRoot = _environment.WebRootPath;

@@ -114,8 +114,8 @@ try
     app.UseHttpsRedirection();
 
     var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
-    Directory.CreateDirectory(Path.Combine(webRootPath, "uploads", "organizations"));
-    Directory.CreateDirectory(Path.Combine(webRootPath, "uploads", "documents"));
+    Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Organization"));
+    Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Employee"));
 
     app.UseStaticFiles();
 

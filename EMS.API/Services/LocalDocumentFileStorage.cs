@@ -3,7 +3,7 @@ using EMS.Domain.Enums;
 namespace EMS.API.Services;
 
 /// <summary>
-/// Stores employee documents under wwwroot/uploads/documents; database holds only web-relative paths.
+/// Stores employee documents under wwwroot/attachments/Employee; database holds only web-relative paths.
 /// </summary>
 public sealed class LocalDocumentFileStorage
 {
@@ -57,7 +57,7 @@ public sealed class LocalDocumentFileStorage
     }
 
     /// <summary>
-    /// Saves under uploads/documents/{employeeId|unassigned}/ and returns path starting with /uploads/...
+    /// Saves under attachments/Employee/{employeeId|unassigned}/Documents and returns path starting with /attachments/...
     /// </summary>
     public async Task<(string RelativePath, string ContentType, DocumentFileKind Kind)> SaveAsync(
         int? employeeId,
@@ -70,7 +70,7 @@ public sealed class LocalDocumentFileStorage
 
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         var folder = employeeId is int id ? id.ToString() : "unassigned";
-        var dir = Path.Combine(webRoot, "uploads", "documents", folder);
+        var dir = Path.Combine(webRoot, "attachments", "Employee", folder, "Documents");
         Directory.CreateDirectory(dir);
 
         var ext = Path.GetExtension(file.FileName);
@@ -82,13 +82,15 @@ public sealed class LocalDocumentFileStorage
             await file.CopyToAsync(stream, cancellationToken);
         }
 
-        var relative = $"/uploads/documents/{folder}/{safeName}".Replace('\\', '/');
+        var relative = $"/attachments/Employee/{folder}/Documents/{safeName}".Replace('\\', '/');
         return (relative, file.ContentType, kind);
     }
 
     public void TryDelete(string? webRelativePath)
     {
-        if (string.IsNullOrWhiteSpace(webRelativePath) || !webRelativePath.StartsWith("/uploads/", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(webRelativePath) ||
+            (!webRelativePath.StartsWith("/attachments/", StringComparison.Ordinal) &&
+             !webRelativePath.StartsWith("/uploads/", StringComparison.Ordinal)))
             return;
 
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
