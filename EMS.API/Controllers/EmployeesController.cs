@@ -1,5 +1,7 @@
 using EMS.Application.DTOs.Employee;
+using EMS.Application.DTOs.Site;
 using Pukar.Shared;
+using EMS.Application.Services.EmployeeSites;
 using EMS.Application.Services.Employees;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,10 +12,12 @@ namespace EMS.API.Controllers;
 public class EmployeesController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
+    private readonly IEmployeeSiteService _employeeSiteService;
 
-    public EmployeesController(IEmployeeService employeeService)
+    public EmployeesController(IEmployeeService employeeService, IEmployeeSiteService employeeSiteService)
     {
         _employeeService = employeeService;
+        _employeeSiteService = employeeSiteService;
     }
 
     [HttpGet]
@@ -22,6 +26,15 @@ public class EmployeesController : ControllerBase
     {
         var items = await _employeeService.GetAllAsync(cancellationToken);
         return Ok(items);
+    }
+
+    [HttpGet("{id:int}/sites")]
+    public async Task<ActionResult<IReadOnlyList<SiteResponseModel>>> GetSitesForEmployee(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var items = await _employeeSiteService.GetSitesForEmployeeAsync(id, cancellationToken);
+        return items is null ? NotFound() : Ok(items);
     }
 
     [HttpGet("{id:int}")]

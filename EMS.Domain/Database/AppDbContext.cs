@@ -16,6 +16,8 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.Document> Documents { get; set; }
         public DbSet<DbModels.DocumentType> DocumentTypes { get; set; }
         public DbSet<DbModels.EmployeeDocument> EmployeeDocuments { get; set; }
+        public DbSet<DbModels.Site> Sites { get; set; }
+        public DbSet<DbModels.EmployeeSite> EmployeeSites { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -32,4 +32,6 @@ public class Employee
     public ICollection<Employee> DirectReports { get; set; } = new List<Employee>();
 
     public ICollection<EmployeeDocument> EmployeeDocuments { get; set; } = new List<EmployeeDocument>();
+
+    public ICollection<EmployeeSite> EmployeeSites { get; set; } = new List<EmployeeSite>();
 }

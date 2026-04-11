@@ -5,9 +5,11 @@ using EMS.API.Services;
 using EMS.Application.Services.Departments;
 using EMS.Application.Services.Documents;
 using EMS.Application.Services.Employees;
+using EMS.Application.Services.EmployeeSites;
 using EMS.Application.Services.JobPositions;
 using EMS.Application.Services.Locations;
 using EMS.Application.Services.Organizations;
+using EMS.Application.Services.Sites;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
 using EMS.Infrastructure.Repositories.Implementations;
@@ -69,6 +71,8 @@ try
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<IJobPositionService, JobPositionService>();
     builder.Services.AddScoped<IDocumentService, DocumentService>();
+    builder.Services.AddScoped<ISiteService, SiteService>();
+    builder.Services.AddScoped<IEmployeeSiteService, EmployeeSiteService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
 
