@@ -12,6 +12,7 @@ const mainLinks = [
   { href: "/employees", label: "Employees" },
   { href: "/departments", label: "Departments" },
   { href: "/positions", label: "Positions" },
+  { href: "/sites", label: "Sites" },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
