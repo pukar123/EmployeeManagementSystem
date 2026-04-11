@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ProtectedShell } from "@/providers/ProtectedShell";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,13 +31,18 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <ReactQueryProvider>
-          <AuthProvider>
-            <ProtectedShell>{children}</ProtectedShell>
-          </AuthProvider>
-        </ReactQueryProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <ReactQueryProvider>
+              <AuthProvider>
+                <ProtectedShell>{children}</ProtectedShell>
+              </AuthProvider>
+            </ReactQueryProvider>
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
