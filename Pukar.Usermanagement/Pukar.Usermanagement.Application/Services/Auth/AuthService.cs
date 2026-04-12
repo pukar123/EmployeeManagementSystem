@@ -14,6 +14,7 @@ public sealed class AuthService : IAuthService
 {
     private readonly IUserRepository _users;
     private readonly IRefreshTokenRepository _refreshTokens;
+    private readonly IUserRoleRepository _userRoles;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwt;
     private readonly JwtTokenOptions _jwtOptions;
@@ -21,12 +22,14 @@ public sealed class AuthService : IAuthService
     public AuthService(
         IUserRepository users,
         IRefreshTokenRepository refreshTokens,
+        IUserRoleRepository userRoles,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwt,
         IOptions<JwtTokenOptions> jwtOptions)
     {
         _users = users;
         _refreshTokens = refreshTokens;
+        _userRoles = userRoles;
         _passwordHasher = passwordHasher;
         _jwt = jwt;
         _jwtOptions = jwtOptions.Value;
@@ -132,7 +135,8 @@ public sealed class AuthService : IAuthService
         DateTime utcNow,
         CancellationToken cancellationToken)
     {
-        var accessToken = _jwt.CreateAccessToken(user.Id, user.Email, user.UserName, utcNow, out var accessExpires);
+        var roleNames = await _userRoles.GetRoleNamesForUserAsync(user.Id, cancellationToken);
+        var accessToken = _jwt.CreateAccessToken(user.Id, user.Email, user.UserName, roleNames, utcNow, out var accessExpires);
 
         var plainRefresh = RefreshTokenCrypto.GenerateOpaqueToken();
         var refreshHash = RefreshTokenCrypto.HashToken(plainRefresh);

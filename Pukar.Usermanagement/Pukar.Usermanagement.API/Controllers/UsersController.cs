@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Pukar.Usermanagement.Application;
 using Pukar.Usermanagement.Application.DTOs.Roles;
 using Pukar.Usermanagement.Application.DTOs.UserRoles;
 using Pukar.Usermanagement.Application.DTOs.Users;
@@ -12,7 +13,7 @@ namespace Pukar.Usermanagement.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = WellKnownRoles.Admin)]
 public sealed class UsersController : ControllerBase
 {
     private readonly IUserAdminService _users;
@@ -39,6 +40,73 @@ public sealed class UsersController : ControllerBase
     {
         var item = await _users.GetByIdAsync(id, cancellationToken);
         return item is null ? NotFound() : Ok(item);
+    }
+
+    [HttpPost]
+    [ProducesResponseType(typeof(UserSummaryResponseModel), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserSummaryResponseModel>> Create(
+        [FromBody] CreateUserRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var created = await _users.CreateAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+        catch (DuplicateEmailException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(UserSummaryResponseModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserSummaryResponseModel>> Update(
+        int id,
+        [FromBody] UpdateUserRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var updated = await _users.UpdateAsync(id, request, cancellationToken);
+            return updated is null ? NotFound() : Ok(updated);
+        }
+        catch (DuplicateEmailException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:int}/password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AdminSetPassword(
+        int id,
+        [FromBody] AdminSetPasswordRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var ok = await _users.AdminSetPasswordAsync(id, request, cancellationToken);
+            return ok ? NoContent() : NotFound();
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpGet("{id:int}/roles")]

@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +16,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
@@ -20,6 +25,8 @@ import {
 import { useNavigationMenus } from "@/features/navigation/hooks/useNavigationMenus";
 import type { MenuDto } from "@/features/navigation/types";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
+import { Button } from "@/shared/components/Button";
+import { cn } from "@/lib/utils";
 import { resolveOrganizationLogoUrl } from "@/shared/utils/organization-logo-url";
 import { getNavIcon } from "./nav-icon-map";
 import { getEmsNavItems, isNavActive, type EmsNavItem } from "./ems-nav-items";
@@ -35,12 +42,12 @@ function NavFromApi({ menus, pathname }: { menus: MenuDto[]; pathname: string })
 }
 
 function NavMenuEntry({ menu, pathname }: { menu: MenuDto; pathname: string }) {
-  const Icon = getNavIcon(menu.iconKey);
   const hasChildren = menu.children.length > 0;
   const activeSelf = !hasChildren && isNavActive(pathname, menu.routePath);
   const childActive = hasChildren && menu.children.some((c) => isNavActive(pathname, c.routePath));
 
   if (!hasChildren) {
+    const Icon = getNavIcon(menu.iconKey);
     return (
       <SidebarMenuItem>
         <SidebarMenuButton
@@ -55,31 +62,70 @@ function NavMenuEntry({ menu, pathname }: { menu: MenuDto; pathname: string }) {
     );
   }
 
+  return <NavMenuEntryWithChildren menu={menu} pathname={pathname} childActive={childActive} />;
+}
+
+function NavMenuEntryWithChildren({
+  menu,
+  pathname,
+  childActive,
+}: {
+  menu: MenuDto;
+  pathname: string;
+  childActive: boolean;
+}) {
+  const Icon = getNavIcon(menu.iconKey);
+  const [open, setOpen] = useState(childActive);
+
+  useEffect(() => {
+    if (childActive) setOpen(true);
+  }, [childActive]);
+
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        isActive={childActive}
-        tooltip={menu.label}
-        render={<Link href={menu.routePath} />}
-      >
-        <Icon />
-        <span>{menu.label}</span>
-      </SidebarMenuButton>
-      <SidebarMenuSub>
-        {menu.children.map((child) => {
-          const CIcon = getNavIcon(child.iconKey);
-          const cActive = isNavActive(pathname, child.routePath);
-          return (
-            <SidebarMenuSubItem key={child.id}>
-              <SidebarMenuSubButton isActive={cActive} render={<Link href={child.routePath} />}>
-                <CIcon />
-                <span>{child.label}</span>
-              </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
-          );
-        })}
-      </SidebarMenuSub>
-    </SidebarMenuItem>
+    <Collapsible open={open} onOpenChange={setOpen} className="group/collapsible">
+      <SidebarMenuItem>
+        <div className="flex w-full min-w-0 items-center gap-0.5">
+          <CollapsibleTrigger
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              "group-data-[collapsible=icon]:hidden",
+            )}
+            type="button"
+            aria-expanded={open}
+            aria-label={open ? "Collapse section" : "Expand section"}
+          >
+            <ChevronRight
+              className={cn("size-4 shrink-0 transition-transform duration-200", open && "rotate-90")}
+            />
+          </CollapsibleTrigger>
+          <SidebarMenuButton
+            className="min-w-0 flex-1"
+            isActive={childActive}
+            tooltip={menu.label}
+            render={<Link href={menu.routePath} />}
+          >
+            <Icon />
+            <span>{menu.label}</span>
+          </SidebarMenuButton>
+        </div>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {menu.children.map((child) => {
+              const CIcon = getNavIcon(child.iconKey);
+              const cActive = isNavActive(pathname, child.routePath);
+              return (
+                <SidebarMenuSubItem key={child.id}>
+                  <SidebarMenuSubButton isActive={cActive} render={<Link href={child.routePath} />}>
+                    <CIcon />
+                    <span>{child.label}</span>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
   );
 }
 
@@ -102,14 +148,61 @@ function NavStatic({ items, pathname }: { items: readonly EmsNavItem[]; pathname
   );
 }
 
+function NavLoadingSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <SidebarMenuItem key={i}>
+          <SidebarMenuSkeleton showIcon />
+        </SidebarMenuItem>
+      ))}
+    </>
+  );
+}
+
+function NavLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <SidebarMenuItem>
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+        <p className="font-medium">Navigation unavailable</p>
+        <p className="mt-1 text-amber-800/90 dark:text-amber-300/90">Could not load menus from the server.</p>
+        <Button type="button" variant="secondary" className="mt-2 h-8 text-xs" onClick={onRetry}>
+          Retry
+        </Button>
+      </div>
+    </SidebarMenuItem>
+  );
+}
+
 export function EmsSidebar() {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const { needsSetup, currentOrganization } = useOrganizationContext();
   const logoSrc = resolveOrganizationLogoUrl(currentOrganization?.logoRelativePath);
   const navQuery = useNavigationMenus(!needsSetup);
 
   const staticItems = getEmsNavItems(needsSetup);
-  const showApiNav = !needsSetup && navQuery.data && navQuery.data.length > 0;
+
+  const retryNav = () => {
+    void queryClient.invalidateQueries({ queryKey: ["navigation", "menus"] });
+  };
+
+  let navBody: ReactNode;
+  if (needsSetup) {
+    navBody = <NavStatic items={staticItems} pathname={pathname} />;
+  } else if (navQuery.isLoading) {
+    navBody = <NavLoadingSkeleton />;
+  } else if (navQuery.isError) {
+    navBody = <NavLoadError onRetry={retryNav} />;
+  } else if (navQuery.data && navQuery.data.length > 0) {
+    navBody = <NavFromApi menus={navQuery.data} pathname={pathname} />;
+  } else {
+    navBody = (
+      <SidebarMenuItem>
+        <p className="px-2 text-xs text-muted-foreground">No menu items are assigned to your roles.</p>
+      </SidebarMenuItem>
+    );
+  }
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
@@ -134,15 +227,7 @@ export function EmsSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {needsSetup || navQuery.isLoading ? (
-                <NavStatic items={staticItems} pathname={pathname} />
-              ) : showApiNav ? (
-                <NavFromApi menus={navQuery.data!} pathname={pathname} />
-              ) : (
-                <NavStatic items={staticItems} pathname={pathname} />
-              )}
-            </SidebarMenu>
+            <SidebarMenu>{navBody}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

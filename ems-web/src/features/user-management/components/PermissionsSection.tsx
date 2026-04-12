@@ -14,8 +14,50 @@ import {
   saveRolePermissions,
 } from "../services/userManagementApi";
 
-function sortMenusFlat(menus: MenuFlatDto[]): MenuFlatDto[] {
-  return [...menus].sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
+type MenuRowFields = Omit<MenuFlatDto, "children">;
+
+type MenuTreeNode = MenuRowFields & { children: MenuTreeNode[] };
+
+/** Group by parent, sort each level by `sortOrder` then label; depth-first order matches the menu hierarchy. */
+function buildMenuTree(flat: MenuFlatDto[]): MenuTreeNode[] {
+  const byParent = new Map<number | null, MenuFlatDto[]>();
+  for (const m of flat) {
+    const p = m.parentMenuId;
+    if (!byParent.has(p)) byParent.set(p, []);
+    byParent.get(p)!.push(m);
+  }
+  const sortFn = (a: MenuFlatDto, b: MenuFlatDto) =>
+    a.sortOrder - b.sortOrder || a.label.localeCompare(b.label);
+  for (const list of byParent.values()) list.sort(sortFn);
+
+  function walk(parentId: number | null): MenuTreeNode[] {
+    const list = byParent.get(parentId) ?? [];
+    return list.map((m) => ({
+      id: m.id,
+      key: m.key,
+      label: m.label,
+      routePath: m.routePath,
+      parentMenuId: m.parentMenuId,
+      sortOrder: m.sortOrder,
+      iconKey: m.iconKey,
+      children: walk(m.id),
+    }));
+  }
+  return walk(null);
+}
+
+function flattenMenuTreeDfs(
+  nodes: MenuTreeNode[],
+  depth = 0,
+): { menu: MenuFlatDto; depth: number }[] {
+  const out: { menu: MenuFlatDto; depth: number }[] = [];
+  for (const n of nodes) {
+    const { children, ...rest } = n;
+    const menu: MenuFlatDto = { ...rest, children: [] };
+    out.push({ menu, depth });
+    out.push(...flattenMenuTreeDfs(children, depth + 1));
+  }
+  return out;
 }
 
 function buildPermissionMap(items: RolePermissionItemDto[]): Map<number, boolean> {
@@ -46,13 +88,17 @@ export function PermissionsSection() {
     }
   }, [permsQuery.data]);
 
-  const flatMenus = useMemo(() => sortMenusFlat(menusQuery.data ?? []), [menusQuery.data]);
+  const orderedMenuRows = useMemo(() => {
+    const flat = menusQuery.data ?? [];
+    const tree = buildMenuTree(flat);
+    return flattenMenuTreeDfs(tree);
+  }, [menusQuery.data]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
       if (selectedRoleId == null) return;
       const permissions: RolePermissionItemDto[] = [];
-      for (const menu of flatMenus) {
+      for (const { menu } of orderedMenuRows) {
         permissions.push({
           menuId: menu.id,
           allowed: allowedByMenuId.get(menu.id) ?? false,
@@ -136,11 +182,11 @@ export function PermissionsSection() {
         </div>
       ) : selectedRoleId != null ? (
         <ul className="mt-8 space-y-2">
-          {flatMenus.map((menu) => (
+          {orderedMenuRows.map(({ menu, depth }) => (
             <li
               key={menu.id}
               className="flex items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
-              style={{ marginLeft: menu.parentMenuId ? 16 : 0 }}
+              style={{ marginLeft: depth * 16 }}
             >
               <input
                 type="checkbox"

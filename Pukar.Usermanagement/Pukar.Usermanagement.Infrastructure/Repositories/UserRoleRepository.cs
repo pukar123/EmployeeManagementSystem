@@ -14,6 +14,15 @@ public sealed class UserRoleRepository : IUserRoleRepository
         _context = context;
     }
 
+    public async Task<IReadOnlyList<string>> GetRoleNamesForUserAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.UserRoles
+            .AsNoTracking()
+            .Where(ur => ur.UserId == userId)
+            .Join(_context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<int>> GetRoleIdsForUserAsync(int userId, CancellationToken cancellationToken = default)
     {
         return await _context.UserRoles

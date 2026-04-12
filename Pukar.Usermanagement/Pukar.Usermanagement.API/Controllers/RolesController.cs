@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Pukar.Usermanagement.Application;
 using Pukar.Usermanagement.Application.DTOs.Roles;
 using Pukar.Usermanagement.Application.Services.Roles;
 using Pukar.Shared;
@@ -37,6 +38,7 @@ public sealed class RolesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = WellKnownRoles.Admin)]
     [ProducesResponseType(typeof(RoleResponseModel), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<RoleResponseModel>> Create(
@@ -55,6 +57,7 @@ public sealed class RolesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = WellKnownRoles.Admin)]
     [ProducesResponseType(typeof(RoleResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -75,6 +78,7 @@ public sealed class RolesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = WellKnownRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
