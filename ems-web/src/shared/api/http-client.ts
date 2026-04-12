@@ -2,7 +2,22 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import type { AuthResponse } from "@/shared/auth/auth-types";
 import { clearAuth, getAccessToken, getRefreshToken, saveAuthResponse } from "@/shared/auth/auth-storage";
 
-export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+/** Prefer IPv4 loopback so Windows does not resolve `localhost` to `::1` while Kestrel listens on IPv4 only. */
+function normalizeApiOrigin(raw: string): string {
+  const t = raw.trim().replace(/\/$/, "");
+  if (!t) return "";
+  try {
+    const u = new URL(t);
+    if (u.hostname === "localhost") {
+      u.hostname = "127.0.0.1";
+    }
+    return u.origin;
+  } catch {
+    return t;
+  }
+}
+
+export const apiBaseUrl = normalizeApiOrigin(process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
 
 export const httpClient = axios.create({
   baseURL: apiBaseUrl,
@@ -104,6 +119,26 @@ export async function postFormData<T>(urlPath: string, formData: FormData): Prom
   return res.json() as Promise<T>;
 }
 
+function networkFailureHint(): string {
+  const parts: string[] = [
+    "Cannot reach the API. Start EMS.API (e.g. from the repo root: npm run dev:all) and confirm it listens on port 5246.",
+  ];
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && apiBaseUrl.startsWith("http:")) {
+    parts.push(
+      "You opened the site over HTTPS but the API URL is HTTP; the browser blocks that. Use http://localhost:3000 for the app, or point NEXT_PUBLIC_API_BASE_URL at an HTTPS API origin.",
+    );
+  } else if (apiBaseUrl) {
+    parts.push(
+      `Current API origin: ${apiBaseUrl}. If login still fails, try NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5246 or remove it to use Next.js /api rewrites (see ems-web/next.config.ts).`,
+    );
+  } else {
+    parts.push(
+      "Using same-origin /api (Next.js rewrites to http://localhost:5246). If the API runs elsewhere, set EMS_API_INTERNAL_URL or NEXT_PUBLIC_API_BASE_URL.",
+    );
+  }
+  return parts.join(" ");
+}
+
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const ax = error as AxiosError<unknown>;
@@ -113,7 +148,16 @@ export function getErrorMessage(error: unknown): string {
       const m = (data as ApiErrorBody).message;
       if (typeof m === "string") return m;
     }
-    return ax.message || "Request failed";
+    const msg = ax.message || "Request failed";
+    const noResponse = ax.response === undefined;
+    const looksNetwork =
+      noResponse &&
+      (msg === "Network Error" ||
+        (ax.code !== undefined && ["ERR_NETWORK", "ECONNREFUSED", "ETIMEDOUT"].includes(ax.code)));
+    if (looksNetwork) {
+      return `${msg}. ${networkFailureHint()}`;
+    }
+    return msg;
   }
   if (error instanceof Error) return error.message;
   return "Something went wrong";
