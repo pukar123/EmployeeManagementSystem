@@ -93,22 +93,31 @@ public sealed class DocumentService : IDocumentService
             UpdatedAtUtc = now,
         };
 
-        await _documents.AddAsync(entity, cancellationToken);
-        await _documents.SaveChangesAsync(cancellationToken);
-
-        if (employeeId is int linkedEmployeeId)
+        await using var createTransaction = await _documents.BeginTransactionAsync(cancellationToken);
+        try
         {
-            var linkNow = DateTime.UtcNow;
-            await _employeeDocuments.AddAsync(new EmployeeDocument
+            await _documents.AddAsync(entity, cancellationToken);
+
+            if (employeeId is int linkedEmployeeId)
             {
-                EmployeeId = linkedEmployeeId,
-                DocumentId = entity.Id,
-                IsActive = true,
-                IsDeleted = false,
-                CreatedAtUtc = linkNow,
-                UpdatedAtUtc = linkNow,
-            }, cancellationToken);
-            await _employeeDocuments.SaveChangesAsync(cancellationToken);
+                await _employeeDocuments.AddAsync(new EmployeeDocument
+                {
+                    EmployeeId = linkedEmployeeId,
+                    Document = entity,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now,
+                }, cancellationToken);
+            }
+
+            await _documents.SaveChangesAsync(cancellationToken);
+            await createTransaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await createTransaction.RollbackAsync(cancellationToken);
+            throw;
         }
 
         var reloaded = await _documents.GetQueryable()
@@ -164,9 +173,18 @@ public sealed class DocumentService : IDocumentService
             }, cancellationToken);
         }
 
-        _documents.Update(entity);
-        await _documents.SaveChangesAsync(cancellationToken);
-        await _employeeDocuments.SaveChangesAsync(cancellationToken);
+        await using var updateTransaction = await _documents.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            _documents.Update(entity);
+            await _documents.SaveChangesAsync(cancellationToken);
+            await updateTransaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await updateTransaction.RollbackAsync(cancellationToken);
+            throw;
+        }
 
         var reloaded = await _documents.GetQueryable()
             .Include(d => d.DocumentType)
