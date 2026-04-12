@@ -8,7 +8,10 @@ using EMS.Application.Services.Employees;
 using EMS.Application.Services.EmployeeSites;
 using EMS.Application.Services.JobPositions;
 using EMS.Application.Services.Locations;
+using EMS.Application.Services.Menus;
+using EMS.Application.Services.Navigation;
 using EMS.Application.Services.Organizations;
+using EMS.Application.Services.RolePermissions;
 using EMS.Application.Services.Sites;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
@@ -53,6 +56,7 @@ try
 
     builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection(SeedAdminOptions.SectionName));
     builder.Services.AddHostedService<AdminUserSeedHostedService>();
+    builder.Services.AddHostedService<EmsRbacSeedHostedService>();
 
     builder.Services.AddControllers(options =>
         {
@@ -65,6 +69,10 @@ try
     builder.Services.AddPukarUserManagementApi(builder.Configuration);
 
     builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
+    builder.Services.AddScoped<IUserEffectiveRoleIdsProvider, UserEffectiveRoleIdsProvider>();
+    builder.Services.AddScoped<INavigationService, NavigationService>();
+    builder.Services.AddScoped<IMenuService, MenuService>();
+    builder.Services.AddScoped<IRolePermissionService, RolePermissionService>();
     builder.Services.AddScoped<IEmployeeService, EmployeeService>();
     builder.Services.AddScoped<IOrganizationService, OrganizationService>();
     builder.Services.AddScoped<IDepartmentService, DepartmentService>();

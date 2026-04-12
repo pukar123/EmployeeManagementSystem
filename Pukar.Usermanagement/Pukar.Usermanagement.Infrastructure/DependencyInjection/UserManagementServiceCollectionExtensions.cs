@@ -3,6 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pukar.Usermanagement.Application.Options;
 using Pukar.Usermanagement.Application.Services.Auth;
+using Pukar.Usermanagement.Application.Services.Roles;
+using Pukar.Usermanagement.Application.Services.UserRoles;
+using Pukar.Usermanagement.Application.Services.Users;
 using Pukar.Usermanagement.Application.Services.Jwt;
 using Pukar.Usermanagement.Application.Services.Password;
 using Pukar.Usermanagement.Domain.Database;
@@ -38,10 +41,15 @@ public static class UserManagementServiceCollectionExtensions
                 sql => sql.MigrationsAssembly(typeof(UserManagementDbContext).Assembly.GetName().Name!)));
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IUserRoleRepository, UserRoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<IUserAdminService, UserAdminService>();
+        services.AddScoped<IUserRoleService, UserRoleService>();
 
         return services;
     }

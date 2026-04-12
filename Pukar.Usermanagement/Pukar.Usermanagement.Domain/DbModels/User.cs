@@ -21,4 +21,7 @@ public class User
     public DateTime? LastLoginAtUtc { get; set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }
+
