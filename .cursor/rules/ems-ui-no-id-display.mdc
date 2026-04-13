@@ -1,0 +1,12 @@
+---
+description: Do not show raw database IDs in UI tables/forms
+globs: "ems-web/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# EMS UI rule: hide raw IDs
+
+- Do not display internal database identifiers (for example `id`, `siteId`, `departmentId`) directly in UI views.
+- When row reference is needed, show a serial number (`#`, index-based) or business-friendly field (code, name, employee number).
+- Keep IDs for internal keys, routing, API payloads, and state management only.
+- Avoid labels/messages like `Id 123` in user-visible text; prefer friendly fallbacks like `Unknown` or `Not assigned`.

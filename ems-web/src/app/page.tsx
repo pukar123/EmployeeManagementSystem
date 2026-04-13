@@ -1,34 +1,17 @@
-import Link from "next/link";
+import { HomeOverview } from "@/features/dashboard/components/HomeOverview";
 import { OrganizationSetupLinks } from "@/features/organizations/components/OrganizationSetupLinks";
-
-const cards = [
-  { href: "/employees", title: "Employees", description: "Browse and manage employees." },
-  { href: "/departments", title: "Departments", description: "Organization departments." },
-  { href: "/positions", title: "Positions", description: "Job titles and roles per organization." },
-] as const;
 
 export default function Home() {
   return (
-    <main className="mx-auto flex max-w-3xl flex-1 flex-col gap-10 px-4 py-12 sm:px-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Employee Management System
-        </h1>
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-10 px-4 py-10 sm:px-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back</h1>
+        <p className="max-w-2xl text-muted-foreground">
+          Employee Management System — overview of your organization at a glance.
+        </p>
         <OrganizationSetupLinks />
       </div>
-      <ul className="grid gap-4 sm:grid-cols-3">
-        {cards.map(({ href, title, description }) => (
-          <li key={href}>
-            <Link
-              href={href}
-              className="block rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-zinc-300 hover:shadow dark:border-zinc-700 dark:bg-zinc-950 dark:hover:border-zinc-600"
-            >
-              <span className="font-medium text-zinc-900 dark:text-zinc-50">{title}</span>
-              <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">{description}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <HomeOverview />
     </main>
   );
 }

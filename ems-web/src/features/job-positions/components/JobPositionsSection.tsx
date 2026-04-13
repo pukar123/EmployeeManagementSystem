@@ -172,7 +172,7 @@ export function JobPositionsSection() {
           <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
             <thead className="bg-zinc-50 dark:bg-zinc-900/50">
               <tr>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Id</th>
+                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">#</th>
                 <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Title</th>
                 <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Code</th>
                 <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Description</th>
@@ -181,10 +181,10 @@ export function JobPositionsSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
-              {filtered.map((row) => (
+              {filtered.map((row, index) => (
                 <tr key={row.id} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
                   <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
-                    {row.id}
+                    {index + 1}
                   </td>
                   <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{row.title}</td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{row.code ?? "—"}</td>

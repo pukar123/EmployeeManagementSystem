@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "npm run dev --prefix ems-web",
     "dev:all": "npm run dev:all --prefix ems-web",
+    "start:api": "dotnet run --project EMS.API/EMS.API.csproj --launch-profile http",
     "dev:api": "npm run dev:api --prefix ems-web",
     "dev:https": "npm run dev:https --prefix ems-web",
     "build:web": "npm run build --prefix ems-web",

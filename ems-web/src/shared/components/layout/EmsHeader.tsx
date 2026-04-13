@@ -17,15 +17,21 @@ export function EmsHeader() {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
-      <SidebarTrigger />
-      <Separator orientation="vertical" className="h-6" />
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-ems-header-border bg-ems-header px-4 text-ems-header-foreground">
+      <SidebarTrigger className="text-ems-header-foreground" />
+      <Separator orientation="vertical" className="h-6 bg-ems-header-border/60" />
       <div className="flex flex-1 items-center justify-end gap-2">
         {user ? (
-          <span className="hidden max-w-[200px] truncate text-xs text-muted-foreground sm:inline">{user.email}</span>
+          <span className="hidden max-w-[200px] truncate text-xs opacity-90 sm:inline">{user.email}</span>
         ) : null}
-        <ThemeToggle />
-        <Button type="button" variant="outline" size="sm" onClick={() => void handleSignOut()}>
+        <ThemeToggle className="text-ems-header-foreground" />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="border-sidebar-border bg-background/90 text-foreground shadow-sm hover:bg-background"
+          onClick={() => void handleSignOut()}
+        >
           Sign out
         </Button>
       </div>

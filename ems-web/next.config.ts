@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
 
 /**
- * When `NEXT_PUBLIC_API_BASE_URL` is unset, the browser uses same-origin `/api/*` paths.
- * Rewrites forward those to EMS.API so login and other calls work with `npm run dev:all`
- * without a `.env.local` file. When the public URL is set, the client calls the API
- * directly and rewrites are disabled.
+ * When `NEXT_PUBLIC_API_BASE_URL` is unset, the browser uses same-origin paths; rewrites
+ * forward to EMS.API (default `http://127.0.0.1:5246`). That avoids direct browser→API
+ * connection issues and matches `npm run dev:all`. `/attachments` is proxied too so logos
+ * and document links work with an empty public API origin. Set `NEXT_PUBLIC_API_BASE_URL`
+ * to call the API directly (e.g. Docker/production).
  */
 const nextConfig: NextConfig = {
   /* Enables Docker image using standalone output (see ems-web/Dockerfile). */
@@ -15,11 +16,15 @@ const nextConfig: NextConfig = {
       return [];
     }
     const internal =
-      process.env.EMS_API_INTERNAL_URL?.replace(/\/$/, "") ?? "http://localhost:5246";
+      process.env.EMS_API_INTERNAL_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:5246";
     return [
       {
         source: "/api/:path*",
         destination: `${internal}/api/:path*`,
+      },
+      {
+        source: "/attachments/:path*",
+        destination: `${internal}/attachments/:path*`,
       },
     ];
   },
