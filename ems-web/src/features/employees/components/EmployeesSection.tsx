@@ -33,6 +33,35 @@ export function EmployeesSection() {
     }
     return map;
   }, [jobPositions]);
+  const jobPositionCodeById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const j of jobPositions) {
+      map.set(j.id, j.code?.trim() || j.title);
+    }
+    return map;
+  }, [jobPositions]);
+  const immediateManagerPositionByEmployeeId = useMemo(() => {
+    const all = data ?? [];
+    const employeeById = new Map<number, (typeof all)[number]>();
+    for (const e of all) {
+      employeeById.set(e.id, e);
+    }
+
+    const map = new Map<number, string>();
+    for (const e of all) {
+      if (e.managerId != null) {
+        const manager = employeeById.get(e.managerId);
+        const managerPositionCode =
+          manager?.jobPositionId != null ? jobPositionCodeById.get(manager.jobPositionId) : undefined;
+        map.set(e.id, managerPositionCode ?? "—");
+      } else {
+        const ownPositionCode =
+          e.jobPositionId != null ? jobPositionCodeById.get(e.jobPositionId) : undefined;
+        map.set(e.id, ownPositionCode ?? "—");
+      }
+    }
+    return map;
+  }, [data, jobPositionCodeById]);
   const [search, setSearch] = useState("");
 
   const formMode = useEmployeeUiStore((s) => s.formMode);
@@ -102,6 +131,7 @@ export function EmployeesSection() {
         <EmployeeTable
           employees={filtered}
           jobPositionLabelById={jobPositionLabelById}
+          immediateManagerPositionByEmployeeId={immediateManagerPositionByEmployeeId}
           onEdit={(e) => openEditForm(e)}
           onDelete={(e) => openDeleteDialog(e)}
         />

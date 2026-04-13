@@ -8,6 +8,8 @@ type EmployeeTableProps = {
   employees: Employee[];
   /** Resolved display labels for job positions; avoids showing raw ids in the grid. */
   jobPositionLabelById: Map<number, string>;
+  /** Per employee, shows immediate manager's position code; top-level falls back to own position code. */
+  immediateManagerPositionByEmployeeId: Map<number, string>;
   onEdit: (e: Employee) => void;
   onDelete: (e: Employee) => void;
 };
@@ -20,23 +22,34 @@ function formatJobPositionCell(
   return jobPositionLabelById.get(jobPositionId) ?? "—";
 }
 
-export function EmployeeTable({ employees, jobPositionLabelById, onEdit, onDelete }: EmployeeTableProps) {
+export function EmployeeTable({
+  employees,
+  jobPositionLabelById,
+  immediateManagerPositionByEmployeeId,
+  onEdit,
+  onDelete,
+}: EmployeeTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
       <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
         <thead className="bg-zinc-50 dark:bg-zinc-900/50">
           <tr>
             <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">#</th>
+            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Employee #</th>
             <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Name</th>
             <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Email</th>
             <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Status</th>
+            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Immediate Manager</th>
             <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Position</th>
             <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
-          {employees.map((row) => (
+          {employees.map((row, index) => (
             <tr key={row.id} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
+              <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
+                {index + 1}
+              </td>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
                 {row.employeeNumber}
               </td>
@@ -46,6 +59,9 @@ export function EmployeeTable({ employees, jobPositionLabelById, onEdit, onDelet
               <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{row.email}</td>
               <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                 {employmentStatusLabels[row.employmentStatus] ?? row.employmentStatus}
+              </td>
+              <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                {immediateManagerPositionByEmployeeId.get(row.id) ?? "—"}
               </td>
               <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                 {formatJobPositionCell(row.jobPositionId, jobPositionLabelById)}

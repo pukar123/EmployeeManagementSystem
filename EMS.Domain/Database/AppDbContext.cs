@@ -23,6 +23,9 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.EmployeeSite> EmployeeSites { get; set; }
         public DbSet<DbModels.Menu> Menus { get; set; }
         public DbSet<DbModels.RolePermission> RolePermissions { get; set; }
+        public DbSet<DbModels.AttendanceRecord> AttendanceRecords { get; set; }
+        public DbSet<DbModels.AttendanceBreak> AttendanceBreaks { get; set; }
+        public DbSet<DbModels.AttendancePolicy> AttendancePolicies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

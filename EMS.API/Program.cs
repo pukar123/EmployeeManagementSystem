@@ -6,6 +6,7 @@ using EMS.Application.Services.Departments;
 using EMS.Application.Services.Documents;
 using EMS.Application.Services.Employees;
 using EMS.Application.Services.EmployeeSites;
+using EMS.Application.Services.Attendance;
 using EMS.Application.Services.JobPositions;
 using EMS.Application.Services.Locations;
 using EMS.Application.Services.Menus;
@@ -85,6 +86,9 @@ try
     builder.Services.AddScoped<IDocumentService, DocumentService>();
     builder.Services.AddScoped<ISiteService, SiteService>();
     builder.Services.AddScoped<IEmployeeSiteService, EmployeeSiteService>();
+    builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+    builder.Services.AddScoped<IAttendanceBreakRepository, AttendanceBreakRepository>();
+    builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
 

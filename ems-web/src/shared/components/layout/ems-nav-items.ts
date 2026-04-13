@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
   Building2,
+  Clock3,
   Home,
   MapPin,
   PlusCircle,
@@ -26,6 +27,7 @@ export const emsNavItemsMain: readonly EmsNavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/employees", label: "Employees", icon: Users },
   { href: "/departments", label: "Departments", icon: Building2 },
+  { href: "/attendance", label: "Attendance", icon: Clock3 },
   { href: "/positions", label: "Positions", icon: Briefcase },
   { href: "/sites", label: "Sites", icon: MapPin },
   { href: "/organization/setup", label: "Organization", icon: Settings },
