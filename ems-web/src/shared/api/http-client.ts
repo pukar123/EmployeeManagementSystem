@@ -120,23 +120,7 @@ export async function postFormData<T>(urlPath: string, formData: FormData): Prom
 }
 
 function networkFailureHint(): string {
-  const parts: string[] = [
-    "Cannot reach the API. Start EMS.API (e.g. from the repo root: npm run dev:all) and confirm it listens on port 5246.",
-  ];
-  if (typeof window !== "undefined" && window.location.protocol === "https:" && apiBaseUrl.startsWith("http:")) {
-    parts.push(
-      "You opened the site over HTTPS but the API URL is HTTP; the browser blocks that. Use http://localhost:3000 for the app, or point NEXT_PUBLIC_API_BASE_URL at an HTTPS API origin.",
-    );
-  } else if (apiBaseUrl) {
-    parts.push(
-      `Current API origin: ${apiBaseUrl}. If login still fails, try NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5246 or remove it to use Next.js /api rewrites (see ems-web/next.config.ts).`,
-    );
-  } else {
-    parts.push(
-      "Using same-origin /api (Next.js rewrites to http://localhost:5246). If the API runs elsewhere, set EMS_API_INTERNAL_URL or NEXT_PUBLIC_API_BASE_URL.",
-    );
-  }
-  return parts.join(" ");
+  return "We could not connect right now. Please try again. If the problem continues, contact your administrator.";
 }
 
 export function getErrorMessage(error: unknown): string {

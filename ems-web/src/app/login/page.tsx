@@ -32,8 +32,7 @@ export default function LoginPage() {
       <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Sign in</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Use your EMS account. Default dev user is seeded when{" "}
-          <code className="rounded bg-zinc-100 px-1 text-xs dark:bg-zinc-900">SeedAdmin</code> is enabled on the API.
+          Use your EMS account to continue.
         </p>
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm">

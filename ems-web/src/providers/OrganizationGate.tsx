@@ -55,9 +55,7 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
           <p className="font-medium">Could not load organization</p>
           <p className="mt-2">{getErrorMessage(error)}</p>
           <p className="mt-3 text-zinc-600 dark:text-zinc-400">
-            Check that EMS.API is running on <code className="rounded bg-red-100 px-1 dark:bg-red-900/50">http://127.0.0.1:5246</code>.
-            In local proxy mode, leave <code className="rounded bg-red-100 px-1 dark:bg-red-900/50">NEXT_PUBLIC_API_BASE_URL</code> unset in{" "}
-            <code className="rounded bg-red-100 px-1 dark:bg-red-900/50">.env.local</code> and restart the web app.
+            Please try again in a moment. If this keeps happening, contact your administrator.
           </p>
         </div>
       </div>
