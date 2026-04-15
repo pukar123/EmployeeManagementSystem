@@ -47,7 +47,8 @@ isProject: false
 - [x] D3 UM role metadata client in EMS
 - [x] F1 Dual-read telemetry/parity reports (fallback/mismatch counters + admin report endpoint)
 - [x] E2 Hosted service decoupling from UM role-id assumptions
-- [ ] F2/F3 production cutover and cleanup
+- [~] F2 production cutover prep (readiness endpoint + checklist docs)
+- [ ] F3 cleanup and legacy removal
 
 ## Scope and Goal
 Decouple EMS runtime authorization and bootstrap flows from direct `Pukar.Usermanagement` table/repository dependency, while preserving your architecture rules:

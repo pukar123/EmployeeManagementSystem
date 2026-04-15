@@ -82,6 +82,7 @@ try
     builder.Services.AddSingleton<AuthorizationTelemetry>();
     builder.Services.AddSingleton<IAuthorizationTelemetry>(sp => sp.GetRequiredService<AuthorizationTelemetry>());
     builder.Services.AddSingleton<IAuthorizationTelemetryReporter>(sp => sp.GetRequiredService<AuthorizationTelemetry>());
+    builder.Services.AddScoped<IAuthorizationCutoverReadinessReporter, AuthorizationCutoverReadinessReporter>();
     builder.Services.AddScoped<IAuthorizationModeResolver, AuthorizationModeResolver>();
     builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
