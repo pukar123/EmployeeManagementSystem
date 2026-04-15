@@ -2,6 +2,7 @@ using EMS.API.Bootstrap;
 using EMS.API.Middleware;
 using EMS.API.Options;
 using EMS.API.Services;
+using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Departments;
 using EMS.Application.Services.Documents;
 using EMS.Application.Services.Employees;
@@ -60,6 +61,7 @@ try
     });
 
     builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection(SeedAdminOptions.SectionName));
+    builder.Services.Configure<AuthorizationModeOptions>(builder.Configuration.GetSection(AuthorizationModeOptions.SectionName));
     builder.Services.AddHostedService<AdminUserSeedHostedService>();
     builder.Services.AddHostedService<EmsRbacSeedHostedService>();
 
@@ -73,7 +75,10 @@ try
 
     builder.Services.AddPukarUserManagementApi(builder.Configuration);
 
+    builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
+    builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
+    builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
     builder.Services.AddScoped<IUserEffectiveRoleIdsProvider, UserEffectiveRoleIdsProvider>();
     builder.Services.AddScoped<INavigationService, NavigationService>();
     builder.Services.AddScoped<IMenuService, MenuService>();
