@@ -77,6 +77,8 @@ try
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
+    builder.Services.AddScoped<IAuthorizationTelemetry, AuthorizationTelemetry>();
+    builder.Services.AddScoped<IAuthorizationModeResolver, AuthorizationModeResolver>();
     builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
     builder.Services.AddScoped<IUserEffectiveRoleIdsProvider, UserEffectiveRoleIdsProvider>();
