@@ -18,6 +18,7 @@ using EMS.Application.Services.Sites;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
 using EMS.Infrastructure.Repositories.Implementations;
+using EMS.Infrastructure.Integrations.UserManagement;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -62,6 +63,7 @@ try
 
     builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection(SeedAdminOptions.SectionName));
     builder.Services.Configure<AuthorizationModeOptions>(builder.Configuration.GetSection(AuthorizationModeOptions.SectionName));
+    builder.Services.Configure<UserManagementApiOptions>(builder.Configuration.GetSection(UserManagementApiOptions.SectionName));
     builder.Services.AddHostedService<AdminUserSeedHostedService>();
     builder.Services.AddHostedService<EmsRbacSeedHostedService>();
 
@@ -82,6 +84,17 @@ try
     builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
     builder.Services.AddScoped<IUserEffectiveRoleIdsProvider, UserEffectiveRoleIdsProvider>();
+    builder.Services.AddHttpClient<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>((sp, client) =>
+    {
+        var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<UserManagementApiOptions>>().Value;
+        if (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUrl))
+        {
+            client.BaseAddress = new Uri(baseUrl, options.RolesMetadataPath);
+        }
+
+        var timeout = options.TimeoutSeconds > 0 ? options.TimeoutSeconds : 5;
+        client.Timeout = TimeSpan.FromSeconds(timeout);
+    });
     builder.Services.AddScoped<INavigationService, NavigationService>();
     builder.Services.AddScoped<IMenuService, MenuService>();
     builder.Services.AddScoped<IRolePermissionService, RolePermissionService>();

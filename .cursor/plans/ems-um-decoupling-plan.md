@@ -44,7 +44,7 @@ isProject: false
 - [x] E1 Initial DI wiring for evaluator + mode resolver
 - [x] C2/E1 Navigation dual-path (role-key + legacy fallback) integrated behind flags
 - [x] B2 Backfill strategy/script (idempotent SQL + runbook)
-- [ ] D3 UM role metadata client in EMS
+- [x] D3 UM role metadata client in EMS
 - [~] F1 Dual-read telemetry/parity reports (fallback and mismatch counters wired)
 - [ ] E2 Hosted service decoupling from UM role-id assumptions
 - [ ] F2/F3 production cutover and cleanup
