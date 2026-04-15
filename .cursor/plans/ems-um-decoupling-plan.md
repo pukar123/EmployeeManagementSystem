@@ -43,7 +43,7 @@ isProject: false
 - [x] D2 Implement role-key permission repository/evaluator path
 - [x] E1 Initial DI wiring for evaluator + mode resolver
 - [x] C2/E1 Navigation dual-path (role-key + legacy fallback) integrated behind flags
-- [ ] B2 Backfill strategy/script
+- [x] B2 Backfill strategy/script (idempotent SQL + runbook)
 - [ ] D3 UM role metadata client in EMS
 - [~] F1 Dual-read telemetry/parity reports (fallback and mismatch counters wired)
 - [ ] E2 Hosted service decoupling from UM role-id assumptions
