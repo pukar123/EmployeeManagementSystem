@@ -13,7 +13,6 @@ using EMS.Application.Services.Locations;
 using EMS.Application.Services.Menus;
 using EMS.Application.Services.Navigation;
 using EMS.Application.Services.Organizations;
-using EMS.Application.Services.RolePermissions;
 using EMS.Application.Services.Sites;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
@@ -83,10 +82,8 @@ try
     builder.Services.AddSingleton<IAuthorizationTelemetry>(sp => sp.GetRequiredService<AuthorizationTelemetry>());
     builder.Services.AddSingleton<IAuthorizationTelemetryReporter>(sp => sp.GetRequiredService<AuthorizationTelemetry>());
     builder.Services.AddScoped<IAuthorizationCutoverReadinessReporter, AuthorizationCutoverReadinessReporter>();
-    builder.Services.AddScoped<IAuthorizationModeResolver, AuthorizationModeResolver>();
     builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
-    builder.Services.AddScoped<IUserEffectiveRoleIdsProvider, UserEffectiveRoleIdsProvider>();
     builder.Services.AddHttpClient<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>((sp, client) =>
     {
         var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<UserManagementApiOptions>>().Value;
@@ -100,7 +97,6 @@ try
     });
     builder.Services.AddScoped<INavigationService, NavigationService>();
     builder.Services.AddScoped<IMenuService, MenuService>();
-    builder.Services.AddScoped<IRolePermissionService, RolePermissionService>();
     builder.Services.AddScoped<IEmployeeService, EmployeeService>();
     builder.Services.AddScoped<IOrganizationService, OrganizationService>();
     builder.Services.AddScoped<IDepartmentService, DepartmentService>();

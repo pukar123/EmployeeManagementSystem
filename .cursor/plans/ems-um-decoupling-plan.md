@@ -19,10 +19,10 @@ todos:
     status: completed
   - id: dual-read-rollout
     content: Backfill role-key mappings and run dual-read with telemetry for parity.
-    status: in_progress
+    status: completed
   - id: cutover-cleanup
     content: Cut over to new mapping, disable fallback, and remove legacy coupling/schema.
-    status: pending
+    status: completed
   - id: um-mandatory-contract-hardening
     content: Implement mandatory UserManagement claim-contract hardening and versioned role metadata read endpoint.
     status: completed
@@ -47,8 +47,8 @@ isProject: false
 - [x] D3 UM role metadata client in EMS
 - [x] F1 Dual-read telemetry/parity reports (fallback/mismatch counters + admin report endpoint)
 - [x] E2 Hosted service decoupling from UM role-id assumptions
-- [~] F2 production cutover prep (readiness endpoint + checklist docs)
-- [ ] F3 cleanup and legacy removal
+- [x] F2 production cutover prep (readiness endpoint + checklist docs)
+- [x] F3 cleanup and legacy removal (legacy role-id model/services/API removed; cleanup migration added)
 
 ## Scope and Goal
 Decouple EMS runtime authorization and bootstrap flows from direct `Pukar.Usermanagement` table/repository dependency, while preserving your architecture rules:

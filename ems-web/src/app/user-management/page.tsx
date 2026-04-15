@@ -3,11 +3,6 @@ import Link from "next/link";
 const links = [
   { href: "/user-management/users", title: "Users", description: "Directory and role assignment." },
   { href: "/user-management/roles", title: "Roles", description: "Create and manage application roles." },
-  {
-    href: "/user-management/permissions",
-    title: "Menu access",
-    description: "Grant menu access per role.",
-  },
 ] as const;
 
 export default function UserManagementIndexPage() {
@@ -17,7 +12,7 @@ export default function UserManagementIndexPage() {
         User management
       </h1>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Choose a section to manage users, roles, or menu access per role.
+        Choose a section to manage users and roles.
       </p>
       <ul className="mt-8 grid gap-4 sm:grid-cols-1">
         {links.map(({ href, title, description }) => (

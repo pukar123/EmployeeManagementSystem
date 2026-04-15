@@ -25,8 +25,3 @@ export type MenuFlatDto = {
   iconKey: string | null;
   children: [];
 };
-
-export type RolePermissionItemDto = {
-  menuId: number;
-  allowed: boolean;
-};

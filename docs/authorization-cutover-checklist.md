@@ -35,6 +35,9 @@ Both endpoints require an Admin token.
   - `MeetsMismatchThreshold=true`
   - fallback usage is acceptable for your environment
   - operational sign-off is complete
+- After go-live (`UseRoleKeyMapping=true`, `EnableLegacyRoleIdFallback=false`):
+  - legacy role-id permission endpoints return conflict by design
+  - role-key permission model is the only supported write path
 - **No-Go** when mismatch exceeds threshold or fallback spikes unexpectedly.
 
 ## Rollback
