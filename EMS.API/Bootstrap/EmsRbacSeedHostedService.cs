@@ -1,17 +1,16 @@
 using EMS.Domain.Database;
 using EMS.Domain.DbModels;
 using Microsoft.EntityFrameworkCore;
-using Pukar.Usermanagement.Application;
-using Pukar.Usermanagement.Domain.Repositories.Interface;
 
 namespace EMS.API.Bootstrap;
 
 /// <summary>
-/// Seeds EMS <see cref="Menu"/> rows and grants all menus to the system Admin role (um.Roles).
-/// Runs after <see cref="AdminUserSeedHostedService"/> so the Admin role exists.
+/// Seeds EMS <see cref="Menu"/> rows and grants all menus to the ADMIN role key.
 /// </summary>
 public sealed class EmsRbacSeedHostedService : IHostedService
 {
+    private const string AdminRoleKey = "ADMIN";
+
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<EmsRbacSeedHostedService> _logger;
 
@@ -27,14 +26,6 @@ public sealed class EmsRbacSeedHostedService : IHostedService
         {
             using var scope = _serviceProvider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var roles = scope.ServiceProvider.GetRequiredService<IRoleRepository>();
-
-            var adminRole = await roles.GetByNormalizedNameAsync(WellKnownRoles.AdminNormalizedName, cancellationToken);
-            if (adminRole is null)
-            {
-                _logger.LogWarning("EMS RBAC seed skipped: Admin role not found. Apply UserManagement migrations and admin seed first.");
-                return;
-            }
 
             var definitions = new[]
             {
@@ -91,21 +82,21 @@ public sealed class EmsRbacSeedHostedService : IHostedService
             var menuIds = await db.Menus.AsNoTracking().Select(m => m.Id).ToListAsync(cancellationToken);
             foreach (var menuId in menuIds)
             {
-                var has = await db.RolePermissions.AsNoTracking()
-                    .AnyAsync(rp => rp.RoleId == adminRole.Id && rp.MenuId == menuId, cancellationToken);
+                var has = await db.RoleKeyPermissions.AsNoTracking()
+                    .AnyAsync(rp => rp.RoleKey == AdminRoleKey && rp.MenuId == menuId, cancellationToken);
                 if (has)
                     continue;
 
-                db.RolePermissions.Add(new RolePermission
+                db.RoleKeyPermissions.Add(new RoleKeyPermission
                 {
-                    RoleId = adminRole.Id,
+                    RoleKey = AdminRoleKey,
                     MenuId = menuId,
                     Allowed = true,
                 });
             }
 
             await db.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("EMS RBAC seed completed for Admin role id {RoleId}.", adminRole.Id);
+            _logger.LogInformation("EMS RBAC seed completed for role key {RoleKey}.", AdminRoleKey);
         }
         catch (Exception ex)
         {

@@ -46,7 +46,7 @@ isProject: false
 - [x] B2 Backfill strategy/script (idempotent SQL + runbook)
 - [x] D3 UM role metadata client in EMS
 - [x] F1 Dual-read telemetry/parity reports (fallback/mismatch counters + admin report endpoint)
-- [ ] E2 Hosted service decoupling from UM role-id assumptions
+- [x] E2 Hosted service decoupling from UM role-id assumptions
 - [ ] F2/F3 production cutover and cleanup
 
 ## Scope and Goal
@@ -498,7 +498,6 @@ This section defines the only allowed work for Sprint 1 and Sprint 2. Any additi
 
 ## Not Before Sprint 3
 
-- `E2` Hosted service decoupling completion if any risky startup behavior remains.
 - `F2` Production cutover.
 - `F3` Legacy removal and cleanup migration.
 
