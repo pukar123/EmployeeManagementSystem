@@ -24,6 +24,8 @@ dotnet build Pukar.Usermanagement.sln
 
 Connection string: `UserManagement` or fallback `DefaultConnection`. JWT section name: `Jwt`.
 
+Claim and authorization contract for consumers (EMS): [docs/AUTH_CONTRACT.md](docs/AUTH_CONTRACT.md).
+
 ```json
 "ConnectionStrings": {
   "UserManagement": "Server=...;Database=...;Trusted_Connection=True;TrustServerCertificate=True"

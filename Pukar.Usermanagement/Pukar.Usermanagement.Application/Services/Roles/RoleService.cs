@@ -24,6 +24,21 @@ public sealed class RoleService : IRoleService
         return list.Select(Map).ToList();
     }
 
+    public async Task<IReadOnlyList<RoleMetadataV1ResponseModel>> GetMetadataV1Async(CancellationToken cancellationToken = default)
+    {
+        return await _roles.GetQueryable()
+            .AsNoTracking()
+            .OrderBy(r => r.Name)
+            .Select(r => new RoleMetadataV1ResponseModel
+            {
+                Id = r.Id,
+                Name = r.Name,
+                NormalizedName = r.NormalizedName,
+                IsSystem = r.IsSystem,
+            })
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<RoleResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _roles.GetByIdAsync(id, cancellationToken);

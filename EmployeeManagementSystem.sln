@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Usermanagement.API", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Shared", "Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj", "{549D9157-90DD-4636-BBBC-0B353A1001DF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Usermanagement.UnitTests", "Pukar.Usermanagement\Pukar.Usermanagement.UnitTests\Pukar.Usermanagement.UnitTests.csproj", "{AEA4321F-8673-465E-847E-42484AC2D535}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -155,6 +157,18 @@ Global
 		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|x64.Build.0 = Release|Any CPU
 		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|x86.ActiveCfg = Release|Any CPU
 		{549D9157-90DD-4636-BBBC-0B353A1001DF}.Release|x86.Build.0 = Release|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Debug|x64.Build.0 = Debug|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Debug|x86.Build.0 = Debug|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Release|x64.ActiveCfg = Release|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Release|x64.Build.0 = Release|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Release|x86.ActiveCfg = Release|Any CPU
+		{AEA4321F-8673-465E-847E-42484AC2D535}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -164,6 +178,7 @@ Global
 		{49433266-3C19-4890-8F62-911463EDCA8C} = {374F757F-8E9B-E55A-7E86-E83F785A568A}
 		{5432BD24-ECC1-4DDB-A0D2-639C81613DE5} = {374F757F-8E9B-E55A-7E86-E83F785A568A}
 		{9F20C98E-92CA-4B00-AA5B-E6421DEAB576} = {374F757F-8E9B-E55A-7E86-E83F785A568A}
+		{AEA4321F-8673-465E-847E-42484AC2D535} = {374F757F-8E9B-E55A-7E86-E83F785A568A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FD1BF3AE-594F-42E4-BF72-C739757A8497}

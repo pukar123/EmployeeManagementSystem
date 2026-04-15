@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Pukar.Usermanagement.Application.Auth;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Pukar.Usermanagement.Application.Options;
@@ -39,15 +40,30 @@ public sealed class JwtTokenService : IJwtTokenService
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new(JwtRegisteredClaimNames.Email, email),
             new(JwtRegisteredClaimNames.Jti, jti),
+            new(AuthContractConstants.ContractVersionClaimType, AuthContractConstants.ContractVersion),
         };
 
         if (!string.IsNullOrWhiteSpace(userName))
             claims.Add(new Claim(JwtRegisteredClaimNames.Name, userName));
 
-        foreach (var roleName in roleNames)
+        var roleNamesTrimmed = roleNames
+            .Where(static role => !string.IsNullOrWhiteSpace(role))
+            .Select(static role => role.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var normalizedRoles = roleNamesTrimmed
+            .Select(static role => role.ToUpperInvariant())
+            .ToList();
+
+        foreach (var roleName in roleNamesTrimmed)
         {
-            if (!string.IsNullOrWhiteSpace(roleName))
-                claims.Add(new Claim(ClaimTypes.Role, roleName.Trim()));
+            claims.Add(new Claim(ClaimTypes.Role, roleName));
+        }
+
+        foreach (var roleName in normalizedRoles)
+        {
+            claims.Add(new Claim(AuthContractConstants.RolesClaimType, roleName));
         }
 
         var token = new JwtSecurityToken(

@@ -22,4 +22,6 @@ public class Menu
     public ICollection<Menu> ChildMenus { get; set; } = new List<Menu>();
 
     public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+
+    public ICollection<RoleKeyPermission> RoleKeyPermissions { get; set; } = new List<RoleKeyPermission>();
 }

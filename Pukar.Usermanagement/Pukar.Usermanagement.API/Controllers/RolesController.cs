@@ -28,6 +28,15 @@ public sealed class RolesController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("metadata/v1")]
+    [Authorize(Roles = WellKnownRoles.Admin)]
+    [ProducesResponseType(typeof(IReadOnlyList<RoleMetadataV1ResponseModel>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<RoleMetadataV1ResponseModel>>> GetMetadataV1(CancellationToken cancellationToken)
+    {
+        var items = await _roles.GetMetadataV1Async(cancellationToken);
+        return Ok(items);
+    }
+
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(RoleResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
