@@ -10,3 +10,5 @@ alwaysApply: false
 - When row reference is needed, show a serial number (`#`, index-based) or business-friendly field (code, name, employee number).
 - Keep IDs for internal keys, routing, API payloads, and state management only.
 - Avoid labels/messages like `Id 123` in user-visible text; prefer friendly fallbacks like `Unknown` or `Not assigned`.
+- For any dropdown/select/search-picker UI (including task assignment), display business labels only (for example employee names/codes). Never show labels/messages like `Employee ID`.
+- Option values may still carry internal IDs for wiring, but the UI must not present them to the user (including search placeholder text).

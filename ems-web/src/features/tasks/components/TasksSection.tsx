@@ -10,6 +10,7 @@ import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { cn } from "@/shared/utils/cn";
 import { useCreateTask, useDeleteTask, useTasks, useUpdateTaskStatus } from "../hooks";
 import type { TaskItem, TaskPriority, TaskWorkflowStatus } from "../types/task.types";
+import { useEmployees } from "@/features/employees/hooks";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
@@ -30,30 +31,43 @@ const priorityLabels: Record<TaskPriority, string> = {
 export function TasksSection() {
   const { organizationId } = useOrganizationContext();
   const { data, isLoading, isError, error } = useTasks();
+  const { data: employees = [], isLoading: employeesLoading, isError: employeesError } = useEmployees();
   const createMut = useCreateTask();
   const statusMut = useUpdateTaskStatus();
   const deleteMut = useDeleteTask();
 
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [employeeId, setEmployeeId] = useState("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAtUtc, setDueAtUtc] = useState("");
   const [priority, setPriority] = useState<TaskPriority>(2);
+
+  const employeeLabelById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const e of employees) {
+      const name = `${e.firstName} ${e.lastName}`.trim();
+      const empNo = e.employeeNumber?.trim();
+      map.set(e.id, empNo ? `${empNo} — ${name}` : name);
+    }
+    return map;
+  }, [employees]);
 
   const filtered = useMemo(() => {
     const list = data ?? [];
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter((task) =>
-      `${task.title} ${task.description ?? ""} ${task.employeeId} ${statusLabels[task.status]}`.toLowerCase().includes(q),
+      `${task.title} ${task.description ?? ""} ${(employeeLabelById.get(task.employeeId) ?? "").toString()} ${
+        statusLabels[task.status]
+      }`.toLowerCase().includes(q),
     );
-  }, [data, search]);
+  }, [data, search, employeeLabelById]);
 
   const closeForm = () => {
     setFormOpen(false);
-    setEmployeeId("");
+    setSelectedEmployeeId(null);
     setTitle("");
     setDescription("");
     setDueAtUtc("");
@@ -62,8 +76,8 @@ export function TasksSection() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!employeeId.trim() || Number(employeeId) <= 0) {
-      toast.error("Employee ID is required.");
+    if (selectedEmployeeId == null) {
+      toast.error("Please select an employee.");
       return;
     }
     if (!title.trim()) {
@@ -73,7 +87,7 @@ export function TasksSection() {
 
     try {
       await createMut.mutateAsync({
-        employeeId: Number(employeeId),
+        employeeId: selectedEmployeeId,
         organizationId,
         title: title.trim(),
         description: description.trim() ? description.trim() : null,
@@ -106,10 +120,18 @@ export function TasksSection() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || employeesLoading) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
+      </div>
+    );
+  }
+
+  if (employeesError) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
+        Could not load employees.
       </div>
     );
   }
@@ -136,7 +158,7 @@ export function TasksSection() {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Title, employee id, status"
+          placeholder="Title, employee, status"
           className={inputClass}
         />
       </div>
@@ -165,7 +187,9 @@ export function TasksSection() {
                     <div className="font-medium text-zinc-900 dark:text-zinc-100">{task.title}</div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">{task.description ?? "No description"}</div>
                   </td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{task.employeeId}</td>
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                    {employeeLabelById.get(task.employeeId) ?? "Unknown"}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={cn(
@@ -221,8 +245,26 @@ export function TasksSection() {
       <Modal open={formOpen} title="Assign task" onClose={closeForm} className="max-w-lg">
         <form onSubmit={(e) => void handleCreate(e)} className="space-y-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Employee ID</label>
-            <input type="number" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className={inputClass} required />
+            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Employee</label>
+            <select
+              value={selectedEmployeeId ?? ""}
+              onChange={(e) => setSelectedEmployeeId(e.target.value ? Number(e.target.value) : null)}
+              className={inputClass}
+              required
+            >
+              <option value="" disabled>
+                Select employee
+              </option>
+              {employees.map((e) => {
+                const name = `${e.firstName} ${e.lastName}`.trim();
+                const empNo = e.employeeNumber?.trim();
+                return (
+                  <option key={e.id} value={e.id}>
+                    {empNo ? `${empNo} — ${name}` : name}
+                  </option>
+                );
+              })}
+            </select>
           </div>
           <div>
             <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Title</label>
