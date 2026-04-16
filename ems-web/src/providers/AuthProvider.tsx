@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { authService } from "@/features/auth/services/authService";
 import type { AuthUser } from "@/shared/auth/auth-types";
-import { getStoredUser, setAuthChangeHandler } from "@/shared/auth/auth-storage";
+import { getAccessToken, getStoredUser, setAuthChangeHandler } from "@/shared/auth/auth-storage";
 
 export type AuthContextValue = {
   isReady: boolean;
@@ -22,7 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const syncFromStorage = useCallback(() => {
-    setUser(getStoredUser());
+    const token = getAccessToken();
+    setUser(token ? getStoredUser() : null);
   }, []);
 
   useEffect(() => {
@@ -32,7 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setAuthChangeHandler(() => {
-      setUser(getStoredUser());
+      const token = getAccessToken();
+      setUser(token ? getStoredUser() : null);
     });
     return () => setAuthChangeHandler(undefined);
   }, []);
@@ -47,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const isAuthenticated = user !== null;
+  const isAuthenticated = user !== null && Boolean(getAccessToken());
 
   const value = useMemo<AuthContextValue>(
     () => ({

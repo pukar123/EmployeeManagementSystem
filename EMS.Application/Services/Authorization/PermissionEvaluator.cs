@@ -6,6 +6,13 @@ namespace EMS.Application.Services.Authorization;
 
 public sealed class PermissionEvaluator : IPermissionEvaluator
 {
+    private static readonly IReadOnlyDictionary<string, string[]> RoleKeyAliases = new Dictionary<string, string[]>(
+        StringComparer.Ordinal)
+    {
+        ["ADMIN"] = ["ADMINISTRATOR"],
+        ["ADMINISTRATOR"] = ["ADMIN"],
+    };
+
     private readonly IBaseRepository<RoleKeyPermission> _roleKeyPermissions;
 
     public PermissionEvaluator(IBaseRepository<RoleKeyPermission> roleKeyPermissions)
@@ -47,10 +54,24 @@ public sealed class PermissionEvaluator : IPermissionEvaluator
 
     private static IReadOnlyList<string> NormalizeRoleKeys(IReadOnlyList<string> roleKeys)
     {
-        return roleKeys
+        var normalized = roleKeys
             .Where(static role => !string.IsNullOrWhiteSpace(role))
             .Select(static role => role.Trim().ToUpperInvariant())
             .Distinct(StringComparer.Ordinal)
             .ToList();
+
+        var expanded = new HashSet<string>(normalized, StringComparer.Ordinal);
+        foreach (var roleKey in normalized)
+        {
+            if (RoleKeyAliases.TryGetValue(roleKey, out var aliases))
+            {
+                foreach (var alias in aliases)
+                {
+                    expanded.Add(alias);
+                }
+            }
+        }
+
+        return expanded.ToList();
     }
 }

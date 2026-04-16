@@ -26,7 +26,8 @@ public sealed class HttpContextIdentityContext : IIdentityContext
 
         int? userId = int.TryParse(sub, out var parsed) ? parsed : null;
 
-        var roleKeys = user.FindAll(RolesClaimType)
+        var roleKeys = user.Claims
+            .Where(static c => c.Type == RolesClaimType || c.Type == ClaimTypes.Role)
             .Select(static c => c.Value)
             .Where(static role => !string.IsNullOrWhiteSpace(role))
             .Select(static role => role.Trim().ToUpperInvariant())

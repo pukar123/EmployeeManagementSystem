@@ -3,6 +3,7 @@ using EMS.Application.Services.Authorization;
 using EMS.Domain.DbModels;
 using EMS.Domain.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace EMS.Application.Services.Navigation;
 
@@ -12,17 +13,20 @@ public sealed class NavigationService : INavigationService
     private readonly IPermissionEvaluator _permissionEvaluator;
     private readonly IAuthorizationTelemetry _telemetry;
     private readonly IBaseRepository<Menu> _menus;
+    private readonly ILogger<NavigationService> _logger;
 
     public NavigationService(
         IIdentityContext identityContext,
         IPermissionEvaluator permissionEvaluator,
         IAuthorizationTelemetry telemetry,
-        IBaseRepository<Menu> menus)
+        IBaseRepository<Menu> menus,
+        ILogger<NavigationService> logger)
     {
         _identityContext = identityContext;
         _permissionEvaluator = permissionEvaluator;
         _telemetry = telemetry;
         _menus = menus;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<MenuResponseModel>> GetMenusForUserAsync(int userId, CancellationToken cancellationToken = default)
@@ -40,7 +44,22 @@ public sealed class NavigationService : INavigationService
         CancellationToken cancellationToken)
     {
         var roleKeys = _identityContext.GetCurrent().RoleKeys;
+        if (roleKeys.Count == 0)
+        {
+            _logger.LogWarning(
+                "No role keys resolved for user {UserId}; returning empty navigation permissions.",
+                userId);
+        }
+
         var roleKeyMenuIds = await _permissionEvaluator.GetAllowedMenuIdsAsync(roleKeys, cancellationToken);
+        if (roleKeyMenuIds.Count == 0)
+        {
+            _logger.LogWarning(
+                "No allowed menu ids resolved for user {UserId}. RoleKeys={RoleKeys}",
+                userId,
+                string.Join(",", roleKeys));
+        }
+
         _telemetry.RecordRoleKeyPathUsed(roleKeys.Count, roleKeyMenuIds.Count);
         return roleKeyMenuIds;
     }
