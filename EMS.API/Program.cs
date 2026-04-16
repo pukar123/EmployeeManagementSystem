@@ -14,6 +14,7 @@ using EMS.Application.Services.Menus;
 using EMS.Application.Services.Navigation;
 using EMS.Application.Services.Organizations;
 using EMS.Application.Services.Sites;
+using EMS.Application.Services.Tasks;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
 using EMS.Infrastructure.Repositories.Implementations;
@@ -108,6 +109,7 @@ try
     builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
     builder.Services.AddScoped<IAttendanceBreakRepository, AttendanceBreakRepository>();
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+    builder.Services.AddScoped<ITaskService, TaskService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
 

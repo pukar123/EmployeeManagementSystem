@@ -33,6 +33,7 @@ public sealed class EmsRbacSeedHostedService : IHostedService
                 new MenuSeedRow("employees", "Employees", "/employees", null, 10, "users"),
                 new MenuSeedRow("departments", "Departments", "/departments", null, 20, "building2"),
                 new MenuSeedRow("attendance", "Attendance", "/attendance", null, 30, "clock3"),
+                new MenuSeedRow("tasks", "Tasks", "/tasks", null, 35, "list-todo"),
                 new MenuSeedRow("positions", "Positions", "/positions", null, 40, "briefcase"),
                 new MenuSeedRow("sites", "Sites", "/sites", null, 50, "mappin"),
                 new MenuSeedRow("organization", "Organization", "/organization/setup", null, 60, "settings"),
