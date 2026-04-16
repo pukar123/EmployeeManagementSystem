@@ -98,7 +98,7 @@ function toApiPayload(values: EmployeeFormValues): CreateEmployeeRequest {
 type EmployeeFormProps = {
   mode: "create" | "edit";
   employee: Employee | null;
-  onSuccess: () => void;
+  onSuccess: (employee: Employee, mode: "create" | "edit") => void;
   onCancel: () => void;
 };
 
@@ -181,10 +181,10 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
 
     if (mode === "create") {
       createMutation.mutate(payload as CreateEmployeeRequest, {
-        onSuccess: () => {
+        onSuccess: (createdEmployee) => {
           toast.success("Employee created");
           closeForm();
-          onSuccess();
+          onSuccess(createdEmployee, "create");
         },
         onError: (e) => toast.error(getErrorMessage(e)),
       });
@@ -192,10 +192,10 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
       updateMutation.mutate(
         { id: employee.id, data: payload },
         {
-          onSuccess: () => {
+          onSuccess: (updatedEmployee) => {
             toast.success("Employee updated");
             closeForm();
-            onSuccess();
+            onSuccess(updatedEmployee, "edit");
           },
           onError: (e) => toast.error(getErrorMessage(e)),
         },

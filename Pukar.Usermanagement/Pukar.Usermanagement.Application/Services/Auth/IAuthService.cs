@@ -11,4 +11,6 @@ public interface IAuthService
     Task<AuthResponseModel> RefreshAsync(RefreshTokenRequestModel request, string? clientInfo, CancellationToken cancellationToken = default);
 
     Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+
+    Task ChangePasswordAsync(int userId, ChangePasswordRequestModel request, CancellationToken cancellationToken = default);
 }

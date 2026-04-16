@@ -11,4 +11,6 @@ public class AuthResponseModel
     public string TokenType { get; set; } = "Bearer";
 
     public UserResponseModel User { get; set; } = null!;
+
+    public bool MustChangePassword { get; set; }
 }

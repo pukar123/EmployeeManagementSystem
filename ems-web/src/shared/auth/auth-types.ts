@@ -10,4 +10,5 @@ export type AuthResponse = {
   accessTokenExpiresAtUtc: string;
   tokenType: string;
   user: AuthUser;
+  mustChangePassword: boolean;
 };

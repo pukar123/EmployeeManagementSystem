@@ -52,6 +52,27 @@ public sealed class UserAdminService : IUserAdminService
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<UserSummaryResponseModel?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return null;
+
+        var normalized = EmailNormalizer.Normalize(email);
+        return await _users.GetQueryable()
+            .AsNoTracking()
+            .Where(u => u.NormalizedEmail == normalized)
+            .Select(u => new UserSummaryResponseModel
+            {
+                Id = u.Id,
+                Email = u.Email,
+                UserName = u.UserName,
+                IsActive = u.IsActive,
+                CreatedAtUtc = u.CreatedAtUtc,
+                LastLoginAtUtc = u.LastLoginAtUtc,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<UserSummaryResponseModel> CreateAsync(CreateUserRequestModel request, CancellationToken cancellationToken = default)
     {
         var email = StringHelper.NormalizeRequired(request.Email);
@@ -70,6 +91,7 @@ public sealed class UserAdminService : IUserAdminService
             PasswordHash = _passwordHasher.HashPassword(request.Password),
             UserName = StringHelper.NormalizeOptional(request.UserName),
             IsActive = request.IsActive,
+            MustChangePassword = request.MustChangePassword,
             CreatedAtUtc = utcNow,
         };
 
@@ -131,6 +153,7 @@ public sealed class UserAdminService : IUserAdminService
             return false;
 
         entity.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+        entity.MustChangePassword = request.RequirePasswordChange;
         _users.Update(entity);
         await _users.SaveChangesAsync(cancellationToken);
         return true;

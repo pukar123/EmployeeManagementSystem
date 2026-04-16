@@ -39,3 +39,16 @@ export type CreateEmployeeRequest = {
 
 
 export type UpdateEmployeeRequest = CreateEmployeeRequest;
+
+export type ProvisionEmployeeUserResponse = {
+  employeeName: string;
+  employeeNumber: string;
+  email: string;
+  temporaryPassword: string | null;
+  isNewUser: boolean;
+  assignedRoleIds: number[];
+};
+
+export type AssignEmployeeUserRolesRequest = {
+  roleIds: number[];
+};

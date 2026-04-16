@@ -8,6 +8,8 @@ public interface IUserAdminService
 
     Task<UserSummaryResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
 
+    Task<UserSummaryResponseModel?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+
     Task<UserSummaryResponseModel> CreateAsync(CreateUserRequestModel request, CancellationToken cancellationToken = default);
 
     Task<UserSummaryResponseModel?> UpdateAsync(int id, UpdateUserRequestModel request, CancellationToken cancellationToken = default);

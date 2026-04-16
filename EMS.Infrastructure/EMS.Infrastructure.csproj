@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EMS.Application\EMS.Application.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Application\Pukar.Usermanagement.Application.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

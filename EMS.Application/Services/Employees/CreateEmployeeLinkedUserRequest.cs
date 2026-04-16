@@ -1,6 +1,6 @@
-namespace Pukar.Usermanagement.Application.DTOs.Users;
+namespace EMS.Application.Services.Employees;
 
-public sealed class CreateUserRequestModel
+public sealed class CreateEmployeeLinkedUserRequest
 {
     public string Email { get; set; } = string.Empty;
 
@@ -10,5 +10,5 @@ public sealed class CreateUserRequestModel
 
     public bool IsActive { get; set; } = true;
 
-    public bool MustChangePassword { get; set; }
+    public bool MustChangePassword { get; set; } = true;
 }

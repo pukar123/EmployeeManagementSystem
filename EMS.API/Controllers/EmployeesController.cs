@@ -12,11 +12,16 @@ namespace EMS.API.Controllers;
 public class EmployeesController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
+    private readonly IEmployeeIdentityProvisioningService _employeeIdentityProvisioningService;
     private readonly IEmployeeSiteService _employeeSiteService;
 
-    public EmployeesController(IEmployeeService employeeService, IEmployeeSiteService employeeSiteService)
+    public EmployeesController(
+        IEmployeeService employeeService,
+        IEmployeeIdentityProvisioningService employeeIdentityProvisioningService,
+        IEmployeeSiteService employeeSiteService)
     {
         _employeeService = employeeService;
+        _employeeIdentityProvisioningService = employeeIdentityProvisioningService;
         _employeeSiteService = employeeSiteService;
     }
 
@@ -55,6 +60,39 @@ public class EmployeesController : ControllerBase
         {
             var created = await _employeeService.CreateAsync(request, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return Conflict(ex.Message);
+        }
+    }
+
+    [HttpPost("{id:int}/provision-user")]
+    public async Task<ActionResult<ProvisionEmployeeUserResponseModel>> ProvisionUser(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _employeeIdentityProvisioningService.ProvisionAsync(id, cancellationToken);
+            return Ok(response);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return Conflict(ex.Message);
+        }
+    }
+
+    [HttpPut("{id:int}/linked-user/roles")]
+    public async Task<IActionResult> AssignLinkedUserRoles(
+        int id,
+        [FromBody] AssignEmployeeUserRolesRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeIdentityProvisioningService.AssignRolesAsync(id, request, cancellationToken);
+            return NoContent();
         }
         catch (BusinessRuleException ex)
         {

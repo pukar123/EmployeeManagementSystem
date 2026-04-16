@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -91,10 +93,40 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return BadRequest(new { message = "Current user could not be resolved." });
+
+        try
+        {
+            await _auth.ChangePasswordAsync(userId.Value, request, cancellationToken);
+            return NoContent();
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     private string? ClientInfo()
     {
         if (Request.Headers.TryGetValue("User-Agent", out var ua) && !string.IsNullOrEmpty(ua))
             return ua.ToString();
         return null;
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                  ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(sub, out var id) ? id : null;
     }
 }

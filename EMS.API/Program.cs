@@ -99,6 +99,8 @@ try
     builder.Services.AddScoped<INavigationService, NavigationService>();
     builder.Services.AddScoped<IMenuService, MenuService>();
     builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+    builder.Services.AddScoped<IEmployeeUserManagementGateway, EmployeeUserManagementGateway>();
+    builder.Services.AddScoped<IEmployeeIdentityProvisioningService, EmployeeIdentityProvisioningService>();
     builder.Services.AddScoped<IOrganizationService, OrganizationService>();
     builder.Services.AddScoped<IDepartmentService, DepartmentService>();
     builder.Services.AddScoped<ILocationService, LocationService>();

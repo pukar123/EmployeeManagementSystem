@@ -3,3 +3,5 @@ export { useEmployee } from "./useEmployee";
 export { useCreateEmployee } from "./useCreateEmployee";
 export { useUpdateEmployee } from "./useUpdateEmployee";
 export { useDeleteEmployee } from "./useDeleteEmployee";
+export { useProvisionEmployeeUser } from "./useProvisionEmployeeUser";
+export { useAssignEmployeeUserRoles } from "./useAssignEmployeeUserRoles";

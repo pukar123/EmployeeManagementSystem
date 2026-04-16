@@ -16,6 +16,8 @@ public class User
 
     public bool IsActive { get; set; } = true;
 
+    public bool MustChangePassword { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime? LastLoginAtUtc { get; set; }

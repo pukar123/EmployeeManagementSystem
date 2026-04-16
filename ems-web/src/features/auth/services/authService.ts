@@ -5,6 +5,7 @@ import { clearAuth, getRefreshToken, saveAuthResponse } from "@/shared/auth/auth
 
 const LOGIN_PATH = "/api/auth/login";
 const REVOKE_PATH = "/api/auth/revoke";
+const CHANGE_PASSWORD_PATH = "/api/auth/change-password";
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthResponse> {
@@ -26,5 +27,9 @@ export const authService = {
       }
     }
     clearAuth();
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await httpClient.post(CHANGE_PASSWORD_PATH, { currentPassword, newPassword });
   },
 };

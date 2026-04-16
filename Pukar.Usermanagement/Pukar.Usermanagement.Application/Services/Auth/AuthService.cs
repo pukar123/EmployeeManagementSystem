@@ -55,6 +55,7 @@ public sealed class AuthService : IAuthService
             PasswordHash = _passwordHasher.HashPassword(request.Password),
             UserName = string.IsNullOrWhiteSpace(request.UserName) ? null : request.UserName.Trim(),
             IsActive = true,
+            MustChangePassword = false,
             CreatedAtUtc = utcNow,
         };
 
@@ -129,6 +130,27 @@ public sealed class AuthService : IAuthService
         await _refreshTokens.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task ChangePasswordAsync(
+        int userId,
+        ChangePasswordRequestModel request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+            throw new BusinessRuleException("Current and new passwords are required.");
+
+        var user = await _users.GetByIdAsync(userId, cancellationToken);
+        if (user is null || !user.IsActive)
+            throw new BusinessRuleException("User was not found.");
+
+        if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+            throw new BusinessRuleException("Current password is incorrect.");
+
+        user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+        user.MustChangePassword = false;
+        _users.Update(user);
+        await _users.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task<AuthResponseModel> IssueTokensAsync(
         User user,
         string? clientInfo,
@@ -159,6 +181,7 @@ public sealed class AuthService : IAuthService
             RefreshToken = plainRefresh,
             AccessTokenExpiresAtUtc = accessExpires,
             TokenType = "Bearer",
+            MustChangePassword = user.MustChangePassword,
             User = new UserResponseModel
             {
                 Id = user.Id,
