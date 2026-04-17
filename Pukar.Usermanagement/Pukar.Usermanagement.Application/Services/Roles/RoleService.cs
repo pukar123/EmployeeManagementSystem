@@ -113,6 +113,7 @@ public sealed class RoleService : IRoleService
         {
             Id = r.Id,
             Name = r.Name,
+            NormalizedName = r.NormalizedName,
             Description = r.Description,
             IsSystem = r.IsSystem,
         };

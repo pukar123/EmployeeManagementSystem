@@ -17,6 +17,7 @@ using EMS.Application.Services.Sites;
 using EMS.Application.Services.Tasks;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
+using Pukar.Usermanagement.Domain.Database;
 using EMS.Infrastructure.Repositories.Implementations;
 using EMS.Infrastructure.Integrations.UserManagement;
 using Microsoft.AspNetCore.Authorization;
@@ -85,6 +86,7 @@ try
     builder.Services.AddScoped<IAuthorizationCutoverReadinessReporter, AuthorizationCutoverReadinessReporter>();
     builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
+    builder.Services.AddScoped<IRoleKeyPermissionService, RoleKeyPermissionService>();
     builder.Services.AddHttpClient<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>((sp, client) =>
     {
         var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<UserManagementApiOptions>>().Value;
@@ -138,6 +140,16 @@ try
 
     if (app.Environment.IsDevelopment())
     {
+        using (var scope = app.Services.CreateScope())
+        {
+            var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var userManagementDb = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
+            appDb.Database.Migrate();
+            userManagementDb.Database.Migrate();
+        }
+
+        Log.Information("Applied pending EF Core migrations for AppDbContext and UserManagementDbContext (Development).");
+
         app.MapOpenApi().AllowAnonymous();
     }
 

@@ -39,6 +39,7 @@ public sealed class UserRoleService : IUserRoleService
             {
                 Id = r.Id,
                 Name = r.Name,
+                NormalizedName = r.NormalizedName,
                 Description = r.Description,
                 IsSystem = r.IsSystem,
             })
