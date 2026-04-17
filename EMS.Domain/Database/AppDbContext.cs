@@ -27,6 +27,11 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.AttendanceBreak> AttendanceBreaks { get; set; }
         public DbSet<DbModels.AttendancePolicy> AttendancePolicies { get; set; }
         public DbSet<DbModels.TaskItem> TaskItems { get; set; }
+        public DbSet<DbModels.AuditTrailEntry> AuditTrailEntries { get; set; }
+        public DbSet<DbModels.EmployeePositionHistory> EmployeePositionHistories { get; set; }
+        public DbSet<DbModels.EmployeeDepartmentHistory> EmployeeDepartmentHistories { get; set; }
+        public DbSet<DbModels.EmployeeManagerHistory> EmployeeManagerHistories { get; set; }
+        public DbSet<DbModels.EmployeeRetentionPolicy> EmployeeRetentionPolicies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

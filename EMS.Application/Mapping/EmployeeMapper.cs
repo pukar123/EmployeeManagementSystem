@@ -63,6 +63,10 @@ internal static class EmployeeMapper
             DateJoined = entity.DateJoined,
             EmploymentStatus = entity.EmploymentStatus,
             IsActive = entity.IsActive,
+            IsArchived = entity.IsArchived,
+            ArchivedAtUtc = entity.ArchivedAtUtc,
+            RetentionUntilUtc = entity.RetentionUntilUtc,
+            ArchiveReason = entity.ArchiveReason,
             CreatedAtUtc = entity.CreatedAtUtc,
             UpdatedAtUtc = entity.UpdatedAtUtc
         };

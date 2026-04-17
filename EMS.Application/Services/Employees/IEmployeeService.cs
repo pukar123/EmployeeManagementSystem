@@ -9,4 +9,5 @@ public interface IEmployeeService
     Task<IReadOnlyList<EmployeeResponseModel>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<EmployeeResponseModel?> UpdateAsync(int id, UpdateEmployeeRequestModel request, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+    Task<EmployeeHistoryResponseModel?> GetHistoryAsync(int employeeId, CancellationToken cancellationToken = default);
 }

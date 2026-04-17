@@ -120,7 +120,7 @@ public class EmployeesController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var deleted = await _employeeService.DeleteAsync(id, cancellationToken);
-        return deleted ? NoContent() : NotFound();
+        var archived = await _employeeService.DeleteAsync(id, cancellationToken);
+        return archived ? NoContent() : NotFound();
     }
 }

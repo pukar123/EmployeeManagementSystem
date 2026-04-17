@@ -30,6 +30,7 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         builder.Property(x => x.PhoneNumber).HasMaxLength(32);
         builder.Property(x => x.ExternalIdentityKey).HasMaxLength(450);
+        builder.Property(x => x.ArchiveReason).HasMaxLength(1024);
 
         builder.Property(x => x.EmploymentStatus)
             .HasConversion<int>();
@@ -71,5 +72,7 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.HasIndex(x => x.LocationId);
         builder.HasIndex(x => x.ManagerId);
         builder.HasIndex(x => x.JobPositionId);
+        builder.HasIndex(x => x.IsArchived);
+        builder.HasIndex(x => x.RetentionUntilUtc);
     }
 }

@@ -20,6 +20,7 @@ using EMS.Domain.Repositories.Interface;
 using Pukar.Usermanagement.Domain.Database;
 using EMS.Infrastructure.Repositories.Implementations;
 using EMS.Infrastructure.Integrations.UserManagement;
+using EMS.Infrastructure.Persistence.Auditing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -85,6 +86,7 @@ try
     builder.Services.AddSingleton<IAuthorizationTelemetryReporter>(sp => sp.GetRequiredService<AuthorizationTelemetry>());
     builder.Services.AddScoped<IAuthorizationCutoverReadinessReporter, AuthorizationCutoverReadinessReporter>();
     builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
+    builder.Services.AddScoped<IAuditContextAccessor, HttpContextAuditContextAccessor>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
     builder.Services.AddScoped<IRoleKeyPermissionService, RoleKeyPermissionService>();
     builder.Services.AddHttpClient<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>((sp, client) =>
@@ -116,11 +118,14 @@ try
     builder.Services.AddScoped<ITaskService, TaskService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
+    builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(
-            builder.Configuration.GetConnectionString("DefaultConnection"),
-            sql => sql.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name!)));
+    builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+        options
+            .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>())
+            .UseSqlServer(
+                builder.Configuration.GetConnectionString("DefaultConnection"),
+                sql => sql.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name!)));
 
     var mongoLogsCs = builder.Configuration.GetConnectionString("MongoLogs");
     var healthChecks = builder.Services.AddHealthChecks()

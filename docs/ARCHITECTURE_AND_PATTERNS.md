@@ -202,6 +202,23 @@ Standalone clone: build **`Pukar.Usermanagement.sln`** (includes `Pukar.Shared`)
 - If first name cannot produce a valid segment, fallback format is `EMP{EmployeeNumber}@123`.
 - Newly provisioned users still have `MustChangePassword = true`.
 
+### Historical tracking and retention
+
+- Historical tracking now follows a cross-cutting architecture:
+  - automatic audit rows are captured through EF save interception (no per-controller/per-endpoint manual audit code)
+  - effective-dated employee history is persisted for position, department, and manager changes
+  - employee delete requests are retention-safe archives (soft delete), not hard deletes
+- New domain artifacts for this pattern live in `EMS.Domain`:
+  - `AuditTrailEntry`
+  - `EmployeePositionHistory`
+  - `EmployeeDepartmentHistory`
+  - `EmployeeManagerHistory`
+  - `EmployeeRetentionPolicy`
+- Application services remain the orchestration layer:
+  - `EmployeeService` detects transition deltas and writes history events
+  - retention deadline is derived from `EmployeeRetentionPolicy` and stored on employee archive metadata
+- API read access for timelines is exposed separately via `EmployeeHistoryController`.
+
 ---
 
 *Keep this file updated when you add new cross-cutting patterns (validation, CQRS, MediatR, etc.) so future projects stay consistent.*

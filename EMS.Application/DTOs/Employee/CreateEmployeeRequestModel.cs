@@ -17,4 +17,13 @@ public class CreateEmployeeRequestModel
     public DateTime DateOfBirth { get; set; }
     public DateTime DateJoined { get; set; }
     public EmploymentStatus EmploymentStatus { get; set; } = EmploymentStatus.Active;
+
+    public DateTime? PositionEffectiveFromUtc { get; set; }
+    public string? PositionChangeReason { get; set; }
+
+    public DateTime? DepartmentEffectiveFromUtc { get; set; }
+    public string? DepartmentChangeReason { get; set; }
+
+    public DateTime? ManagerEffectiveFromUtc { get; set; }
+    public string? ManagerChangeReason { get; set; }
 }

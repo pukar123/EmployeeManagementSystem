@@ -56,3 +56,21 @@ Registrations live in `EMS.API/Program.cs`: open-generic `IBaseRepository<>` →
 - **Permission UX:** menu permissions are now managed as a collapsible tree under user management with tri-state selection and per-branch bulk actions.
 - **RBAC seed hardening:** startup seed logic now checks logical parent+route matches in addition to key checks to avoid duplicate logical menu rows.
 - **Employee provisioning password rule:** initial linked-user password is generated as `FirstName@123` with fallback `EMP{EmployeeNumber}@123`; forced password change remains enabled for new users.
+- **Historical tracking:** employee changes now write effective-dated history rows for position, department, and manager transitions.
+- **Automatic audit trail:** persistence-level save interception records who changed what and when for tracked entity changes.
+- **Retention-safe employee deletion:** employee delete API behavior archives records (`IsArchived`) and computes `RetentionUntilUtc` from policy instead of hard delete.
+
+## Historical tracking flow
+
+```mermaid
+flowchart TD
+  employeeApi[EmployeesController] --> employeeService[EmployeeService]
+  employeeService --> transitionDetect[DetectPositionDepartmentManagerDelta]
+  transitionDetect --> historyWrite[WriteEmployeeHistoryRows]
+  employeeService --> employeeWrite[UpdateEmployeeRow]
+  employeeWrite --> repoSave[BaseRepositorySaveChanges]
+  repoSave --> auditInterceptor[AuditSaveChangesInterceptor]
+  auditInterceptor --> auditTable[AuditTrailEntries]
+  historyWrite --> historyTables[EmployeePositionDepartmentManagerHistories]
+  employeeService --> retentionApply[ApplyRetentionPolicyOnArchiveOrTermination]
+```

@@ -20,6 +20,10 @@ public class Employee
     public DateTime DateJoined { get; set; }
     public EmploymentStatus EmploymentStatus { get; set; } = EmploymentStatus.Active;
     public bool IsActive { get; set; } = true;
+    public bool IsArchived { get; set; }
+    public DateTime? ArchivedAtUtc { get; set; }
+    public DateTime? RetentionUntilUtc { get; set; }
+    public string? ArchiveReason { get; set; }
     public string? ExternalIdentityKey { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
