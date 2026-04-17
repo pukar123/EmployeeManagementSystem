@@ -40,7 +40,7 @@ public sealed class EmsRbacSeedHostedService : IHostedService
                 new MenuSeedRow("user-management", "User management", "/user-management", null, 70, "shield"),
                 new MenuSeedRow("user-management.users", "Users", "/user-management/users", "user-management", 10, "users"),
                 new MenuSeedRow("user-management.roles", "Roles", "/user-management/roles", "user-management", 20, "shield"),
-                new MenuSeedRow("user-management.menu-access", "Menu access", "/user-management/menu-access", "user-management", 30, "menu"),
+                new MenuSeedRow("user-management.menu-access", "Menu access", "/user-management/menu-access", "user-management", 30, "layout-list"),
             };
 
             var keyToId = new Dictionary<string, int>(StringComparer.Ordinal);

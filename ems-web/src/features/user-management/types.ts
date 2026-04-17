@@ -10,6 +10,8 @@ export type UserSummaryDto = {
 export type RoleDto = {
   id: number;
   name: string;
+  /** Upper-invariant key (e.g. ADMIN); matches EMS RoleKeyPermissions.RoleKey. */
+  normalizedName: string;
   description: string | null;
   isSystem: boolean;
 };

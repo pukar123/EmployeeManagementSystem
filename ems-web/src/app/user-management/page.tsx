@@ -3,6 +3,11 @@ import Link from "next/link";
 const links = [
   { href: "/user-management/users", title: "Users", description: "Directory and role assignment." },
   { href: "/user-management/roles", title: "Roles", description: "Create and manage application roles." },
+  {
+    href: "/user-management/menu-access",
+    title: "Menu access",
+    description: "Choose which menus each role can see in the sidebar.",
+  },
 ] as const;
 
 export default function UserManagementIndexPage() {
