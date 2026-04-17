@@ -10,6 +10,7 @@ type EmployeeTableProps = {
   jobPositionLabelById: Map<number, string>;
   /** Per employee, shows immediate manager's position code; top-level falls back to own position code. */
   immediateManagerPositionByEmployeeId: Map<number, string>;
+  onViewHistory: (e: Employee) => void;
   onEdit: (e: Employee) => void;
   onDelete: (e: Employee) => void;
 };
@@ -26,6 +27,7 @@ export function EmployeeTable({
   employees,
   jobPositionLabelById,
   immediateManagerPositionByEmployeeId,
+  onViewHistory,
   onEdit,
   onDelete,
 }: EmployeeTableProps) {
@@ -68,6 +70,9 @@ export function EmployeeTable({
               </td>
               <td className="whitespace-nowrap px-4 py-3">
                 <div className="flex gap-2">
+                  <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onViewHistory(row)}>
+                    History
+                  </Button>
                   <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onEdit(row)}>
                     Edit
                   </Button>

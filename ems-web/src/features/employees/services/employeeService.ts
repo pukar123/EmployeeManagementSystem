@@ -2,12 +2,14 @@ import { httpClient } from "@/shared/api/http-client";
 import type {
   AssignEmployeeUserRolesRequest,
   CreateEmployeeRequest,
+  EmployeeHistoryResponse,
   Employee,
   ProvisionEmployeeUserResponse,
   UpdateEmployeeRequest,
 } from "../types/employee.types";
 
 const EMPLOYEES_PATH = "/api/Employees";
+const EMPLOYEE_HISTORY_PATH = "/api/EmployeeHistory";
 
 export const employeeService = {
   getEmployees: async (): Promise<Employee[]> => {
@@ -17,6 +19,11 @@ export const employeeService = {
 
   getEmployeeById: async (id: number): Promise<Employee> => {
     const { data } = await httpClient.get<Employee>(`${EMPLOYEES_PATH}/${id}`);
+    return data;
+  },
+
+  getEmployeeHistory: async (employeeId: number): Promise<EmployeeHistoryResponse> => {
+    const { data } = await httpClient.get<EmployeeHistoryResponse>(`${EMPLOYEE_HISTORY_PATH}/${employeeId}`);
     return data;
   },
 

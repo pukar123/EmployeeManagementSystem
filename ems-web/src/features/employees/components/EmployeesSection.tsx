@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useJobPositions } from "@/features/job-positions/hooks";
@@ -11,6 +11,7 @@ import { Modal } from "@/shared/components/Modal";
 import { Spinner } from "@/shared/components/Spinner";
 import { cn } from "@/shared/utils/cn";
 import { EmployeeTable } from "./EmployeeTable";
+import { EmployeeHistoryModal } from "./EmployeeHistoryModal";
 import { EmployeeForm } from "./EmployeeForm";
 import { DeleteEmployeeDialog } from "./DeleteEmployeeDialog";
 import { getErrorMessage } from "@/shared/api/http-client";
@@ -18,6 +19,7 @@ import { fetchRoles } from "@/features/user-management/services/userManagementAp
 import type { RoleDto } from "@/features/user-management/types";
 import { useAssignEmployeeUserRoles, useEmployees, useProvisionEmployeeUser } from "../hooks";
 import { employeeKeys } from "../services/query-keys";
+import { employeeService } from "../services/employeeService";
 import { useEmployeeUiStore } from "../store/employee-ui-store";
 import type { Employee, ProvisionEmployeeUserResponse } from "../types/employee.types";
 
@@ -86,6 +88,12 @@ export function EmployeesSection() {
   const [provisioningResult, setProvisioningResult] = useState<ProvisionEmployeeUserResponse | null>(null);
   const [wizardStep, setWizardStep] = useState<"password" | "roles">("password");
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
+  const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
+  const historyQuery = useQuery({
+    queryKey: ["employees", "history", historyEmployee?.id],
+    queryFn: () => employeeService.getEmployeeHistory(historyEmployee!.id),
+    enabled: historyEmployee != null,
+  });
 
   const filtered = useMemo(() => {
     const list = data ?? [];
@@ -100,13 +108,6 @@ export function EmployeesSection() {
   const refetchList = () => {
     void queryClient.invalidateQueries({ queryKey: employeeKeys.list() });
   };
-
-  useEffect(() => {
-    if (provisioningResult) {
-      setSelectedRoleIds(new Set(provisioningResult.assignedRoleIds));
-      setWizardStep(provisioningResult.temporaryPassword ? "password" : "roles");
-    }
-  }, [provisioningResult]);
 
   const closeProvisioningModal = () => {
     setProvisioningEmployee(null);
@@ -126,6 +127,8 @@ export function EmployeesSection() {
     provisionMutation.mutate(employee.id, {
       onSuccess: (result) => {
         setProvisioningResult(result);
+        setSelectedRoleIds(new Set(result.assignedRoleIds));
+        setWizardStep(result.temporaryPassword ? "password" : "roles");
       },
       onError: (mutationError) => {
         toast.error(getErrorMessage(mutationError));
@@ -208,6 +211,7 @@ export function EmployeesSection() {
           employees={filtered}
           jobPositionLabelById={jobPositionLabelById}
           immediateManagerPositionByEmployeeId={immediateManagerPositionByEmployeeId}
+          onViewHistory={(e) => setHistoryEmployee(e)}
           onEdit={(e) => openEditForm(e)}
           onDelete={(e) => openDeleteDialog(e)}
         />
@@ -335,6 +339,16 @@ export function EmployeesSection() {
         open={isDeleteOpen}
         onClose={closeDeleteDialog}
         onDeleted={refetchList}
+      />
+
+      <EmployeeHistoryModal
+        open={historyEmployee != null}
+        employee={historyEmployee}
+        history={historyQuery.data}
+        isLoading={historyQuery.isLoading || historyQuery.isFetching}
+        isError={historyQuery.isError}
+        errorMessage={historyQuery.isError ? getErrorMessage(historyQuery.error) : null}
+        onClose={() => setHistoryEmployee(null)}
       />
     </div>
   );

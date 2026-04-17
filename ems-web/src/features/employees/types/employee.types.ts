@@ -18,6 +18,10 @@ export type Employee = {
   employmentStatus: EmploymentStatusValue;
   /** Derived from employment lifecycle; true when status is Active. */
   isActive: boolean;
+  isArchived: boolean;
+  archivedAtUtc: string | null;
+  retentionUntilUtc: string | null;
+  archiveReason: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;
 };
@@ -51,4 +55,50 @@ export type ProvisionEmployeeUserResponse = {
 
 export type AssignEmployeeUserRolesRequest = {
   roleIds: number[];
+};
+
+export type EmployeeHistoryResponse = {
+  employeeId: number;
+  positionHistory: PositionHistoryItem[];
+  departmentHistory: DepartmentHistoryItem[];
+  managerHistory: ManagerHistoryItem[];
+};
+
+export type PositionHistoryItem = {
+  id: number;
+  previousJobPositionId: number | null;
+  newJobPositionId: number | null;
+  effectiveFromUtc: string;
+  effectiveToUtc: string | null;
+  reason: string | null;
+  changedByUserId: number | null;
+  changedByUserName: string | null;
+  changedByEmail: string | null;
+  createdAtUtc: string;
+};
+
+export type DepartmentHistoryItem = {
+  id: number;
+  previousDepartmentId: number | null;
+  newDepartmentId: number | null;
+  effectiveFromUtc: string;
+  effectiveToUtc: string | null;
+  reason: string | null;
+  changedByUserId: number | null;
+  changedByUserName: string | null;
+  changedByEmail: string | null;
+  createdAtUtc: string;
+};
+
+export type ManagerHistoryItem = {
+  id: number;
+  previousManagerId: number | null;
+  newManagerId: number | null;
+  effectiveFromUtc: string;
+  effectiveToUtc: string | null;
+  reason: string | null;
+  changedByUserId: number | null;
+  changedByUserName: string | null;
+  changedByEmail: string | null;
+  createdAtUtc: string;
 };
