@@ -1,8 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/Button";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
@@ -18,6 +20,10 @@ function collectDescendantIds(flat: MenuFlatDto[], rootId: number): number[] {
   const direct = flat.filter((m) => m.parentMenuId === rootId).map((m) => m.id);
   const nested = direct.flatMap((id) => collectDescendantIds(flat, id));
   return [...direct, ...nested];
+}
+
+function collectNodeAndDescendantIds(flat: MenuFlatDto[], rootId: number): number[] {
+  return [rootId, ...collectDescendantIds(flat, rootId)];
 }
 
 function collectAncestorIds(flat: MenuFlatDto[], menuId: number): number[] {
@@ -66,62 +72,14 @@ export function MenuAccessSection() {
     enabled: Boolean(roleKey),
   });
 
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    if (!access?.menuIds) {
-      setSelected(new Set());
-      return;
-    }
-    setSelected(new Set(access.menuIds));
-  }, [access?.menuIds, roleKey]);
-
   const flatSorted = useMemo(() => {
     if (!menus?.length) return [];
     return [...menus].sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
   }, [menus]);
 
-  const byId = useMemo(() => new Map(flatSorted.map((m) => [m.id, m])), [flatSorted]);
-
-  const depth = useCallback(
-    (m: MenuFlatDto) => {
-      let d = 0;
-      let cur: MenuFlatDto | undefined = m;
-      while (cur?.parentMenuId != null) {
-        d++;
-        cur = byId.get(cur.parentMenuId);
-      }
-      return d;
-    },
-    [byId],
-  );
-
-  const toggle = useCallback(
-    (menuId: number, checked: boolean) => {
-      if (!menus?.length) return;
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (checked) {
-          next.add(menuId);
-          for (const a of collectAncestorIds(menus, menuId)) {
-            next.add(a);
-          }
-        } else {
-          next.delete(menuId);
-          for (const d of collectDescendantIds(menus, menuId)) {
-            next.delete(d);
-          }
-        }
-        return next;
-      });
-    },
-    [menus],
-  );
-
   const saveMut = useMutation({
-    mutationFn: async () => {
-      if (!roleKey || !menus?.length) return;
-      const menuIds = expandMenuIdsWithParents(menus, selected);
+    mutationFn: async (menuIds: number[]) => {
+      if (!roleKey) return;
       await setRoleMenuAccess(roleKey, menuIds);
     },
     onSuccess: async () => {
@@ -187,50 +145,237 @@ export function MenuAccessSection() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
-            <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
-              <thead className="bg-zinc-50 dark:bg-zinc-900/50">
-                <tr>
-                  <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Allow</th>
-                  <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Menu</th>
-                  <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Route</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
-                {flatSorted.map((m) => {
-                  const d = depth(m);
-                  return (
-                    <tr key={m.id} className="bg-white dark:bg-zinc-950">
-                      <td className="px-4 py-2">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500"
-                          checked={selected.has(m.id)}
-                          onChange={(e) => toggle(m.id, e.target.checked)}
-                        />
-                      </td>
-                      <td className="px-4 py-2 text-zinc-900 dark:text-zinc-100" style={{ paddingLeft: `${1 + d * 1}rem` }}>
-                        {m.label}
-                      </td>
-                      <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{m.routePath}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              onClick={() => saveMut.mutate()}
-              disabled={saveMut.isPending || !roleKey}
-            >
-              {saveMut.isPending ? "Saving…" : "Save"}
-            </Button>
-          </div>
+          <MenuAccessTreeEditor
+            key={`${roleKey}-${(access?.menuIds ?? []).join("-")}`}
+            menus={flatSorted}
+            initialSelectedIds={access?.menuIds ?? []}
+            saving={saveMut.isPending}
+            onSave={(selected) => {
+              if (!roleKey || !menus?.length) return;
+              saveMut.mutate(expandMenuIdsWithParents(menus, selected));
+            }}
+          />
         </>
       )}
     </div>
+  );
+}
+
+function MenuAccessTreeEditor({
+  menus,
+  initialSelectedIds,
+  saving,
+  onSave,
+}: {
+  menus: MenuFlatDto[];
+  initialSelectedIds: number[];
+  saving: boolean;
+  onSave: (selected: ReadonlySet<number>) => void;
+}) {
+  const [selected, setSelected] = useState<Set<number>>(new Set(initialSelectedIds));
+  const roots = useMemo(() => menus.filter((m) => m.parentMenuId == null), [menus]);
+  const childrenByParent = useMemo(() => {
+    const map = new Map<number, MenuFlatDto[]>();
+    for (const menu of menus) {
+      if (menu.parentMenuId == null) continue;
+      const list = map.get(menu.parentMenuId) ?? [];
+      list.push(menu);
+      map.set(menu.parentMenuId, list);
+    }
+    return map;
+  }, [menus]);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set(roots.map((r) => r.id)));
+
+  const toggle = useCallback(
+    (menuId: number, checked: boolean) => {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (checked) {
+          next.add(menuId);
+          for (const a of collectAncestorIds(menus, menuId)) {
+            next.add(a);
+          }
+        } else {
+          next.delete(menuId);
+          for (const d of collectDescendantIds(menus, menuId)) {
+            next.delete(d);
+          }
+        }
+        return next;
+      });
+    },
+    [menus],
+  );
+
+  const toggleBranch = useCallback(
+    (menuId: number, checked: boolean) => {
+      const scope = new Set(collectNodeAndDescendantIds(menus, menuId));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (checked) {
+          for (const id of scope) next.add(id);
+          for (const id of scope) {
+            for (const a of collectAncestorIds(menus, id)) next.add(a);
+          }
+        } else {
+          for (const id of scope) next.delete(id);
+        }
+        return next;
+      });
+    },
+    [menus],
+  );
+
+  const setExpandedForNode = useCallback((menuId: number, open: boolean) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (open) next.add(menuId);
+      else next.delete(menuId);
+      return next;
+    });
+  }, []);
+
+  const getNodeState = useCallback(
+    (menuId: number) => {
+      const ids = collectNodeAndDescendantIds(menus, menuId);
+      const checkedCount = ids.filter((id) => selected.has(id)).length;
+      return {
+        checked: checkedCount === ids.length && ids.length > 0,
+        indeterminate: checkedCount > 0 && checkedCount < ids.length,
+      };
+    },
+    [menus, selected],
+  );
+
+  return (
+    <>
+      <div className="rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-700 dark:bg-zinc-950">
+        {roots.map((root) => (
+          <MenuPermissionNode
+            key={root.id}
+            node={root}
+            level={0}
+            childrenByParent={childrenByParent}
+            expanded={expanded}
+            setExpandedForNode={setExpandedForNode}
+            onToggle={toggle}
+            onToggleBranch={toggleBranch}
+            getNodeState={getNodeState}
+          />
+        ))}
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" onClick={() => onSave(selected)} disabled={saving}>
+          {saving ? "Saving…" : "Save"}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function MenuPermissionNode({
+  node,
+  level,
+  childrenByParent,
+  expanded,
+  setExpandedForNode,
+  onToggle,
+  onToggleBranch,
+  getNodeState,
+}: {
+  node: MenuFlatDto;
+  level: number;
+  childrenByParent: Map<number, MenuFlatDto[]>;
+  expanded: Set<number>;
+  setExpandedForNode: (menuId: number, open: boolean) => void;
+  onToggle: (menuId: number, checked: boolean) => void;
+  onToggleBranch: (menuId: number, checked: boolean) => void;
+  getNodeState: (menuId: number) => { checked: boolean; indeterminate: boolean };
+}) {
+  const children = childrenByParent.get(node.id) ?? [];
+  const hasChildren = children.length > 0;
+  const open = expanded.has(node.id);
+  const state = getNodeState(node.id);
+
+  return (
+    <div className="rounded-md">
+      <div
+        className="flex flex-wrap items-center gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+        style={{ paddingLeft: `${0.5 + level * 1.1}rem` }}
+      >
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={() => setExpandedForNode(node.id, !open)}
+            className="inline-flex h-6 w-6 items-center justify-center rounded hover:bg-zinc-200/70 dark:hover:bg-zinc-800"
+            aria-label={open ? "Collapse branch" : "Expand branch"}
+          >
+            <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+          </button>
+        ) : (
+          <span className="inline-block h-6 w-6" />
+        )}
+        <TriStateCheckbox
+          checked={state.checked}
+          indeterminate={state.indeterminate}
+          onChange={(checked) => onToggle(node.id, checked)}
+        />
+        <span className="min-w-[14rem] flex-1 text-sm text-zinc-900 dark:text-zinc-100">{node.label}</span>
+        <span className="min-w-[12rem] flex-1 text-xs text-zinc-500 dark:text-zinc-400">{node.routePath}</span>
+        {hasChildren ? (
+          <div className="ml-auto flex items-center gap-1">
+            <Button type="button" variant="secondary" className="h-7 px-2 text-xs" onClick={() => onToggleBranch(node.id, true)}>
+              Select all
+            </Button>
+            <Button type="button" variant="secondary" className="h-7 px-2 text-xs" onClick={() => onToggleBranch(node.id, false)}>
+              Clear all
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {hasChildren && open ? (
+        <div className="pb-1">
+          {children.map((child) => (
+            <MenuPermissionNode
+              key={child.id}
+              node={child}
+              level={level + 1}
+              childrenByParent={childrenByParent}
+              expanded={expanded}
+              setExpandedForNode={setExpandedForNode}
+              onToggle={onToggle}
+              onToggleBranch={onToggleBranch}
+              getNodeState={getNodeState}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TriStateCheckbox({
+  checked,
+  indeterminate,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <input
+      ref={(el) => {
+        if (el) {
+          el.indeterminate = indeterminate;
+        }
+      }}
+      type="checkbox"
+      className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      aria-checked={indeterminate ? "mixed" : checked}
+    />
   );
 }

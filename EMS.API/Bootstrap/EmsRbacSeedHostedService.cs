@@ -46,6 +46,23 @@ public sealed class EmsRbacSeedHostedService : IHostedService
             var keyToId = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var row in definitions)
             {
+                int? parentId = null;
+                if (row.ParentKey is not null)
+                {
+                    if (!keyToId.TryGetValue(row.ParentKey, out var pid))
+                    {
+                        var parent = await db.Menus.AsNoTracking().FirstOrDefaultAsync(m => m.Key == row.ParentKey, cancellationToken);
+                        if (parent is not null)
+                        {
+                            pid = parent.Id;
+                            keyToId[row.ParentKey] = pid;
+                        }
+                    }
+
+                    if (keyToId.TryGetValue(row.ParentKey, out var resolvedParentId))
+                        parentId = resolvedParentId;
+                }
+
                 var existing = await db.Menus.AsNoTracking().FirstOrDefaultAsync(m => m.Key == row.Key, cancellationToken);
                 if (existing is not null)
                 {
@@ -53,17 +70,20 @@ public sealed class EmsRbacSeedHostedService : IHostedService
                     continue;
                 }
 
-                int? parentId = null;
-                if (row.ParentKey is not null)
+                var route = row.RoutePath.Trim();
+                if (route.Length > 1)
                 {
-                    if (!keyToId.TryGetValue(row.ParentKey, out var pid))
-                    {
-                        var parent = await db.Menus.AsNoTracking().FirstAsync(m => m.Key == row.ParentKey, cancellationToken);
-                        pid = parent.Id;
-                        keyToId[row.ParentKey] = pid;
-                    }
+                    route = route.TrimEnd('/');
+                }
 
-                    parentId = pid;
+                var existingByRouteAndParent = await db.Menus.AsNoTracking().FirstOrDefaultAsync(
+                    m => m.ParentMenuId == parentId &&
+                         (m.RoutePath == route || m.RoutePath == route + "/"),
+                    cancellationToken);
+                if (existingByRouteAndParent is not null)
+                {
+                    keyToId[row.Key] = existingByRouteAndParent.Id;
+                    continue;
                 }
 
                 var menu = new Menu

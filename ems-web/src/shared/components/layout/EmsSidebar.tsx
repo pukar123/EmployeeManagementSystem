@@ -31,10 +31,38 @@ import { resolveOrganizationLogoUrl } from "@/shared/utils/organization-logo-url
 import { getNavIcon } from "./nav-icon-map";
 import { getEmsNavItems, isNavActive, type EmsNavItem } from "./ems-nav-items";
 
+function normalizePath(path: string): string {
+  return path.trim().replace(/\/+$/, "").toLowerCase() || "/";
+}
+
+function dedupeMenus(menus: MenuDto[]): MenuDto[] {
+  const seen = new Set<string>();
+
+  const walk = (items: MenuDto[], parentId: number | null): MenuDto[] => {
+    return items.reduce<MenuDto[]>((acc, menu) => {
+      const key = `${parentId ?? "root"}|${normalizePath(menu.routePath)}|${menu.label.trim().toLowerCase()}`;
+      if (seen.has(key)) {
+        return acc;
+      }
+
+      seen.add(key);
+      acc.push({
+        ...menu,
+        children: walk(menu.children, menu.id),
+      });
+      return acc;
+    }, []);
+  };
+
+  return walk(menus, null);
+}
+
 function NavFromApi({ menus, pathname }: { menus: MenuDto[]; pathname: string }) {
+  const safeMenus = dedupeMenus(menus);
+
   return (
     <>
-      {menus.map((menu) => (
+      {safeMenus.map((menu) => (
         <NavMenuEntry key={menu.id} menu={menu} pathname={pathname} />
       ))}
     </>

@@ -69,15 +69,16 @@ public sealed class NavigationService : INavigationService
         CancellationToken cancellationToken)
     {
         var allMenus = await _menus.GetQueryable().AsNoTracking().ToListAsync(cancellationToken);
+        var menuById = allMenus.ToDictionary(m => m.Id);
 
         var required = new HashSet<int>(permittedMenuIds);
         foreach (var menuId in permittedMenuIds)
         {
-            var current = allMenus.FirstOrDefault(m => m.Id == menuId);
+            menuById.TryGetValue(menuId, out var current);
             while (current?.ParentMenuId is int parentId)
             {
                 required.Add(parentId);
-                current = allMenus.FirstOrDefault(m => m.Id == parentId);
+                menuById.TryGetValue(parentId, out current);
             }
         }
 
@@ -86,7 +87,31 @@ public sealed class NavigationService : INavigationService
             .ThenBy(static m => m.Label)
             .ToList();
 
-        return BuildTree(filtered, null);
+        var deduped = DeduplicateByEffectiveRoute(filtered);
+        return BuildTree(deduped, null);
+    }
+
+    private static IReadOnlyList<Menu> DeduplicateByEffectiveRoute(IReadOnlyList<Menu> menus)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var deduped = new List<Menu>(menus.Count);
+
+        foreach (var menu in menus)
+        {
+            var route = menu.RoutePath.Trim();
+            if (route.Length > 1)
+            {
+                route = route.TrimEnd('/');
+            }
+
+            var key = $"{menu.ParentMenuId?.ToString() ?? "root"}|{route}|{menu.Label.Trim()}";
+            if (seen.Add(key))
+            {
+                deduped.Add(menu);
+            }
+        }
+
+        return deduped;
     }
 
     private static IReadOnlyList<MenuResponseModel> BuildTree(IReadOnlyList<Menu> flat, int? parentId)
