@@ -181,4 +181,27 @@ Standalone clone: build **`Pukar.Usermanagement.sln`** (includes `Pukar.Shared`)
 
 ---
 
+## 13. Recent implementation notes
+
+### Navigation and menu permissions
+
+- Sidebar navigation now defensively deduplicates effective menu entries before rendering (same parent + normalized route + label) to prevent duplicate items such as `Menu access`.
+- Navigation tree construction in `EMS.Application` includes a backend dedupe safeguard for effective route/parent collisions before serializing menu children.
+- Menu permission management in `ems-web` now uses a collapsible tree (instead of a flat table) with:
+  - parent-child hierarchy by `parentMenuId`
+  - tri-state checkboxes (checked/unchecked/indeterminate)
+  - branch actions: `Select all` and `Clear all`
+
+### Seeding hardening
+
+- EMS RBAC seed logic now checks both menu key and logical parent+route match to reduce duplicate logical rows during repeated startup seeding.
+
+### Employee linked-user temporary password
+
+- Employee linked-user provisioning now generates temporary passwords as `FirstName@123`.
+- If first name cannot produce a valid segment, fallback format is `EMP{EmployeeNumber}@123`.
+- Newly provisioned users still have `MustChangePassword = true`.
+
+---
+
 *Keep this file updated when you add new cross-cutting patterns (validation, CQRS, MediatR, etc.) so future projects stay consistent.*

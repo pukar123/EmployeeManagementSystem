@@ -48,3 +48,11 @@ flowchart TB
 ## Dependency injection
 
 Registrations live in `EMS.API/Program.cs`: open-generic `IBaseRepository<>` → `BaseRepository<>`, plus scoped application services per entity area.
+
+## Recent EMS changes
+
+- **Navigation duplicate guard:** navigation output now includes backend dedupe protection for effective parent+route+label duplicates before tree serialization.
+- **Sidebar safety:** frontend sidebar applies a defensive dedupe pass on navigation payload prior to rendering menu entries.
+- **Permission UX:** menu permissions are now managed as a collapsible tree under user management with tri-state selection and per-branch bulk actions.
+- **RBAC seed hardening:** startup seed logic now checks logical parent+route matches in addition to key checks to avoid duplicate logical menu rows.
+- **Employee provisioning password rule:** initial linked-user password is generated as `FirstName@123` with fallback `EMP{EmployeeNumber}@123`; forced password change remains enabled for new users.

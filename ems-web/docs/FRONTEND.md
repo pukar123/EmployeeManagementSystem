@@ -221,3 +221,22 @@ npm run build
 3. Add **query keys** and **hooks** (`useQuery` / `useMutation`).
 4. Add **components**; wire **pages** under `src/app/`.
 5. Keep **env-specific** URLs in `.env.local` / Compose build args, not hard-coded in components.
+
+---
+
+## 15. Recent UI updates
+
+### Sidebar navigation
+
+- Sidebar rendering now applies a defensive dedupe pass to API menu data before mapping items to UI entries.
+- Dedupe identity is based on effective parent and normalized route/label to prevent duplicate visible items (e.g. duplicate `Menu access`).
+
+### Menu access management
+
+- `User management > Menu access` now uses a tree structure instead of a flat table.
+- Tree behavior includes:
+  - recursive parent-child rendering from `parentMenuId`
+  - branch expand/collapse
+  - tri-state checkbox status for partial selections
+  - branch-level `Select all` / `Clear all`
+- Save flow remains compatible with existing backend API and still includes parent expansion logic before submit.
