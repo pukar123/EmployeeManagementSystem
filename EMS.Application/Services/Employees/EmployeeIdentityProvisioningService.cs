@@ -46,7 +46,7 @@ public sealed class EmployeeIdentityProvisioningService : IEmployeeIdentityProvi
 
         if (existingUser is null)
         {
-            temporaryPassword = GenerateTemporaryPassword(organization, employee);
+            temporaryPassword = GenerateTemporaryPassword(employee);
             existingUser = await _gateway.CreateUserAsync(
                 new CreateEmployeeLinkedUserRequest
                 {
@@ -128,22 +128,18 @@ public sealed class EmployeeIdentityProvisioningService : IEmployeeIdentityProvi
         return $"{employee.FirstName} {employee.LastName}".Trim();
     }
 
-    private static string GenerateTemporaryPassword(Organization organization, Employee employee)
+    private static string GenerateTemporaryPassword(Employee employee)
     {
-        var prefixSource = !string.IsNullOrWhiteSpace(organization.Code)
-            ? organization.Code
-            : !string.IsNullOrWhiteSpace(organization.Name)
-                ? organization.Name
-                : organization.Id.ToString(CultureInfo.InvariantCulture);
+        var firstName = PasswordSegmentCleaner.Replace(employee.FirstName?.Trim() ?? string.Empty, string.Empty);
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
+            var employeeNumber = PasswordSegmentCleaner.Replace(employee.EmployeeNumber.Trim(), string.Empty);
+            if (string.IsNullOrWhiteSpace(employeeNumber))
+                throw new BusinessRuleException("Employee number is required before creating a linked user.");
 
-        var prefix = PasswordSegmentCleaner.Replace(prefixSource.Trim(), string.Empty);
-        if (string.IsNullOrWhiteSpace(prefix))
-            prefix = $"ORG{organization.Id.ToString(CultureInfo.InvariantCulture)}";
+            firstName = $"EMP{employeeNumber}";
+        }
 
-        var employeeNumber = PasswordSegmentCleaner.Replace(employee.EmployeeNumber.Trim(), string.Empty);
-        if (string.IsNullOrWhiteSpace(employeeNumber))
-            throw new BusinessRuleException("Employee number is required before creating a linked user.");
-
-        return $"{prefix}@{employeeNumber}";
+        return $"{firstName}@123";
     }
 }
