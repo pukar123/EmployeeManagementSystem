@@ -39,6 +39,12 @@ export type CreateEmployeeRequest = {
   dateOfBirth: string;
   dateJoined: string;
   employmentStatus: EmploymentStatusValue;
+  positionEffectiveFromUtc?: string | null;
+  positionChangeReason?: string | null;
+  departmentEffectiveFromUtc?: string | null;
+  departmentChangeReason?: string | null;
+  managerEffectiveFromUtc?: string | null;
+  managerChangeReason?: string | null;
 };
 
 

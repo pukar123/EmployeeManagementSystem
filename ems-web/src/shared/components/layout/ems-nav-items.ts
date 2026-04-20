@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ArrowLeftRight,
   Briefcase,
   Building2,
   Clock3,
@@ -27,6 +28,7 @@ export const emsNavItemsSetup: readonly EmsNavItem[] = [
 export const emsNavItemsMain: readonly EmsNavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/employees", label: "Employees", icon: Users },
+  { href: "/employee-transfers", label: "Transfers", icon: ArrowLeftRight },
   { href: "/departments", label: "Departments", icon: Building2 },
   { href: "/attendance", label: "Attendance", icon: Clock3 },
   { href: "/tasks", label: "Tasks", icon: ListTodo },

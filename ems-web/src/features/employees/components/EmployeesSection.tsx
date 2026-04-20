@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useJobPositions } from "@/features/job-positions/hooks";
@@ -176,6 +177,9 @@ export function EmployeesSection() {
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             View and manage your employee records.
           </p>
+          <Link href="/employee-transfers" className="mt-2 inline-block text-sm text-zinc-700 underline underline-offset-4 dark:text-zinc-300">
+            Open transfer workspace
+          </Link>
         </div>
         <Button type="button" onClick={openCreateForm}>
           Add employee
