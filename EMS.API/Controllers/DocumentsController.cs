@@ -61,10 +61,14 @@ public class DocumentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(form.Name))
             return BadRequest(new { message = "Name is required." });
 
+        string? relativePath = null;
         try
         {
             LocalDocumentFileStorage.ValidateContentOrThrow(form.File);
-            var (relativePath, contentType, kind) = await _storage.SaveAsync(form.EmployeeId, form.File, cancellationToken);
+            var savedFile = await _storage.SaveAsync(form.EmployeeId, form.File, cancellationToken);
+            relativePath = savedFile.relativePath;
+            var contentType = savedFile.contentType;
+            var kind = savedFile.kind;
 
             var issue = ParseOptionalDate(form.IssueDate);
             var expiry = ParseOptionalDate(form.ExpiryDate);
@@ -84,10 +88,14 @@ public class DocumentsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            if (!string.IsNullOrWhiteSpace(relativePath))
+                _storage.TryDelete(relativePath);
             return BadRequest(new { message = ex.Message });
         }
         catch (BusinessRuleException ex)
         {
+            if (!string.IsNullOrWhiteSpace(relativePath))
+                _storage.TryDelete(relativePath);
             return BadRequest(new { message = ex.Message });
         }
     }

@@ -130,6 +130,7 @@ public sealed class TasksController : ControllerBase
             return true;
 
         var currentUserId = GetCurrentUserId();
-        return currentUserId.HasValue && task.AssignedByUserId == currentUserId.Value || task.EmployeeId == currentUserId;
+        return currentUserId.HasValue
+            && (task.AssignedByUserId == currentUserId.Value || task.EmployeeId == currentUserId.Value);
     }
 }
