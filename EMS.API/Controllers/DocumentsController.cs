@@ -66,9 +66,9 @@ public class DocumentsController : ControllerBase
         {
             LocalDocumentFileStorage.ValidateContentOrThrow(form.File);
             var savedFile = await _storage.SaveAsync(form.EmployeeId, form.File, cancellationToken);
-            relativePath = savedFile.relativePath;
-            var contentType = savedFile.contentType;
-            var kind = savedFile.kind;
+            relativePath = savedFile.RelativePath;
+            var contentType = savedFile.ContentType;
+            var kind = savedFile.Kind;
 
             var issue = ParseOptionalDate(form.IssueDate);
             var expiry = ParseOptionalDate(form.ExpiryDate);
