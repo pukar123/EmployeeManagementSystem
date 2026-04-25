@@ -14,6 +14,7 @@ public class TaskItem
     public TaskWorkflowStatus Status { get; set; } = TaskWorkflowStatus.Assigned;
     public TaskPriority? Priority { get; set; }
     public DateTime AssignedAtUtc { get; set; }
+    public DateTime? StartAtUtc { get; set; }
     public DateTime? DueAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }

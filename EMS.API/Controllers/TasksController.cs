@@ -25,14 +25,23 @@ public sealed class TasksController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<TaskResponseModel>>> GetAll(
         [FromQuery] int? employeeId,
         [FromQuery] int? assignedByUserId,
+        [FromQuery] DateTime? rangeStartUtc,
+        [FromQuery] DateTime? rangeEndUtc,
         CancellationToken cancellationToken)
     {
         if (!IsAdmin() && employeeId.HasValue && employeeId.Value != GetCurrentUserId())
             return Forbid();
 
         var effectiveEmployeeId = IsAdmin() ? employeeId : GetCurrentUserId();
-        var items = await _taskService.GetAllAsync(effectiveEmployeeId, assignedByUserId, cancellationToken);
-        return Ok(items);
+        try
+        {
+            var items = await _taskService.GetAllAsync(effectiveEmployeeId, assignedByUserId, rangeStartUtc, rangeEndUtc, cancellationToken);
+            return Ok(items);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpGet("{id:int}")]

@@ -11,6 +11,7 @@ export type TaskItem = {
   status: TaskWorkflowStatus;
   priority: TaskPriority | null;
   assignedAtUtc: string;
+  startAtUtc: string | null;
   dueAtUtc: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;
@@ -21,6 +22,7 @@ export type CreateTaskRequest = {
   organizationId?: number | null;
   title: string;
   description?: string | null;
+  startAtUtc?: string | null;
   dueAtUtc?: string | null;
   priority?: TaskPriority | null;
 };
@@ -28,8 +30,16 @@ export type CreateTaskRequest = {
 export type UpdateTaskRequest = {
   title: string;
   description?: string | null;
+  startAtUtc?: string | null;
   dueAtUtc?: string | null;
   priority?: TaskPriority | null;
+};
+
+export type TaskQueryParams = {
+  employeeId?: number | null;
+  assignedByUserId?: number | null;
+  rangeStartUtc?: string | null;
+  rangeEndUtc?: string | null;
 };
 
 export type UpdateTaskStatusRequest = {

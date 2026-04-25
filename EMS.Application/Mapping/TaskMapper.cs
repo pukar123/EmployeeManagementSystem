@@ -13,6 +13,7 @@ internal static class TaskMapper
             OrganizationId = request.OrganizationId,
             Title = request.Title,
             Description = request.Description,
+            StartAtUtc = request.StartAtUtc,
             DueAtUtc = request.DueAtUtc,
             Priority = request.Priority,
         };
@@ -22,6 +23,7 @@ internal static class TaskMapper
     {
         entity.Title = request.Title;
         entity.Description = request.Description;
+        entity.StartAtUtc = request.StartAtUtc;
         entity.DueAtUtc = request.DueAtUtc;
         entity.Priority = request.Priority;
     }
@@ -39,6 +41,7 @@ internal static class TaskMapper
             Status = entity.Status,
             Priority = entity.Priority,
             AssignedAtUtc = entity.AssignedAtUtc,
+            StartAtUtc = entity.StartAtUtc,
             DueAtUtc = entity.DueAtUtc,
             CreatedAtUtc = entity.CreatedAtUtc,
             UpdatedAtUtc = entity.UpdatedAtUtc,

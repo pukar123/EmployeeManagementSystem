@@ -1,12 +1,19 @@
 import { httpClient } from "@/shared/api/http-client";
-import type { CreateTaskRequest, TaskItem, UpdateTaskRequest, UpdateTaskStatusRequest } from "../types/task.types";
+import type { CreateTaskRequest, TaskItem, TaskQueryParams, UpdateTaskRequest, UpdateTaskStatusRequest } from "../types/task.types";
 
 const PATH = "/api/Tasks";
 
 export const taskService = {
-  getAll: async (employeeId?: number | null): Promise<TaskItem[]> => {
+  getAll: async (query: TaskQueryParams = {}): Promise<TaskItem[]> => {
+    const params = {
+      ...(query.employeeId ? { employeeId: query.employeeId } : {}),
+      ...(query.assignedByUserId ? { assignedByUserId: query.assignedByUserId } : {}),
+      ...(query.rangeStartUtc ? { rangeStartUtc: query.rangeStartUtc } : {}),
+      ...(query.rangeEndUtc ? { rangeEndUtc: query.rangeEndUtc } : {}),
+    };
+
     const { data } = await httpClient.get<TaskItem[]>(PATH, {
-      params: employeeId ? { employeeId } : undefined,
+      params: Object.keys(params).length > 0 ? params : undefined,
     });
     return data;
   },

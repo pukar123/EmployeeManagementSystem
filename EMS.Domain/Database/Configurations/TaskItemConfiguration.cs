@@ -47,6 +47,7 @@ public sealed class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
         builder.HasIndex(x => x.EmployeeId);
         builder.HasIndex(x => x.OrganizationId);
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => x.StartAtUtc);
         builder.HasIndex(x => x.DueAtUtc);
     }
 }

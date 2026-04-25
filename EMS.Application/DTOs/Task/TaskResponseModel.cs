@@ -13,6 +13,7 @@ public class TaskResponseModel
     public TaskWorkflowStatus Status { get; set; }
     public TaskPriority? Priority { get; set; }
     public DateTime AssignedAtUtc { get; set; }
+    public DateTime? StartAtUtc { get; set; }
     public DateTime? DueAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }

@@ -27,7 +27,7 @@ public sealed class TaskService : ITaskService
         CancellationToken cancellationToken = default)
     {
         request.Title = StringHelper.NormalizeRequired(request.Title);
-        ValidateDueDate(request.DueAtUtc);
+        ValidateTimeframe(request.StartAtUtc, request.DueAtUtc);
 
         var employee = await _employeeRepository.GetByIdAsync(request.EmployeeId, cancellationToken);
         if (employee is null)
@@ -60,8 +60,12 @@ public sealed class TaskService : ITaskService
     public async Task<IReadOnlyList<TaskResponseModel>> GetAllAsync(
         int? employeeId = null,
         int? assignedByUserId = null,
+        DateTime? rangeStartUtc = null,
+        DateTime? rangeEndUtc = null,
         CancellationToken cancellationToken = default)
     {
+        ValidateDateRange(rangeStartUtc, rangeEndUtc);
+
         var query = _taskRepository.GetQueryable().AsNoTracking();
 
         if (employeeId.HasValue)
@@ -69,6 +73,16 @@ public sealed class TaskService : ITaskService
 
         if (assignedByUserId.HasValue)
             query = query.Where(t => t.AssignedByUserId == assignedByUserId.Value);
+
+        if (rangeStartUtc.HasValue || rangeEndUtc.HasValue)
+        {
+            var effectiveStart = rangeStartUtc ?? DateTime.MinValue;
+            var effectiveEnd = rangeEndUtc ?? DateTime.MaxValue;
+
+            query = query.Where(t =>
+                (t.StartAtUtc.HasValue ? t.StartAtUtc.Value : (t.DueAtUtc ?? t.AssignedAtUtc)) <= effectiveEnd
+                && (t.DueAtUtc ?? t.StartAtUtc ?? t.AssignedAtUtc) >= effectiveStart);
+        }
 
         var list = await query
             .OrderByDescending(t => t.UpdatedAtUtc)
@@ -85,7 +99,7 @@ public sealed class TaskService : ITaskService
             return null;
 
         request.Title = StringHelper.NormalizeRequired(request.Title);
-        ValidateDueDate(request.DueAtUtc);
+        ValidateTimeframe(request.StartAtUtc, request.DueAtUtc);
 
         TaskMapper.ApplyUpdate(entity, request);
         entity.UpdatedAtUtc = DateTime.UtcNow;
@@ -123,10 +137,28 @@ public sealed class TaskService : ITaskService
         return true;
     }
 
-    private static void ValidateDueDate(DateTime? dueAtUtc)
+    private static void ValidateTimeframe(DateTime? startAtUtc, DateTime? dueAtUtc)
     {
-        if (dueAtUtc.HasValue && dueAtUtc.Value.Kind == DateTimeKind.Unspecified)
-            throw new BusinessRuleException("Due date must include a valid UTC-aware timestamp.");
+        ValidateUtcDate(startAtUtc, "Start date must include a valid UTC-aware timestamp.");
+        ValidateUtcDate(dueAtUtc, "Due date must include a valid UTC-aware timestamp.");
+
+        if (startAtUtc.HasValue && dueAtUtc.HasValue && startAtUtc.Value > dueAtUtc.Value)
+            throw new BusinessRuleException("Start date must be before or equal to due date.");
+    }
+
+    private static void ValidateDateRange(DateTime? rangeStartUtc, DateTime? rangeEndUtc)
+    {
+        ValidateUtcDate(rangeStartUtc, "Range start must include a valid UTC-aware timestamp.");
+        ValidateUtcDate(rangeEndUtc, "Range end must include a valid UTC-aware timestamp.");
+
+        if (rangeStartUtc.HasValue && rangeEndUtc.HasValue && rangeStartUtc.Value > rangeEndUtc.Value)
+            throw new BusinessRuleException("Range start must be before or equal to range end.");
+    }
+
+    private static void ValidateUtcDate(DateTime? value, string message)
+    {
+        if (value.HasValue && value.Value.Kind == DateTimeKind.Unspecified)
+            throw new BusinessRuleException(message);
     }
 
     private static void EnsureValidTransition(TaskWorkflowStatus current, TaskWorkflowStatus next)
