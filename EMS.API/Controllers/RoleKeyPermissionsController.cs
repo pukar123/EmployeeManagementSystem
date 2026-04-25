@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
-using Pukar.Usermanagement.Application;
 
 namespace EMS.API.Controllers;
 
@@ -21,7 +20,7 @@ public sealed class RoleKeyPermissionsController : ControllerBase
     }
 
     [HttpGet("{roleKey}")]
-    [Authorize(Roles = WellKnownRoles.Admin)]
+    [Authorize(Policy = "AdminAccess")]
     [ProducesResponseType(typeof(RoleMenuAccessResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<RoleMenuAccessResponseModel>> GetByRoleKey(string roleKey, CancellationToken cancellationToken)
@@ -38,7 +37,7 @@ public sealed class RoleKeyPermissionsController : ControllerBase
     }
 
     [HttpPut("{roleKey}")]
-    [Authorize(Roles = WellKnownRoles.Admin)]
+    [Authorize(Policy = "AdminAccess")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> SetForRoleKey(

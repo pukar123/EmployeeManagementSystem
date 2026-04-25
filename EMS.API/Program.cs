@@ -2,6 +2,7 @@ using EMS.API.Bootstrap;
 using EMS.API.Middleware;
 using EMS.API.Options;
 using EMS.API.Services;
+using System.Security.Claims;
 using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Departments;
 using EMS.Application.Services.Documents;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using Pukar.Usermanagement.API.Extensions;
+using Pukar.Usermanagement.Application;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -78,6 +80,17 @@ try
     builder.Services.AddOpenApi();
 
     builder.Services.AddPukarUserManagementApi(builder.Configuration);
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("AdminAccess", policy =>
+            policy.RequireAssertion(context =>
+                context.User.Claims.Any(c =>
+                    c.Type == ClaimTypes.Role
+                    && string.Equals(c.Value, WellKnownRoles.Admin, StringComparison.OrdinalIgnoreCase))
+                || context.User.Claims.Any(c =>
+                    c.Type == "roles"
+                    && string.Equals(c.Value, WellKnownRoles.AdminNormalizedName, StringComparison.OrdinalIgnoreCase))));
+    });
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));

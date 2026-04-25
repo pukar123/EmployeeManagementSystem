@@ -2,13 +2,12 @@ using EMS.Application.Services.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Pukar.Usermanagement.Application;
 
 namespace EMS.API.Controllers;
 
 [ApiController]
 [Route("api/authorization-cutover")]
-[Authorize(Roles = WellKnownRoles.Admin)]
+[Authorize(Policy = "AdminAccess")]
 public sealed class AuthorizationCutoverController : ControllerBase
 {
     private readonly IAuthorizationCutoverReadinessReporter _readinessReporter;
