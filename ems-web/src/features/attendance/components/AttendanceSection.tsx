@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useEmployees } from "@/features/employees/hooks";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
@@ -113,9 +114,23 @@ export function AttendanceSection() {
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Attendance</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Track check-ins, breaks, and working time.</p>
         </div>
-        <Button type="button" variant="secondary" onClick={() => setManualOpen(true)} disabled={!employeeId}>
-          Add manual entry
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/attendance/reports"
+            className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Reports
+          </Link>
+          <Link
+            href="/attendance/analytics"
+            className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Analytics
+          </Link>
+          <Button type="button" variant="secondary" onClick={() => setManualOpen(true)} disabled={!employeeId}>
+            Add manual entry
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

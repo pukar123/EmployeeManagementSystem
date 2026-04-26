@@ -117,4 +117,84 @@ public class AttendanceController : ControllerBase
         var result = await _attendanceService.GetSummaryAsync(employeeId, fromDate, toDate, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("reports/daily")]
+    public async Task<ActionResult<IReadOnlyList<AttendanceDailySummaryResponseModel>>> GetDailySummaries(
+        [FromQuery] AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _attendanceService.GetDailySummariesAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("reports/period")]
+    public async Task<ActionResult<IReadOnlyList<AttendancePeriodSummaryResponseModel>>> GetPeriodSummaries(
+        [FromQuery] AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _attendanceService.GetPeriodSummariesAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("analytics/punctuality")]
+    public async Task<ActionResult<AttendancePunctualityResponseModel>> GetPunctualityAnalytics(
+        [FromQuery] AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _attendanceService.GetPunctualityAnalyticsAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("analytics/absenteeism")]
+    public async Task<ActionResult<AttendanceAbsenteeismResponseModel>> GetAbsenteeismAnalytics(
+        [FromQuery] AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _attendanceService.GetAbsenteeismAnalyticsAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("reports/export")]
+    public async Task<IActionResult> ExportReport(
+        [FromQuery] AttendanceExportRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var fileData = await _attendanceService.ExportReportAsync(request, cancellationToken);
+            return File(fileData.FileBytes, fileData.ContentType, fileData.FileName);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

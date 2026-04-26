@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Pukar.Usermanagement.API</name>
+    </assembly>
+    <members>
+        <member name="M:Pukar.Usermanagement.API.Extensions.UserManagementApiExtensions.AddPukarUserManagementApi(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration,System.String)">
+            <summary>
+            Registers user management (EF, auth, refresh tokens) and JWT bearer validation. Call after <c>AddControllers()</c> or use <see cref="M:Pukar.Usermanagement.API.Extensions.UserManagementApiExtensions.AddPukarUserManagementControllers(Microsoft.Extensions.DependencyInjection.IMvcBuilder)"/> on the MVC builder.
+            </summary>
+        </member>
+        <member name="M:Pukar.Usermanagement.API.Extensions.UserManagementApiExtensions.AddPukarUserManagementControllers(Microsoft.Extensions.DependencyInjection.IMvcBuilder)">
+            <summary>
+            Registers controllers from this assembly (required when the host references this project as a library).
+            </summary>
+        </member>
+    </members>
+</doc>

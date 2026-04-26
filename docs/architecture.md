@@ -59,6 +59,23 @@ Registrations live in `EMS.API/Program.cs`: open-generic `IBaseRepository<>` →
 - **Historical tracking:** employee changes now write effective-dated history rows for position, department, and manager transitions.
 - **Automatic audit trail:** persistence-level save interception records who changed what and when for tracked entity changes.
 - **Retention-safe employee deletion:** employee delete API behavior archives records (`IsArchived`) and computes `RetentionUntilUtc` from policy instead of hard delete.
+- **Attendance reporting and analytics:** attendance now includes daily summaries, weekly/monthly aggregation, punctuality analytics (late/early), absenteeism analytics, and report export endpoints (CSV/XLSX/PDF).
+
+## Attendance reporting flow
+
+```mermaid
+flowchart LR
+  reportsPage[AttendanceReportsPage] --> reportHooks[AttendanceReportHooks]
+  analyticsPage[AttendanceAnalyticsPage] --> analyticsHooks[AttendanceAnalyticsHooks]
+  reportHooks --> reportService[AttendanceReportingService]
+  analyticsHooks --> reportService
+  reportService --> httpClient[SharedHttpClient]
+  httpClient --> attendanceController[AttendanceController]
+  attendanceController --> attendanceService[AttendanceService]
+  attendanceService --> attendanceRepoIf[IAttendanceRepository]
+  attendanceRepoIf --> attendanceRepo[AttendanceRepository]
+  attendanceRepo --> appDbContext[AppDbContext]
+```
 
 ## Historical tracking flow
 

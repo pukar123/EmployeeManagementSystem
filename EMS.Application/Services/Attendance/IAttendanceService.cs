@@ -19,4 +19,19 @@ public interface IAttendanceService
         DateTime fromDate,
         DateTime toDate,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AttendanceDailySummaryResponseModel>> GetDailySummariesAsync(
+        AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AttendancePeriodSummaryResponseModel>> GetPeriodSummariesAsync(
+        AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken = default);
+    Task<AttendancePunctualityResponseModel> GetPunctualityAnalyticsAsync(
+        AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken = default);
+    Task<AttendanceAbsenteeismResponseModel> GetAbsenteeismAnalyticsAsync(
+        AttendanceReportFilterRequestModel request,
+        CancellationToken cancellationToken = default);
+    Task<AttendanceExportFileResponseModel> ExportReportAsync(
+        AttendanceExportRequestModel request,
+        CancellationToken cancellationToken = default);
 }
