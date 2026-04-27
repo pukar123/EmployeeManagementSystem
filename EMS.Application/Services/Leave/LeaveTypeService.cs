@@ -9,9 +9,9 @@ namespace EMS.Application.Services.Leave;
 
 public sealed class LeaveTypeService : ILeaveTypeService
 {
-    private readonly IBaseRepository<LeaveType> _leaveTypeRepository;
+    private readonly ILeaveTypeRepository _leaveTypeRepository;
 
-    public LeaveTypeService(IBaseRepository<LeaveType> leaveTypeRepository)
+    public LeaveTypeService(ILeaveTypeRepository leaveTypeRepository)
     {
         _leaveTypeRepository = leaveTypeRepository;
     }

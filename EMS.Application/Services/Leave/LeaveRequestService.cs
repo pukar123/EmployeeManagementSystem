@@ -3,22 +3,21 @@ using EMS.Application.Mapping;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
-using Microsoft.EntityFrameworkCore;
 using Pukar.Shared;
 
 namespace EMS.Application.Services.Leave;
 
 public sealed class LeaveRequestService : ILeaveRequestService
 {
-    private readonly IBaseRepository<LeaveRequest> _leaveRequestRepository;
-    private readonly IBaseRepository<LeaveBalance> _leaveBalanceRepository;
-    private readonly IBaseRepository<LeaveType> _leaveTypeRepository;
+    private readonly ILeaveRequestRepository _leaveRequestRepository;
+    private readonly ILeaveBalanceRepository _leaveBalanceRepository;
+    private readonly ILeaveTypeRepository _leaveTypeRepository;
     private readonly IBaseRepository<Employee> _employeeRepository;
 
     public LeaveRequestService(
-        IBaseRepository<LeaveRequest> leaveRequestRepository,
-        IBaseRepository<LeaveBalance> leaveBalanceRepository,
-        IBaseRepository<LeaveType> leaveTypeRepository,
+        ILeaveRequestRepository leaveRequestRepository,
+        ILeaveBalanceRepository leaveBalanceRepository,
+        ILeaveTypeRepository leaveTypeRepository,
         IBaseRepository<Employee> employeeRepository)
     {
         _leaveRequestRepository = leaveRequestRepository;
@@ -31,11 +30,7 @@ public sealed class LeaveRequestService : ILeaveRequestService
         int employeeId,
         CancellationToken cancellationToken = default)
     {
-        var rows = await _leaveRequestRepository.GetQueryable()
-            .AsNoTracking()
-            .Where(x => x.EmployeeId == employeeId)
-            .OrderByDescending(x => x.SubmittedAtUtc)
-            .ToListAsync(cancellationToken);
+        var rows = await _leaveRequestRepository.GetByEmployeeAsync(employeeId, cancellationToken);
 
         return rows.Select(LeaveMapper.ToResponse).ToList();
     }
@@ -142,11 +137,10 @@ public sealed class LeaveRequestService : ILeaveRequestService
         if (employee.OrganizationId != leaveType.OrganizationId)
             throw new BusinessRuleException("Employee and leave type must belong to the same organization.");
 
-        var balance = await _leaveBalanceRepository.GetQueryable()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                x => x.EmployeeId == employeeId && x.LeaveTypeId == leaveTypeId,
-                cancellationToken);
+        var balance = await _leaveBalanceRepository.GetByEmployeeAndTypeAsync(
+            employeeId,
+            leaveTypeId,
+            cancellationToken);
         if (balance is null)
             throw new BusinessRuleException("Leave balance was not found for the selected leave type.");
 

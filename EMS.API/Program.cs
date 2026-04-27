@@ -128,6 +128,10 @@ try
     builder.Services.AddScoped<IEmployeeSiteService, EmployeeSiteService>();
     builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
     builder.Services.AddScoped<IAttendanceBreakRepository, AttendanceBreakRepository>();
+    builder.Services.AddScoped<ILeaveTypeRepository, LeaveTypeRepository>();
+    builder.Services.AddScoped<ILeaveBalanceRepository, LeaveBalanceRepository>();
+    builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
+    builder.Services.AddScoped<ILeaveRequestAttachmentRepository, LeaveRequestAttachmentRepository>();
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
     builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();

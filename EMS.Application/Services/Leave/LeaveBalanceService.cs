@@ -9,9 +9,9 @@ namespace EMS.Application.Services.Leave;
 
 public sealed class LeaveBalanceService : ILeaveBalanceService
 {
-    private readonly IBaseRepository<LeaveBalance> _leaveBalanceRepository;
+    private readonly ILeaveBalanceRepository _leaveBalanceRepository;
 
-    public LeaveBalanceService(IBaseRepository<LeaveBalance> leaveBalanceRepository)
+    public LeaveBalanceService(ILeaveBalanceRepository leaveBalanceRepository)
     {
         _leaveBalanceRepository = leaveBalanceRepository;
     }
@@ -34,10 +34,9 @@ public sealed class LeaveBalanceService : ILeaveBalanceService
         int leaveTypeId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _leaveBalanceRepository.GetQueryable()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                x => x.EmployeeId == employeeId && x.LeaveTypeId == leaveTypeId,
+        var entity = await _leaveBalanceRepository.GetByEmployeeAndTypeAsync(
+                employeeId,
+                leaveTypeId,
                 cancellationToken)
             ?? throw new BusinessRuleException("Leave balance was not found.");
 
