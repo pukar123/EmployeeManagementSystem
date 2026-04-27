@@ -26,6 +26,11 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<DbModels.AttendanceBreak> AttendanceBreaks { get; set; }
         public DbSet<DbModels.AttendancePolicy> AttendancePolicies { get; set; }
+        public DbSet<DbModels.LeaveType> LeaveTypes { get; set; }
+        public DbSet<DbModels.LeavePolicyRule> LeavePolicyRules { get; set; }
+        public DbSet<DbModels.LeaveBalance> LeaveBalances { get; set; }
+        public DbSet<DbModels.LeaveRequest> LeaveRequests { get; set; }
+        public DbSet<DbModels.LeaveRequestAttachment> LeaveRequestAttachments { get; set; }
         public DbSet<DbModels.TaskItem> TaskItems { get; set; }
         public DbSet<DbModels.AuditTrailEntry> AuditTrailEntries { get; set; }
         public DbSet<DbModels.EmployeePositionHistory> EmployeePositionHistories { get; set; }
