@@ -132,13 +132,19 @@ try
     builder.Services.AddScoped<ILeaveBalanceRepository, LeaveBalanceRepository>();
     builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
     builder.Services.AddScoped<ILeaveRequestAttachmentRepository, LeaveRequestAttachmentRepository>();
+    builder.Services.AddScoped<ILeavePolicyRuleRepository, LeavePolicyRuleRepository>();
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
     builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
     builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
+    builder.Services.AddScoped<ILeavePolicyRuleService, LeavePolicyRuleService>();
+    builder.Services.AddScoped<ILeaveAttachmentService, LeaveAttachmentService>();
+    builder.Services.AddScoped<ILeaveAccrualService, LeaveAccrualService>();
+    builder.Services.AddScoped<ILeaveImportService, LeaveImportService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
+    builder.Services.AddScoped<LocalLeaveAttachmentStorage>();
     builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
     builder.Services.AddDbContext<AppDbContext>((sp, options) =>
@@ -197,6 +203,7 @@ try
     var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
     Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Organization"));
     Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Employee"));
+    Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Leave"));
 
     app.UseStaticFiles();
 

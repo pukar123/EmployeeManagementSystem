@@ -41,7 +41,14 @@ public class LeaveBalancesController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return HandleBusinessRule(ex);
         }
+    }
+
+    private ActionResult HandleBusinessRule(BusinessRuleException ex)
+    {
+        if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            return NotFound(new { message = ex.Message });
+        return BadRequest(new { message = ex.Message });
     }
 }

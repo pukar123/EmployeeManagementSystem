@@ -3,6 +3,7 @@ using EMS.Application.Mapping;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
+using Microsoft.EntityFrameworkCore;
 using Pukar.Shared;
 
 namespace EMS.Application.Services.Leave;
@@ -52,6 +53,7 @@ public sealed class LeaveRequestService : ILeaveRequestService
             request.LeaveTypeId,
             request.StartDateUtc,
             request.EndDateUtc,
+            null,
             request.RequestedAmount,
             cancellationToken);
 
@@ -81,6 +83,7 @@ public sealed class LeaveRequestService : ILeaveRequestService
             entity.LeaveTypeId,
             request.StartDateUtc,
             request.EndDateUtc,
+            entity.Id,
             request.RequestedAmount,
             cancellationToken);
 
@@ -118,6 +121,7 @@ public sealed class LeaveRequestService : ILeaveRequestService
         int leaveTypeId,
         DateTime startDateUtc,
         DateTime endDateUtc,
+        int? currentRequestId,
         decimal requestedAmount,
         CancellationToken cancellationToken)
     {
@@ -143,6 +147,21 @@ public sealed class LeaveRequestService : ILeaveRequestService
             cancellationToken);
         if (balance is null)
             throw new BusinessRuleException("Leave balance was not found for the selected leave type.");
+
+        var normalizedStart = startDateUtc.Date;
+        var normalizedEnd = endDateUtc.Date;
+        var overlappingExists = await _leaveRequestRepository.GetQueryable().AnyAsync(
+            x =>
+                x.EmployeeId == employeeId &&
+                x.LeaveTypeId == leaveTypeId &&
+                x.Status != LeaveRequestStatus.Cancelled &&
+                x.Status != LeaveRequestStatus.Rejected &&
+                (!currentRequestId.HasValue || x.Id != currentRequestId.Value) &&
+                x.StartDateUtc <= normalizedEnd &&
+                x.EndDateUtc >= normalizedStart,
+            cancellationToken);
+        if (overlappingExists)
+            throw new BusinessRuleException("Requested date range overlaps an existing leave request.");
 
         var available = balance.OpeningBalance
             + balance.AccruedAmount

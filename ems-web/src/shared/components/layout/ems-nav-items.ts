@@ -32,6 +32,7 @@ export const emsNavItemsMain: readonly EmsNavItem[] = [
   { href: "/employee-transfers", label: "Transfers", icon: ArrowLeftRight },
   { href: "/departments", label: "Departments", icon: Building2 },
   { href: "/attendance", label: "Attendance", icon: Clock3 },
+  { href: "/leave", label: "Leave", icon: CalendarDays },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/tasks/calendar", label: "Task Calendar", icon: CalendarDays },
   { href: "/positions", label: "Positions", icon: Briefcase },

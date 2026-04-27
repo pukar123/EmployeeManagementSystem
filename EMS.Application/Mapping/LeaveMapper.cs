@@ -70,6 +70,25 @@ internal static class LeaveMapper
         };
     }
 
+    public static LeavePolicyRuleResponseModel ToResponse(LeavePolicyRule entity)
+    {
+        return new LeavePolicyRuleResponseModel
+        {
+            Id = entity.Id,
+            OrganizationId = entity.OrganizationId,
+            LeaveTypeId = entity.LeaveTypeId,
+            AccrualRatePerPeriod = entity.AccrualRatePerPeriod,
+            AccrualFrequency = entity.AccrualFrequency,
+            MaximumCarryForward = entity.MaximumCarryForward,
+            EnableProration = entity.EnableProration,
+            IsActive = entity.IsActive,
+            EffectiveFromDateUtc = entity.EffectiveFromDateUtc,
+            EffectiveToDateUtc = entity.EffectiveToDateUtc,
+            CreatedAtUtc = entity.CreatedAtUtc,
+            UpdatedAtUtc = entity.UpdatedAtUtc,
+        };
+    }
+
     public static LeaveRequest CreateRequestEntity(
         CreateLeaveRequestRequestModel request,
         int organizationId)

@@ -7,30 +7,30 @@ namespace EMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class LeaveTypesController : ControllerBase
+public class LeavePolicyRulesController : ControllerBase
 {
-    private readonly ILeaveTypeService _leaveTypeService;
+    private readonly ILeavePolicyRuleService _policyRuleService;
 
-    public LeaveTypesController(ILeaveTypeService leaveTypeService)
+    public LeavePolicyRulesController(ILeavePolicyRuleService policyRuleService)
     {
-        _leaveTypeService = leaveTypeService;
+        _policyRuleService = policyRuleService;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<LeaveTypeResponseModel>>> GetByOrganization(
-        [FromQuery] int organizationId,
+    [HttpGet("leave-type/{leaveTypeId:int}")]
+    public async Task<ActionResult<IReadOnlyList<LeavePolicyRuleResponseModel>>> GetByLeaveType(
+        int leaveTypeId,
         CancellationToken cancellationToken)
     {
-        var result = await _leaveTypeService.GetByOrganizationAsync(organizationId, cancellationToken);
+        var result = await _policyRuleService.GetByLeaveTypeAsync(leaveTypeId, cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<LeaveTypeResponseModel>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<LeavePolicyRuleResponseModel>> GetById(int id, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _leaveTypeService.GetByIdAsync(id, cancellationToken);
+            var result = await _policyRuleService.GetByIdAsync(id, cancellationToken);
             return Ok(result);
         }
         catch (BusinessRuleException ex)
@@ -40,13 +40,13 @@ public class LeaveTypesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<LeaveTypeResponseModel>> Create(
-        [FromBody] CreateLeaveTypeRequestModel request,
+    public async Task<ActionResult<LeavePolicyRuleResponseModel>> Create(
+        [FromBody] CreateLeavePolicyRuleRequestModel request,
         CancellationToken cancellationToken)
     {
         try
         {
-            var created = await _leaveTypeService.CreateAsync(request, cancellationToken);
+            var created = await _policyRuleService.CreateAsync(request, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (BusinessRuleException ex)
@@ -56,14 +56,14 @@ public class LeaveTypesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<LeaveTypeResponseModel>> Update(
+    public async Task<ActionResult<LeavePolicyRuleResponseModel>> Update(
         int id,
-        [FromBody] UpdateLeaveTypeRequestModel request,
+        [FromBody] UpdateLeavePolicyRuleRequestModel request,
         CancellationToken cancellationToken)
     {
         try
         {
-            var updated = await _leaveTypeService.UpdateAsync(id, request, cancellationToken);
+            var updated = await _policyRuleService.UpdateAsync(id, request, cancellationToken);
             return Ok(updated);
         }
         catch (BusinessRuleException ex)
