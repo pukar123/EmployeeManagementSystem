@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { OrganizationGate } from "@/providers/OrganizationGate";
 import { OrganizationProvider } from "@/providers/OrganizationProvider";
 import { useAuth } from "@/providers/AuthProvider";
-import { EmsDashboardShell } from "@/shared/components/layout/EmsDashboardShell";
+import { EmsTailAdminShell } from "@/shared/components/layout/EmsTailAdminShell";
 import { Spinner } from "@/shared/components/Spinner";
 
 const LOGIN_PATH = "/login";
@@ -75,7 +75,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
   return (
     <OrganizationProvider>
       <OrganizationGate>
-        <EmsDashboardShell>{children}</EmsDashboardShell>
+        <EmsTailAdminShell>{children}</EmsTailAdminShell>
       </OrganizationGate>
     </OrganizationProvider>
   );

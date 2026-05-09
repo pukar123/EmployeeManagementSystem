@@ -1,13 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/shared/components/Button";
 import { useAuth } from "@/providers/AuthProvider";
 import { getErrorMessage } from "@/shared/api/http-client";
 
 const inputClass =
-  "rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
+  "shadow-theme-xs h-11 w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -44,55 +44,81 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-1 flex-col justify-center px-4 py-16 sm:px-6">
-      <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Change password</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Update your temporary password before continuing.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">Current password</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className={inputClass}
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">New password</span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className={inputClass}
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">Confirm new password</span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={inputClass}
-              required
-            />
-          </label>
-          {error ? (
-            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving…" : "Save password"}
-          </Button>
-        </form>
+    <main className="flex min-h-[85vh] flex-1 flex-col justify-center bg-gray-50 px-4 py-16 dark:bg-gray-900 sm:px-6">
+      <div className="mx-auto w-full max-w-md">
+        <div className="mb-8 flex justify-center">
+          <Image
+            src="/images/logo/logo.svg"
+            alt="EMS"
+            width={180}
+            height={48}
+            className="dark:hidden"
+            priority
+          />
+          <Image
+            src="/images/logo/logo-dark.svg"
+            alt="EMS"
+            width={180}
+            height={48}
+            className="hidden dark:block"
+            priority
+          />
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-theme-lg dark:border-gray-800 dark:bg-white/[0.03]">
+          <h1 className="text-title-sm font-semibold text-gray-800 sm:text-title-md dark:text-white/90">
+            Change password
+          </h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Update your temporary password before continuing.
+          </p>
+          <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Current password</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-gray-700 dark:text-gray-300">New password</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Confirm new password</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </label>
+            {error ? (
+              <p className="text-sm text-error-500 dark:text-error-400" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex w-full items-center justify-center rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:opacity-60"
+            >
+              {submitting ? "Saving…" : "Save password"}
+            </button>
+          </form>
+        </div>
       </div>
     </main>
   );

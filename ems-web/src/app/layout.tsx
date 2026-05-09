@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ProtectedShell } from "@/providers/ProtectedShell";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
-import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { SidebarProvider } from "@/context/SidebarContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -33,15 +34,17 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col dark:bg-gray-900">
         <ThemeProvider>
-          <TooltipProvider>
-            <ReactQueryProvider>
-              <AuthProvider>
-                <ProtectedShell>{children}</ProtectedShell>
-              </AuthProvider>
-            </ReactQueryProvider>
-          </TooltipProvider>
+          <SidebarProvider>
+            <TooltipProvider>
+              <ReactQueryProvider>
+                <AuthProvider>
+                  <ProtectedShell>{children}</ProtectedShell>
+                </AuthProvider>
+              </ReactQueryProvider>
+            </TooltipProvider>
+          </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>

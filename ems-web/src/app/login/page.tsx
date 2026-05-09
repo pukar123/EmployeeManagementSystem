@@ -1,9 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { getErrorMessage } from "@/shared/api/http-client";
+
+const inputClass =
+  "shadow-theme-xs h-11 w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,48 +32,66 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-1 flex-col justify-center px-4 py-16 sm:px-6">
-      <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Sign in</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Use your EMS account to continue.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">Email</span>
-            <input
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">Password</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            />
-          </label>
-          {error ? (
-            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-          >
-            {submitting ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
+    <main className="flex min-h-[85vh] flex-1 flex-col justify-center bg-gray-50 px-4 py-16 dark:bg-gray-900 sm:px-6">
+      <div className="mx-auto w-full max-w-md">
+        <div className="mb-8 flex justify-center">
+          <Image
+            src="/images/logo/logo.svg"
+            alt="EMS"
+            width={180}
+            height={48}
+            className="dark:hidden"
+            priority
+          />
+          <Image
+            src="/images/logo/logo-dark.svg"
+            alt="EMS"
+            width={180}
+            height={48}
+            className="hidden dark:block"
+            priority
+          />
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-theme-lg dark:border-gray-800 dark:bg-white/[0.03]">
+          <h1 className="text-title-sm font-semibold text-gray-800 sm:text-title-md dark:text-white/90">Sign in</h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Use your EMS account to continue.</p>
+          <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Email</span>
+              <input
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Password</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputClass}
+              />
+            </label>
+            {error ? (
+              <p className="text-sm text-error-500 dark:text-error-400" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex w-full items-center justify-center rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:opacity-60"
+            >
+              {submitting ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+        </div>
       </div>
     </main>
   );

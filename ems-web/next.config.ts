@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const svgrLoader = require.resolve("@svgr/webpack");
 
 /**
  * When `NEXT_PUBLIC_API_BASE_URL` is unset, the browser uses same-origin paths; rewrites
@@ -10,6 +14,21 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* Enables Docker image using standalone output (see ems-web/Dockerfile). */
   output: "standalone",
+  webpack(config) {
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: [svgrLoader],
+    });
+    return config;
+  },
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: [svgrLoader],
+        as: "*.js",
+      },
+    },
+  },
   async rewrites() {
     const publicBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
     if (publicBase) {

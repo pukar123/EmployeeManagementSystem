@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, type Resolver } from "react-hook-form";
 import { SearchableSelect } from "@/shared/components/SearchableSelect";
 import { Button } from "@/shared/components/Button";
 import { toSelectOptions } from "@/shared/utils/to-select-options";
@@ -35,7 +35,7 @@ export function PositionTransferForm({
   onSubmit,
 }: PositionTransferFormProps) {
   const form = useForm<PositionTransferValues>({
-    resolver: zodResolver(positionTransferSchema),
+    resolver: zodResolver(positionTransferSchema) as Resolver<PositionTransferValues>,
     defaultValues: {
       newJobPositionId: employee.jobPositionId ?? undefined,
       effectiveFromUtc: new Date().toISOString().slice(0, 10),

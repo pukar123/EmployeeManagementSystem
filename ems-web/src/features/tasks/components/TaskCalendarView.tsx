@@ -5,6 +5,7 @@ import { format, getDay, parse, startOfWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import type { TaskCalendarEvent } from "../hooks/useTaskCalendarEvents";
+import type { TaskPriority, TaskWorkflowStatus } from "../types/task.types";
 import { taskPriorityLabels, taskStatusLabels } from "../utils/taskDisplay";
 
 const locales = {
@@ -38,8 +39,9 @@ export function TaskCalendarView({ events, employeeLabelById, onRangeChange, def
           tooltipAccessor={(event) => {
             const task = (event as TaskCalendarEvent).resource;
             const employee = employeeLabelById.get(task.employeeId) ?? "Unknown employee";
-            const status = taskStatusLabels[task.status];
-            const priority = task.priority ? taskPriorityLabels[task.priority] : "No priority";
+            const status = taskStatusLabels[task.status as TaskWorkflowStatus];
+            const priority =
+              task.priority != null ? taskPriorityLabels[task.priority as TaskPriority] : "No priority";
             return `${task.title}\n${employee}\n${status}\n${priority}`;
           }}
           defaultView={defaultView}

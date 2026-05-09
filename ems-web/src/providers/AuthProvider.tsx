@@ -26,15 +26,10 @@ export type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isReady] = useState(true);
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const token = getAccessToken();
-    return token ? getStoredUser() : null;
-  });
-  const [mustChangePassword, setMustChangePasswordState] = useState(() => {
-    const token = getAccessToken();
-    return token ? getMustChangePassword() : false;
-  });
+  /** false until client reads localStorage — avoids SSR (no token) vs client (has token) hydration mismatch. */
+  const [isReady, setIsReady] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [mustChangePassword, setMustChangePasswordState] = useState(false);
 
   const syncFromStorage = useCallback(() => {
     const token = getAccessToken();
@@ -43,13 +38,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    syncFromStorage();
+    setIsReady(true);
+
     setAuthChangeHandler(() => {
       const token = getAccessToken();
       setUser(token ? getStoredUser() : null);
       setMustChangePasswordState(token ? getMustChangePassword() : false);
     });
     return () => setAuthChangeHandler(undefined);
-  }, []);
+  }, [syncFromStorage]);
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await authService.login(email, password);
