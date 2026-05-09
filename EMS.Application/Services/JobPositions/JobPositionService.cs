@@ -12,13 +12,16 @@ public sealed class JobPositionService : IJobPositionService
 {
     private readonly IBaseRepository<JobPositionEntity> _repository;
     private readonly IBaseRepository<Employee> _employeeRepository;
+    private readonly IBaseRepository<PositionRole> _positionRoleRepository;
 
     public JobPositionService(
         IBaseRepository<JobPositionEntity> repository,
-        IBaseRepository<Employee> employeeRepository)
+        IBaseRepository<Employee> employeeRepository,
+        IBaseRepository<PositionRole> positionRoleRepository)
     {
         _repository = repository;
         _employeeRepository = employeeRepository;
+        _positionRoleRepository = positionRoleRepository;
     }
 
     public async Task<JobPositionResponseModel> CreateAsync(CreateJobPositionRequestModel request, CancellationToken cancellationToken = default)
@@ -85,6 +88,9 @@ public sealed class JobPositionService : IJobPositionService
 
         if (await _employeeRepository.GetQueryable().AnyAsync(e => e.JobPositionId == id, cancellationToken))
             throw new BusinessRuleException("Cannot delete a job position that is assigned to employees. Unassign employees first.");
+
+        if (await _positionRoleRepository.GetQueryable().AnyAsync(x => x.JobPositionId == id, cancellationToken))
+            throw new BusinessRuleException("Cannot delete a job position that still has roles mapped. Remove position roles first.");
 
         _repository.Remove(entity);
         await _repository.SaveChangesAsync(cancellationToken);

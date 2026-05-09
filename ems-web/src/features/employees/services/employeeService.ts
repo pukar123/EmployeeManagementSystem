@@ -2,9 +2,11 @@ import { httpClient } from "@/shared/api/http-client";
 import type {
   AssignEmployeeUserRolesRequest,
   CreateEmployeeRequest,
+  EmployeeEffectiveRole,
   EmployeeHistoryResponse,
   Employee,
   ProvisionEmployeeUserResponse,
+  SetEmployeeDirectRolesRequest,
   UpdateEmployeeRequest,
 } from "../types/employee.types";
 
@@ -39,6 +41,15 @@ export const employeeService = {
 
   assignEmployeeUserRoles: async (employeeId: number, body: AssignEmployeeUserRolesRequest): Promise<void> => {
     await httpClient.put(`${EMPLOYEES_PATH}/${employeeId}/linked-user/roles`, body);
+  },
+
+  getEmployeeEffectiveRoles: async (employeeId: number): Promise<EmployeeEffectiveRole[]> => {
+    const { data } = await httpClient.get<EmployeeEffectiveRole[]>(`${EMPLOYEES_PATH}/${employeeId}/roles/effective`);
+    return data;
+  },
+
+  setEmployeeDirectRoles: async (employeeId: number, body: SetEmployeeDirectRolesRequest): Promise<void> => {
+    await httpClient.put(`${EMPLOYEES_PATH}/${employeeId}/roles/direct-overrides`, body);
   },
 
   updateEmployee: async (id: number, body: UpdateEmployeeRequest): Promise<Employee> => {

@@ -39,4 +39,5 @@ public class Employee
 
     public ICollection<EmployeeSite> EmployeeSites { get; set; } = new List<EmployeeSite>();
     public ICollection<TaskItem> TaskItems { get; set; } = new List<TaskItem>();
+    public ICollection<EmployeeRoleAssignment> RoleAssignments { get; set; } = new List<EmployeeRoleAssignment>();
 }

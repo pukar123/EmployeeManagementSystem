@@ -51,8 +51,28 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (pathname === LOGIN_PATH || pathname === CHANGE_PASSWORD_PATH) {
+  if (pathname === LOGIN_PATH) {
     if (isAuthenticated) {
+      return (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
+          <Spinner />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting…</p>
+        </div>
+      );
+    }
+    return <>{children}</>;
+  }
+
+  if (pathname === CHANGE_PASSWORD_PATH) {
+    if (!isAuthenticated) {
+      return (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
+          <Spinner />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting to sign in…</p>
+        </div>
+      );
+    }
+    if (!mustChangePassword) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
           <Spinner />

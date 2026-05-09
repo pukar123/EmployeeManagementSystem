@@ -12,9 +12,13 @@ import {
   useCreateJobPosition,
   useDeleteJobPosition,
   useJobPositions,
+  usePositionRoles,
+  useSetPositionRoles,
   useUpdateJobPosition,
 } from "../hooks";
 import type { JobPosition } from "../types/job-position.types";
+import { fetchRoles } from "@/features/user-management/services/userManagementApi";
+import { useQuery } from "@tanstack/react-query";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
@@ -26,10 +30,15 @@ export function JobPositionsSection() {
   const createMut = useCreateJobPosition(currentOrgId);
   const updateMut = useUpdateJobPosition(currentOrgId);
   const deleteMut = useDeleteJobPosition(currentOrgId);
+  const setPositionRolesMut = useSetPositionRoles(currentOrgId);
+  const rolesCatalogQuery = useQuery({ queryKey: ["roles"], queryFn: fetchRoles });
 
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<JobPosition | null>(null);
+  const [rolesPosition, setRolesPosition] = useState<JobPosition | null>(null);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
+  const positionRolesQuery = usePositionRoles(rolesPosition?.id ?? null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -67,6 +76,16 @@ export function JobPositionsSection() {
   const closeForm = () => {
     setFormOpen(false);
     setEditing(null);
+  };
+
+  const openRoles = (position: JobPosition) => {
+    setRolesPosition(position);
+    setSelectedRoleIds(new Set());
+  };
+
+  const closeRoles = () => {
+    setRolesPosition(null);
+    setSelectedRoleIds(new Set());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,6 +138,40 @@ export function JobPositionsSection() {
   };
 
   const busy = createMut.isPending || updateMut.isPending;
+  const assignedRoleIds = useMemo(
+    () => new Set((positionRolesQuery.data ?? []).map((role) => role.roleId)),
+    [positionRolesQuery.data],
+  );
+  const displayRoleIds = selectedRoleIds.size > 0 ? selectedRoleIds : assignedRoleIds;
+
+  const toggleRoleSelection = (roleId: number, checked: boolean) => {
+    setSelectedRoleIds((prev) => {
+      const next = new Set(prev.size > 0 ? prev : assignedRoleIds);
+      if (checked) {
+        next.add(roleId);
+      } else {
+        next.delete(roleId);
+      }
+      return next;
+    });
+  };
+
+  const savePositionRoles = async () => {
+    if (!rolesPosition) return;
+    const roleIds = Array.from(displayRoleIds);
+    const removed = Array.from(assignedRoleIds).filter((roleId) => !displayRoleIds.has(roleId));
+    if (removed.length > 0 && !window.confirm("Remove selected role(s) from this position?")) {
+      return;
+    }
+
+    try {
+      await setPositionRolesMut.mutateAsync({ id: rolesPosition.id, roleIds });
+      toast.success("Position roles updated.");
+      closeRoles();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
 
   if (currentOrgId == null) {
     return (
@@ -205,6 +258,9 @@ export function JobPositionsSection() {
                       <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => openEdit(row)}>
                         Edit
                       </Button>
+                      <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => openRoles(row)}>
+                        Roles
+                      </Button>
                       <Button
                         type="button"
                         variant="danger"
@@ -283,6 +339,52 @@ export function JobPositionsSection() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={rolesPosition != null}
+        title={rolesPosition ? `Position roles: ${rolesPosition.title}` : "Position roles"}
+        onClose={closeRoles}
+        className="max-w-xl"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={closeRoles}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void savePositionRoles()} disabled={setPositionRolesMut.isPending}>
+              {setPositionRolesMut.isPending ? "Saving…" : "Save roles"}
+            </Button>
+          </>
+        }
+      >
+        {rolesCatalogQuery.isLoading || positionRolesQuery.isLoading ? (
+          <div className="flex justify-center py-12">
+            <Spinner />
+          </div>
+        ) : rolesCatalogQuery.isError || positionRolesQuery.isError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
+            {getErrorMessage(rolesCatalogQuery.error ?? positionRolesQuery.error)}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {(rolesCatalogQuery.data ?? []).map((role) => (
+              <label key={role.id} className="flex items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 rounded border-zinc-300"
+                  checked={displayRoleIds.has(role.id)}
+                  onChange={(e) => toggleRoleSelection(role.id, e.target.checked)}
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{role.name}</span>
+                  {role.description ? (
+                    <span className="mt-0.5 block text-xs text-zinc-500">{role.description}</span>
+                  ) : null}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );

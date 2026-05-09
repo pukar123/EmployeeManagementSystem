@@ -11,4 +11,6 @@ public class JobPosition
 
     public Organization Organization { get; set; } = null!;
     public ICollection<Employee> Employees { get; set; } = new List<Employee>();
+    public ICollection<PositionRole> PositionRoles { get; set; } = new List<PositionRole>();
+    public ICollection<EmployeeRoleAssignment> EmployeeRoleAssignments { get; set; } = new List<EmployeeRoleAssignment>();
 }

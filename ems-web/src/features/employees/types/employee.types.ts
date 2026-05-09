@@ -108,3 +108,17 @@ export type ManagerHistoryItem = {
   changedByEmail: string | null;
   createdAtUtc: string;
 };
+
+export type EmployeeEffectiveRole = {
+  roleId: number;
+  roleName: string;
+  roleNormalizedName: string;
+  source: "position_inherited" | "direct_override";
+  jobPositionId: number | null;
+  jobPositionTitle: string | null;
+  isSystem: boolean;
+};
+
+export type SetEmployeeDirectRolesRequest = {
+  roleIds: number[];
+};

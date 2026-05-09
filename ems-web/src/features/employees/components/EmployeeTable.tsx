@@ -11,6 +11,7 @@ type EmployeeTableProps = {
   /** Per employee, shows immediate manager's position code; top-level falls back to own position code. */
   immediateManagerPositionByEmployeeId: Map<number, string>;
   onViewHistory: (e: Employee) => void;
+  onManageRoles: (e: Employee) => void;
   onEdit: (e: Employee) => void;
   onDelete: (e: Employee) => void;
 };
@@ -28,6 +29,7 @@ export function EmployeeTable({
   jobPositionLabelById,
   immediateManagerPositionByEmployeeId,
   onViewHistory,
+  onManageRoles,
   onEdit,
   onDelete,
 }: EmployeeTableProps) {
@@ -72,6 +74,9 @@ export function EmployeeTable({
                 <div className="flex gap-2">
                   <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onViewHistory(row)}>
                     History
+                  </Button>
+                  <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onManageRoles(row)}>
+                    Roles
                   </Button>
                   <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onEdit(row)}>
                     Edit

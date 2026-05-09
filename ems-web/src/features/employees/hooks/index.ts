@@ -5,3 +5,5 @@ export { useUpdateEmployee } from "./useUpdateEmployee";
 export { useDeleteEmployee } from "./useDeleteEmployee";
 export { useProvisionEmployeeUser } from "./useProvisionEmployeeUser";
 export { useAssignEmployeeUserRoles } from "./useAssignEmployeeUserRoles";
+export { useEmployeeEffectiveRoles } from "./useEmployeeEffectiveRoles";
+export { useSetEmployeeDirectRoles } from "./useSetEmployeeDirectRoles";

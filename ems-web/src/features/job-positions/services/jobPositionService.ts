@@ -2,6 +2,8 @@ import { httpClient } from "@/shared/api/http-client";
 import type {
   CreateJobPositionRequest,
   JobPosition,
+  PositionRole,
+  SetPositionRolesRequest,
   UpdateJobPositionRequest,
 } from "../types/job-position.types";
 
@@ -27,5 +29,14 @@ export const jobPositionService = {
 
   deleteJobPosition: async (id: number): Promise<void> => {
     await httpClient.delete(`${PATH}/${id}`);
+  },
+
+  getPositionRoles: async (id: number): Promise<PositionRole[]> => {
+    const { data } = await httpClient.get<PositionRole[]>(`${PATH}/${id}/roles`);
+    return data;
+  },
+
+  setPositionRoles: async (id: number, body: SetPositionRolesRequest): Promise<void> => {
+    await httpClient.put(`${PATH}/${id}/roles`, body);
   },
 };

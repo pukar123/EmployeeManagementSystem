@@ -26,6 +26,7 @@ public sealed class EmployeeService : IEmployeeService
     private readonly IBaseRepository<EmployeeManagerHistory> _managerHistoryRepository;
     private readonly IBaseRepository<EmployeeRetentionPolicy> _retentionPolicyRepository;
     private readonly IIdentityContext _identityContext;
+    private readonly IEmployeeRoleSyncService _employeeRoleSyncService;
 
     public EmployeeService(
         IBaseRepository<Employee> repository,
@@ -34,7 +35,8 @@ public sealed class EmployeeService : IEmployeeService
         IBaseRepository<EmployeeDepartmentHistory> departmentHistoryRepository,
         IBaseRepository<EmployeeManagerHistory> managerHistoryRepository,
         IBaseRepository<EmployeeRetentionPolicy> retentionPolicyRepository,
-        IIdentityContext identityContext)
+        IIdentityContext identityContext,
+        IEmployeeRoleSyncService employeeRoleSyncService)
     {
         _repository = repository;
         _jobPositionRepository = jobPositionRepository;
@@ -43,6 +45,7 @@ public sealed class EmployeeService : IEmployeeService
         _managerHistoryRepository = managerHistoryRepository;
         _retentionPolicyRepository = retentionPolicyRepository;
         _identityContext = identityContext;
+        _employeeRoleSyncService = employeeRoleSyncService;
     }
 
     public async Task<EmployeeResponseModel> CreateAsync(CreateEmployeeRequestModel request, CancellationToken cancellationToken = default)
@@ -66,6 +69,7 @@ public sealed class EmployeeService : IEmployeeService
             await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
         }
         await _repository.SaveChangesAsync(cancellationToken);
+        await _employeeRoleSyncService.SyncEmployeeAsync(entity.Id, cancellationToken);
 
         return EmployeeMapper.ToResponse(entity);
     }
@@ -121,6 +125,8 @@ public sealed class EmployeeService : IEmployeeService
 
         _repository.Update(entity);
         await _repository.SaveChangesAsync(cancellationToken);
+        if (previousJobPositionId != entity.JobPositionId)
+            await _employeeRoleSyncService.SyncEmployeeAsync(entity.Id, cancellationToken);
 
         return EmployeeMapper.ToResponse(entity);
     }

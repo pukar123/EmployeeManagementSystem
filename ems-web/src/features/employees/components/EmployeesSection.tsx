@@ -18,7 +18,13 @@ import { DeleteEmployeeDialog } from "./DeleteEmployeeDialog";
 import { getErrorMessage } from "@/shared/api/http-client";
 import { fetchRoles } from "@/features/user-management/services/userManagementApi";
 import type { RoleDto } from "@/features/user-management/types";
-import { useAssignEmployeeUserRoles, useEmployees, useProvisionEmployeeUser } from "../hooks";
+import {
+  useAssignEmployeeUserRoles,
+  useEmployeeEffectiveRoles,
+  useEmployees,
+  useProvisionEmployeeUser,
+  useSetEmployeeDirectRoles,
+} from "../hooks";
 import { employeeKeys } from "../services/query-keys";
 import { employeeService } from "../services/employeeService";
 import { useEmployeeUiStore } from "../store/employee-ui-store";
@@ -36,6 +42,7 @@ export function EmployeesSection() {
   const rolesQuery = useQuery({ queryKey: ["roles"], queryFn: fetchRoles });
   const provisionMutation = useProvisionEmployeeUser();
   const assignRolesMutation = useAssignEmployeeUserRoles();
+  const setEmployeeDirectRolesMutation = useSetEmployeeDirectRoles();
 
   const jobPositionLabelById = useMemo(() => {
     const map = new Map<number, string>();
@@ -90,6 +97,9 @@ export function EmployeesSection() {
   const [wizardStep, setWizardStep] = useState<"password" | "roles">("password");
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
   const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
+  const [rolesEmployee, setRolesEmployee] = useState<Employee | null>(null);
+  const [selectedDirectRoleIds, setSelectedDirectRoleIds] = useState<Set<number>>(new Set());
+  const employeeRolesQuery = useEmployeeEffectiveRoles(rolesEmployee?.id ?? null);
   const historyQuery = useQuery({
     queryKey: ["employees", "history", historyEmployee?.id],
     queryFn: () => employeeService.getEmployeeHistory(historyEmployee!.id),
@@ -108,6 +118,15 @@ export function EmployeesSection() {
 
   const refetchList = () => {
     void queryClient.invalidateQueries({ queryKey: employeeKeys.list() });
+  };
+
+  const closeRolesModal = () => {
+    setRolesEmployee(null);
+    setSelectedDirectRoleIds(new Set());
+  };
+
+  const openRolesModal = (employee: Employee) => {
+    setRolesEmployee(employee);
   };
 
   const closeProvisioningModal = () => {
@@ -166,6 +185,60 @@ export function EmployeesSection() {
   };
 
   const availableRoles = rolesQuery.data ?? [];
+  const effectiveRoles = useMemo(() => employeeRolesQuery.data ?? [], [employeeRolesQuery.data]);
+  const inheritedRoleIds = useMemo(
+    () =>
+      new Set(
+        effectiveRoles
+          .filter((role) => role.source === "position_inherited")
+          .map((role) => role.roleId),
+      ),
+    [effectiveRoles],
+  );
+  const directRoleIds = useMemo(
+    () =>
+      new Set(
+        effectiveRoles
+          .filter((role) => role.source === "direct_override")
+          .map((role) => role.roleId),
+      ),
+    [effectiveRoles],
+  );
+
+  const displayDirectRoleIds = selectedDirectRoleIds.size > 0 ? selectedDirectRoleIds : directRoleIds;
+
+  const toggleDirectRole = (roleId: number, checked: boolean) => {
+    setSelectedDirectRoleIds((prev) => {
+      const next = new Set(prev.size > 0 ? prev : directRoleIds);
+      if (checked) {
+        next.add(roleId);
+      } else {
+        next.delete(roleId);
+      }
+      return next;
+    });
+  };
+
+  const handleSaveDirectRoles = async () => {
+    if (!rolesEmployee) return;
+
+    const nextRoleIds = Array.from(displayDirectRoleIds);
+    const removingRoles = Array.from(directRoleIds).filter((roleId) => !displayDirectRoleIds.has(roleId));
+    if (removingRoles.length > 0 && !window.confirm("Remove selected direct override role(s) for this employee?")) {
+      return;
+    }
+
+    try {
+      await setEmployeeDirectRolesMutation.mutateAsync({
+        employeeId: rolesEmployee.id,
+        roleIds: nextRoleIds,
+      });
+      toast.success("Employee direct roles updated.");
+      closeRolesModal();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
   const provisioningOpen = provisioningEmployee != null;
   const provisioningBusy = provisionMutation.isPending || assignRolesMutation.isPending;
 
@@ -216,6 +289,7 @@ export function EmployeesSection() {
           jobPositionLabelById={jobPositionLabelById}
           immediateManagerPositionByEmployeeId={immediateManagerPositionByEmployeeId}
           onViewHistory={(e) => setHistoryEmployee(e)}
+          onManageRoles={openRolesModal}
           onEdit={(e) => openEditForm(e)}
           onDelete={(e) => openDeleteDialog(e)}
         />
@@ -354,6 +428,81 @@ export function EmployeesSection() {
         errorMessage={historyQuery.isError ? getErrorMessage(historyQuery.error) : null}
         onClose={() => setHistoryEmployee(null)}
       />
+
+      <Modal
+        open={rolesEmployee != null}
+        title={rolesEmployee ? `Employee roles: ${rolesEmployee.firstName} ${rolesEmployee.lastName}` : "Employee roles"}
+        onClose={closeRolesModal}
+        className="max-w-2xl"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={closeRolesModal}>
+              Close
+            </Button>
+            <Button type="button" onClick={() => void handleSaveDirectRoles()} disabled={setEmployeeDirectRolesMutation.isPending}>
+              {setEmployeeDirectRolesMutation.isPending ? "Saving…" : "Save direct overrides"}
+            </Button>
+          </>
+        }
+      >
+        {employeeRolesQuery.isLoading ? (
+          <div className="flex justify-center py-12">
+            <Spinner />
+          </div>
+        ) : employeeRolesQuery.isError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
+            {getErrorMessage(employeeRolesQuery.error)}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200">
+              Effective roles are inherited from position plus direct overrides. Position-inherited roles are read-only.
+            </div>
+            <div className="space-y-2">
+              {availableRoles.map((role) => {
+                const inherited = inheritedRoleIds.has(role.id);
+                const checked = inherited || displayDirectRoleIds.has(role.id);
+                return (
+                  <label
+                    key={role.id}
+                    className="flex items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-4 rounded border-zinc-300"
+                      checked={checked}
+                      disabled={inherited}
+                      onChange={(e) => toggleDirectRole(role.id, e.target.checked)}
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium text-zinc-900 dark:text-zinc-100">{role.name}</span>
+                      <span className="mt-0.5 block text-xs text-zinc-500">
+                        {inherited ? "Source: position_inherited" : checked ? "Source: direct_override" : "Not assigned"}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {effectiveRoles.length > 0 ? (
+              <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Current effective roles</p>
+                <ul className="space-y-1 text-sm text-zinc-700 dark:text-zinc-200">
+                  {effectiveRoles.map((role) => (
+                    <li key={`${role.roleId}-${role.source}-${role.jobPositionId ?? "none"}`}>
+                      {role.roleName}
+                      {" - "}
+                      {role.source === "position_inherited"
+                        ? `position_inherited (${role.jobPositionTitle ?? "position"})`
+                        : "direct_override"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

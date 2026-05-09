@@ -16,6 +16,17 @@ export type CreateJobPositionRequest = {
   isActive: boolean;
 };
 
+export type PositionRole = {
+  roleId: number;
+  roleName: string;
+  roleNormalizedName: string;
+  isSystem: boolean;
+};
+
+export type SetPositionRolesRequest = {
+  roleIds: number[];
+};
+
 export type UpdateJobPositionRequest = {
   title: string;
   description?: string | null;
