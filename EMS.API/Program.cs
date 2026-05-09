@@ -30,7 +30,6 @@ using MongoDB.Driver;
 using Pukar.Usermanagement.API.Extensions;
 using Pukar.Usermanagement.Application;
 using Serilog;
-using System.Text.Json;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -38,23 +37,6 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    // #region agent log
-    static void DebugLog(string runId, string hypothesisId, string location, string message, object data)
-    {
-        var payload = JsonSerializer.Serialize(new
-        {
-            sessionId = "e16419",
-            runId,
-            hypothesisId,
-            location,
-            message,
-            data,
-            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-        });
-        File.AppendAllText("debug-e16419.log", payload + Environment.NewLine);
-    }
-    // #endregion
-
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Host.UseSerilog((context, _, configuration) =>
@@ -234,27 +216,6 @@ try
     app.MapControllers();
 
     Log.Information("EMS.API starting ({Environment})", app.Environment.EnvironmentName);
-    // #region agent log
-    DebugLog(
-        "pre-fix",
-        "H1_H2_H3",
-        "EMS.API/Program.cs:startup",
-        "API host about to run",
-        new
-        {
-            pid = Environment.ProcessId,
-            env = app.Environment.EnvironmentName,
-            contentRoot = app.Environment.ContentRootPath,
-            appBase = AppContext.BaseDirectory,
-        });
-    app.Lifetime.ApplicationStopping.Register(() =>
-        DebugLog(
-            "pre-fix",
-            "H1_H2_H3",
-            "EMS.API/Program.cs:stopping",
-            "API host stopping",
-            new { pid = Environment.ProcessId }));
-    // #endregion
 
     app.Run();
 }
