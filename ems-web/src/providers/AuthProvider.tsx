@@ -26,20 +26,21 @@ export type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isReady, setIsReady] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [mustChangePassword, setMustChangePasswordState] = useState(false);
+  const [isReady] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const token = getAccessToken();
+    return token ? getStoredUser() : null;
+  });
+  const [mustChangePassword, setMustChangePasswordState] = useState(() => {
+    const token = getAccessToken();
+    return token ? getMustChangePassword() : false;
+  });
 
   const syncFromStorage = useCallback(() => {
     const token = getAccessToken();
     setUser(token ? getStoredUser() : null);
     setMustChangePasswordState(token ? getMustChangePassword() : false);
   }, []);
-
-  useEffect(() => {
-    syncFromStorage();
-    setIsReady(true);
-  }, [syncFromStorage]);
 
   useEffect(() => {
     setAuthChangeHandler(() => {

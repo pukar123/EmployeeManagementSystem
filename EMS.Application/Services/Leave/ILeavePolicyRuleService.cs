@@ -11,4 +11,5 @@ public interface ILeavePolicyRuleService
     Task<LeavePolicyRuleResponseModel> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<LeavePolicyRuleResponseModel> CreateAsync(CreateLeavePolicyRuleRequestModel request, CancellationToken cancellationToken = default);
     Task<LeavePolicyRuleResponseModel> UpdateAsync(int id, UpdateLeavePolicyRuleRequestModel request, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

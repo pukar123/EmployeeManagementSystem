@@ -35,6 +35,8 @@ public sealed class EmsRbacSeedHostedService : IHostedService
                 new MenuSeedRow("attendance", "Attendance", "/attendance", null, 30, "clock3"),
                 new MenuSeedRow("attendance.reports", "Reports", "/attendance/reports", "attendance", 10, "layout-list"),
                 new MenuSeedRow("attendance.analytics", "Analytics", "/attendance/analytics", "attendance", 20, "layout-list"),
+                new MenuSeedRow("leave", "Leave", "/leave", null, 32, "calendar-days"),
+                new MenuSeedRow("leave.admin", "Leave Admin", "/leave/admin", "leave", 10, "calendar-days"),
                 new MenuSeedRow("tasks", "Tasks", "/tasks", null, 35, "list-todo"),
                 new MenuSeedRow("positions", "Positions", "/positions", null, 40, "briefcase"),
                 new MenuSeedRow("sites", "Sites", "/sites", null, 50, "mappin"),

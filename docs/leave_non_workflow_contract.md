@@ -2,6 +2,8 @@
 
 This document defines the current leave-management contract while approval workflow is deferred.
 
+All leave endpoints below require authenticated access.
+
 ## Lifecycle Scope
 
 - Supported request lifecycle: `Pending`, `ModifiedPending`, `Cancelled`.
@@ -17,11 +19,20 @@ This document defines the current leave-management contract while approval workf
 - `GET /api/LeaveTypes/{id}`
 - `POST /api/LeaveTypes`
 - `PUT /api/LeaveTypes/{id}`
+- `DELETE /api/LeaveTypes/{id}`
 
 ### Leave Balances
 
 - `GET /api/LeaveBalances/employee/{employeeId}`
 - `GET /api/LeaveBalances/employee/{employeeId}/type/{leaveTypeId}`
+
+### Leave Policy Rules
+
+- `GET /api/LeavePolicyRules/leave-type/{leaveTypeId}`
+- `GET /api/LeavePolicyRules/{id}`
+- `POST /api/LeavePolicyRules`
+- `PUT /api/LeavePolicyRules/{id}`
+- `DELETE /api/LeavePolicyRules/{id}`
 
 ### Leave Requests
 
@@ -30,6 +41,22 @@ This document defines the current leave-management contract while approval workf
 - `POST /api/LeaveRequests`
 - `PUT /api/LeaveRequests/{id}`
 - `POST /api/LeaveRequests/{id}/cancel`
+
+### Leave Attachments
+
+- `GET /api/LeaveAttachments/request/{leaveRequestId}`
+- `POST /api/LeaveAttachments` (multipart form upload)
+- `GET /api/LeaveAttachments/{id}/file`
+- `DELETE /api/LeaveAttachments/{id}`
+
+### Leave Operations
+
+- `POST /api/LeaveOperations/accrual/run`
+- `POST /api/LeaveOperations/year-reset/run`
+
+### Leave Imports
+
+- `POST /api/LeaveImports/bulk`
 
 ## Error Semantics
 

@@ -1,11 +1,13 @@
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
 namespace EMS.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class LeaveTypesController : ControllerBase
 {
@@ -65,6 +67,20 @@ public class LeaveTypesController : ControllerBase
         {
             var updated = await _leaveTypeService.UpdateAsync(id, request, cancellationToken);
             return Ok(updated);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deleted = await _leaveTypeService.DeleteAsync(id, cancellationToken);
+            return deleted ? NoContent() : NotFound();
         }
         catch (BusinessRuleException ex)
         {

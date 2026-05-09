@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useCreateOrganization } from "@/features/organizations/hooks";
 import { organizationKeys } from "@/features/organizations/services/query-keys";
@@ -29,17 +29,13 @@ export default function SetupPage() {
   const [motto, setMotto] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : null), [logoFile]);
 
   useEffect(() => {
-    if (!logoFile) {
-      setLogoPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(logoFile);
-    setLogoPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [logoFile]);
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+    };
+  }, [logoPreview]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

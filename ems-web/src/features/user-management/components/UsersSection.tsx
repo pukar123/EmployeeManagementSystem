@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/shared/components/Button";
@@ -35,7 +35,7 @@ export function UsersSection() {
   const [isActive, setIsActive] = useState(true);
 
   const [rolesUserId, setRolesUserId] = useState<number | null>(null);
-  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number> | null>(null);
 
   const [passwordUserId, setPasswordUserId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -46,11 +46,10 @@ export function UsersSection() {
     enabled: rolesUserId != null,
   });
 
-  useEffect(() => {
-    if (userRolesQuery.data) {
-      setSelectedRoleIds(new Set(userRolesQuery.data.map((r) => r.id)));
-    }
-  }, [userRolesQuery.data]);
+  const effectiveSelectedRoleIds = useMemo(
+    () => selectedRoleIds ?? new Set((userRolesQuery.data ?? []).map((r) => r.id)),
+    [selectedRoleIds, userRolesQuery.data],
+  );
 
   const createMut = useMutation({
     mutationFn: createUser,
@@ -116,11 +115,12 @@ export function UsersSection() {
 
   const openRolesModal = (u: UserSummaryDto) => {
     setRolesUserId(u.id);
-    setSelectedRoleIds(new Set());
+    setSelectedRoleIds(null);
   };
 
   const closeRolesModal = () => {
     setRolesUserId(null);
+    setSelectedRoleIds(null);
   };
 
   const openPasswordModal = (u: UserSummaryDto) => {
@@ -135,7 +135,8 @@ export function UsersSection() {
 
   const toggleRole = (roleId: number, checked: boolean) => {
     setSelectedRoleIds((prev) => {
-      const next = new Set(prev);
+      const base = prev ?? new Set((userRolesQuery.data ?? []).map((r) => r.id));
+      const next = new Set(base);
       if (checked) next.add(roleId);
       else next.delete(roleId);
       return next;
@@ -178,7 +179,7 @@ export function UsersSection() {
 
   const handleSaveRoles = () => {
     if (rolesUserId == null) return;
-    setRolesMut.mutate({ userId: rolesUserId, roleIds: Array.from(selectedRoleIds) });
+    setRolesMut.mutate({ userId: rolesUserId, roleIds: Array.from(effectiveSelectedRoleIds) });
   };
 
   const handleSavePassword = async (e: React.FormEvent) => {
@@ -399,7 +400,7 @@ export function UsersSection() {
                   <input
                     type="checkbox"
                     className="mt-0.5 size-4 rounded border-zinc-300"
-                    checked={selectedRoleIds.has(r.id)}
+                    checked={effectiveSelectedRoleIds.has(r.id)}
                     onChange={(e) => toggleRole(r.id, e.target.checked)}
                   />
                   <span>

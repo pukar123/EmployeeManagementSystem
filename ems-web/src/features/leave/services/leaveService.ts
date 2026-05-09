@@ -1,5 +1,6 @@
 import { postFormData, httpClient } from "@/shared/api/http-client";
 import type {
+  LeaveAdminSummary,
   BulkLeaveImportPayload,
   BulkLeaveImportResult,
   CreateLeaveRequestPayload,
@@ -23,6 +24,13 @@ export const leaveService = {
 
   getLeaveRequests: async (employeeId: number): Promise<LeaveRequest[]> => {
     const { data } = await httpClient.get<LeaveRequest[]>(`/api/LeaveRequests/employee/${employeeId}`);
+    return data;
+  },
+
+  getAdminSummary: async (organizationId: number, asOfDateUtc?: string): Promise<LeaveAdminSummary> => {
+    const { data } = await httpClient.get<LeaveAdminSummary>("/api/LeaveRequests/admin/summary", {
+      params: { organizationId, asOfDateUtc },
+    });
     return data;
   },
 

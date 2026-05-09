@@ -10,10 +10,20 @@ namespace EMS.Application.Services.Leave;
 public sealed class LeaveTypeService : ILeaveTypeService
 {
     private readonly ILeaveTypeRepository _leaveTypeRepository;
+    private readonly ILeavePolicyRuleRepository _leavePolicyRuleRepository;
+    private readonly ILeaveBalanceRepository _leaveBalanceRepository;
+    private readonly ILeaveRequestRepository _leaveRequestRepository;
 
-    public LeaveTypeService(ILeaveTypeRepository leaveTypeRepository)
+    public LeaveTypeService(
+        ILeaveTypeRepository leaveTypeRepository,
+        ILeavePolicyRuleRepository leavePolicyRuleRepository,
+        ILeaveBalanceRepository leaveBalanceRepository,
+        ILeaveRequestRepository leaveRequestRepository)
     {
         _leaveTypeRepository = leaveTypeRepository;
+        _leavePolicyRuleRepository = leavePolicyRuleRepository;
+        _leaveBalanceRepository = leaveBalanceRepository;
+        _leaveRequestRepository = leaveRequestRepository;
     }
 
     public async Task<IReadOnlyList<LeaveTypeResponseModel>> GetByOrganizationAsync(
@@ -98,5 +108,30 @@ public sealed class LeaveTypeService : ILeaveTypeService
         _leaveTypeRepository.Update(entity);
         await _leaveTypeRepository.SaveChangesAsync(cancellationToken);
         return LeaveMapper.ToResponse(entity);
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _leaveTypeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new BusinessRuleException("Leave type was not found.");
+
+        var hasPolicyRules = await _leavePolicyRuleRepository.GetQueryable()
+            .AnyAsync(x => x.LeaveTypeId == id, cancellationToken);
+        if (hasPolicyRules)
+            throw new BusinessRuleException("Leave type cannot be deleted because policy rules reference it.");
+
+        var hasBalances = await _leaveBalanceRepository.GetQueryable()
+            .AnyAsync(x => x.LeaveTypeId == id, cancellationToken);
+        if (hasBalances)
+            throw new BusinessRuleException("Leave type cannot be deleted because leave balances reference it.");
+
+        var hasRequests = await _leaveRequestRepository.GetQueryable()
+            .AnyAsync(x => x.LeaveTypeId == id, cancellationToken);
+        if (hasRequests)
+            throw new BusinessRuleException("Leave type cannot be deleted because leave requests reference it.");
+
+        _leaveTypeRepository.Remove(entity);
+        await _leaveTypeRepository.SaveChangesAsync(cancellationToken);
+        return true;
     }
 }

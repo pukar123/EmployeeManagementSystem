@@ -102,4 +102,62 @@ public class LeaveRequestServiceTests
         var ex = Assert.ThrowsAsync<BusinessRuleException>(async () => await sut.CreateAsync(request, CancellationToken.None));
         Assert.That(ex!.Message, Is.EqualTo("Insufficient leave balance for this request."));
     }
+
+    [Test]
+    public async Task GetAdminSummaryAsync_ReturnsExpectedCounts()
+    {
+        var requestRepo = new Mock<ILeaveRequestRepository>();
+        var balanceRepo = new Mock<ILeaveBalanceRepository>();
+        var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
+        var employeeRepo = new Mock<IBaseRepository<Employee>>();
+
+        var rows = new List<LeaveRequest>
+        {
+            new() { Id = 1, OrganizationId = 9, EmployeeId = 11, LeaveTypeId = 1, StartDateUtc = new DateTime(2026, 5, 1), EndDateUtc = new DateTime(2026, 5, 4), Status = LeaveRequestStatus.Pending },
+            new() { Id = 2, OrganizationId = 9, EmployeeId = 12, LeaveTypeId = 1, StartDateUtc = new DateTime(2026, 4, 29), EndDateUtc = new DateTime(2026, 5, 2), Status = LeaveRequestStatus.ModifiedPending },
+            new() { Id = 3, OrganizationId = 9, EmployeeId = 13, LeaveTypeId = 1, StartDateUtc = new DateTime(2026, 5, 2), EndDateUtc = new DateTime(2026, 5, 6), Status = LeaveRequestStatus.Approved },
+            new() { Id = 4, OrganizationId = 9, EmployeeId = 14, LeaveTypeId = 1, StartDateUtc = new DateTime(2026, 5, 1), EndDateUtc = new DateTime(2026, 5, 1), Status = LeaveRequestStatus.Cancelled },
+            new() { Id = 5, OrganizationId = 9, EmployeeId = 15, LeaveTypeId = 1, StartDateUtc = new DateTime(2026, 4, 1), EndDateUtc = new DateTime(2026, 4, 2), Status = LeaveRequestStatus.Rejected },
+            new() { Id = 6, OrganizationId = 77, EmployeeId = 16, LeaveTypeId = 1, StartDateUtc = new DateTime(2026, 5, 1), EndDateUtc = new DateTime(2026, 5, 2), Status = LeaveRequestStatus.Pending },
+        };
+        requestRepo.Setup(x => x.GetQueryable()).Returns(rows.BuildMock());
+
+        var sut = new LeaveRequestService(
+            requestRepo.Object,
+            balanceRepo.Object,
+            leaveTypeRepo.Object,
+            employeeRepo.Object);
+
+        var result = await sut.GetAdminSummaryAsync(9, new DateTime(2026, 5, 2), CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.OrganizationId, Is.EqualTo(9));
+            Assert.That(result.AppliedCount, Is.EqualTo(2));
+            Assert.That(result.ApprovedCount, Is.EqualTo(1));
+            Assert.That(result.RejectedCount, Is.EqualTo(1));
+            Assert.That(result.CancelledCount, Is.EqualTo(1));
+            Assert.That(result.CurrentlyOnLeaveCount, Is.EqualTo(3));
+        });
+    }
+
+    [Test]
+    public void GetAdminSummaryAsync_Throws_WhenOrganizationIdIsInvalid()
+    {
+        var requestRepo = new Mock<ILeaveRequestRepository>();
+        var balanceRepo = new Mock<ILeaveBalanceRepository>();
+        var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
+        var employeeRepo = new Mock<IBaseRepository<Employee>>();
+
+        requestRepo.Setup(x => x.GetQueryable()).Returns(new List<LeaveRequest>().BuildMock());
+        var sut = new LeaveRequestService(
+            requestRepo.Object,
+            balanceRepo.Object,
+            leaveTypeRepo.Object,
+            employeeRepo.Object);
+
+        var ex = Assert.ThrowsAsync<BusinessRuleException>(async () =>
+            await sut.GetAdminSummaryAsync(0, DateTime.UtcNow, CancellationToken.None));
+        Assert.That(ex!.Message, Is.EqualTo("Organization id must be greater than zero."));
+    }
 }

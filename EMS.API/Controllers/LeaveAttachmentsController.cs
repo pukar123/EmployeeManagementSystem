@@ -1,12 +1,14 @@
 using EMS.API.Services;
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
 namespace EMS.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class LeaveAttachmentsController : ControllerBase
 {

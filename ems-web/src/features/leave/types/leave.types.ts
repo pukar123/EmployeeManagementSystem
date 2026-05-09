@@ -44,6 +44,16 @@ export type LeaveRequest = {
   updatedAtUtc: string;
 };
 
+export type LeaveAdminSummary = {
+  organizationId: number;
+  asOfDateUtc: string;
+  appliedCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  cancelledCount: number;
+  currentlyOnLeaveCount: number;
+};
+
 export type CreateLeaveRequestPayload = {
   employeeId: number;
   leaveTypeId: number;

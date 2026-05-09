@@ -1,11 +1,13 @@
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
 namespace EMS.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class LeaveRequestsController : ControllerBase
 {
@@ -23,6 +25,26 @@ public class LeaveRequestsController : ControllerBase
     {
         var result = await _leaveRequestService.GetByEmployeeAsync(employeeId, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("admin/summary")]
+    public async Task<ActionResult<LeaveAdminSummaryResponseModel>> GetAdminSummary(
+        [FromQuery] int organizationId,
+        [FromQuery] DateTime? asOfDateUtc,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _leaveRequestService.GetAdminSummaryAsync(
+                organizationId,
+                asOfDateUtc ?? DateTime.UtcNow,
+                cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
     }
 
     [HttpGet("{id:int}")]

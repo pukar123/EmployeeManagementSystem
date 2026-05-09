@@ -85,6 +85,16 @@ public sealed class LeavePolicyRuleService : ILeavePolicyRuleService
         return LeaveMapper.ToResponse(entity);
     }
 
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _policyRuleRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new BusinessRuleException("Leave policy rule was not found.");
+
+        _policyRuleRepository.Remove(entity);
+        await _policyRuleRepository.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     private async Task ValidateLeaveTypeAsync(int leaveTypeId, int organizationId, CancellationToken cancellationToken)
     {
         var leaveType = await _leaveTypeRepository.GetByIdAsync(leaveTypeId, cancellationToken)

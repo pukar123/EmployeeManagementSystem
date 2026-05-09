@@ -4,31 +4,31 @@ Use this checklist before releasing the non-workflow leave module.
 
 ## Backend
 
-- [ ] `dotnet build EmployeeManagementSystem.sln` passes.
-- [ ] Leave migration is applied in target environment.
-- [ ] Leave controllers are reachable and authenticated.
-- [ ] Contract docs match deployed endpoint behavior.
+- [x] `dotnet build EmployeeManagementSystem.sln` passes.
+- [x] Leave migration is applied in target environment.
+- [x] Leave controllers are reachable and authenticated.
+- [x] Contract docs match deployed endpoint behavior.
 
 ## Functional
 
-- [ ] Leave type CRUD works.
-- [ ] Leave policy rule CRUD works.
-- [ ] Leave request create/update/cancel works.
-- [ ] Leave balance validation blocks insufficient requests.
-- [ ] Leave request overlap validation blocks conflicting requests.
-- [ ] Leave attachment upload/download/delete works.
-- [ ] Manual accrual run endpoint executes successfully.
-- [ ] Leave-year reset endpoint executes successfully.
-- [ ] Bulk import returns row-level outcomes.
+- [x] Leave type CRUD works.
+- [x] Leave policy rule CRUD works.
+- [x] Leave request create/update/cancel works.
+- [x] Leave balance validation blocks insufficient requests.
+- [x] Leave request overlap validation blocks conflicting requests.
+- [x] Leave attachment upload/download/delete works.
+- [x] Manual accrual run endpoint executes successfully.
+- [x] Leave-year reset endpoint executes successfully.
+- [x] Bulk import returns row-level outcomes.
 
 ## Frontend
 
-- [ ] Leave navigation item is visible for authorized users.
-- [ ] `/leave` page shows balances and requests.
-- [ ] Request submission and cancel actions work.
-- [ ] `/leave/admin` bulk import flow works.
-- [ ] Frontend uses `NEXT_PUBLIC_API_BASE_URL` and shared HTTP client.
+- [x] Leave navigation item is visible for authorized users.
+- [x] `/leave` page shows balances and requests.
+- [x] Request submission and cancel actions work.
+- [x] `/leave/admin` bulk import flow works.
+- [x] Frontend uses `NEXT_PUBLIC_API_BASE_URL` and shared HTTP client.
 
 ## Deferred
 
-- [ ] Approval workflow remains deferred (no approve/reject routing in this release).
+- [x] Approval workflow remains deferred (no approve/reject routing in this release).

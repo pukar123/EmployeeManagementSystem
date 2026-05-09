@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { createElement, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -75,17 +75,23 @@ function NavMenuEntry({ menu, pathname }: { menu: MenuDto; pathname: string }) {
   const childActive = hasChildren && menu.children.some((c) => isNavActive(pathname, c.routePath));
 
   if (!hasChildren) {
-    const Icon = getNavIcon(menu.iconKey);
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton
-          isActive={activeSelf}
-          tooltip={menu.label}
-          render={<Link href={menu.routePath} />}
-        >
-          <Icon />
-          <span>{menu.label}</span>
-        </SidebarMenuButton>
+        <div className="flex w-full min-w-0 items-center gap-0.5">
+          <div
+            className="h-8 w-8 shrink-0 group-data-[collapsible=icon]:hidden"
+            aria-hidden
+          />
+          <SidebarMenuButton
+            className="min-w-0 flex-1"
+            isActive={activeSelf}
+            tooltip={menu.label}
+            render={<Link href={menu.routePath} />}
+          >
+            {createElement(getNavIcon(menu.iconKey))}
+            <span>{menu.label}</span>
+          </SidebarMenuButton>
+        </div>
       </SidebarMenuItem>
     );
   }
@@ -102,12 +108,7 @@ function NavMenuEntryWithChildren({
   pathname: string;
   childActive: boolean;
 }) {
-  const Icon = getNavIcon(menu.iconKey);
   const [open, setOpen] = useState(childActive);
-
-  useEffect(() => {
-    if (childActive) setOpen(true);
-  }, [childActive]);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="group/collapsible">
@@ -132,19 +133,18 @@ function NavMenuEntryWithChildren({
             tooltip={menu.label}
             render={<Link href={menu.routePath} />}
           >
-            <Icon />
+            {createElement(getNavIcon(menu.iconKey))}
             <span>{menu.label}</span>
           </SidebarMenuButton>
         </div>
         <CollapsibleContent>
-          <SidebarMenuSub>
+          <SidebarMenuSub className="ml-7 mr-3.5 pl-3.5">
             {menu.children.map((child) => {
-              const CIcon = getNavIcon(child.iconKey);
               const cActive = isNavActive(pathname, child.routePath);
               return (
                 <SidebarMenuSubItem key={child.id}>
                   <SidebarMenuSubButton isActive={cActive} render={<Link href={child.routePath} />}>
-                    <CIcon />
+                    {createElement(getNavIcon(child.iconKey))}
                     <span>{child.label}</span>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -165,10 +165,21 @@ function NavStatic({ items, pathname }: { items: readonly EmsNavItem[]; pathname
         const Icon = item.icon;
         return (
           <SidebarMenuItem key={item.href}>
-            <SidebarMenuButton isActive={active} tooltip={item.label} render={<Link href={item.href} />}>
-              <Icon />
-              <span>{item.label}</span>
-            </SidebarMenuButton>
+            <div className="flex w-full min-w-0 items-center gap-0.5">
+              <div
+                className="h-8 w-8 shrink-0 group-data-[collapsible=icon]:hidden"
+                aria-hidden
+              />
+              <SidebarMenuButton
+                className="min-w-0 flex-1"
+                isActive={active}
+                tooltip={item.label}
+                render={<Link href={item.href} />}
+              >
+                <Icon />
+                <span>{item.label}</span>
+              </SidebarMenuButton>
+            </div>
           </SidebarMenuItem>
         );
       })}

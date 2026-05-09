@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { OrganizationLogoUpload } from "@/features/organizations/components/OrganizationLogoUpload";
 import { useUpdateOrganization } from "@/features/organizations/hooks";
@@ -20,36 +20,32 @@ export default function OrganizationSetupEditPage() {
   const { currentOrganization, needsSetup, organizationId } = useOrganizationContext();
   const updateMut = useUpdateOrganization(organizationId);
 
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [description, setDescription] = useState("");
-  const [motto, setMotto] = useState("");
-  const [isActive, setIsActive] = useState(true);
-
-  useEffect(() => {
-    if (currentOrganization) {
-      setName(currentOrganization.name);
-      setCode(currentOrganization.code ?? "");
-      setDescription(currentOrganization.description ?? "");
-      setMotto(currentOrganization.motto ?? "");
-      setIsActive(currentOrganization.isActive);
-    }
-  }, [currentOrganization]);
+  const [name, setName] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
+  const [description, setDescription] = useState<string | null>(null);
+  const [motto, setMotto] = useState<string | null>(null);
+  const [isActive, setIsActive] = useState<boolean | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    const resolvedName = name ?? currentOrganization?.name ?? "";
+    const resolvedCode = code ?? currentOrganization?.code ?? "";
+    const resolvedDescription = description ?? currentOrganization?.description ?? "";
+    const resolvedMotto = motto ?? currentOrganization?.motto ?? "";
+    const resolvedIsActive = isActive ?? currentOrganization?.isActive ?? true;
+
+    if (!resolvedName.trim()) {
       toast.error("Organization name is required.");
       return;
     }
 
     try {
       await updateMut.mutateAsync({
-        name: name.trim(),
-        code: code.trim() ? code.trim() : null,
-        isActive,
-        description: description.trim() ? description.trim() : null,
-        motto: motto.trim() ? motto.trim() : null,
+        name: resolvedName.trim(),
+        code: resolvedCode.trim() ? resolvedCode.trim() : null,
+        isActive: resolvedIsActive,
+        description: resolvedDescription.trim() ? resolvedDescription.trim() : null,
+        motto: resolvedMotto.trim() ? resolvedMotto.trim() : null,
       });
       toast.success("Organization updated.");
       router.replace("/");
@@ -61,6 +57,12 @@ export default function OrganizationSetupEditPage() {
   if (needsSetup || !currentOrganization || organizationId == null || organizationId <= 0) {
     return null;
   }
+
+  const resolvedName = name ?? currentOrganization.name;
+  const resolvedCode = code ?? currentOrganization.code ?? "";
+  const resolvedDescription = description ?? currentOrganization.description ?? "";
+  const resolvedMotto = motto ?? currentOrganization.motto ?? "";
+  const resolvedIsActive = isActive ?? currentOrganization.isActive;
 
   return (
     <main className="mx-auto max-w-2xl flex-1 px-4 py-12 sm:px-6">
@@ -89,7 +91,7 @@ export default function OrganizationSetupEditPage() {
                 </label>
                 <input
                   type="text"
-                  value={name}
+                  value={resolvedName}
                   onChange={(e) => setName(e.target.value)}
                   className={inputClass}
                   required
@@ -102,7 +104,7 @@ export default function OrganizationSetupEditPage() {
                 </label>
                 <input
                   type="text"
-                  value={code}
+                  value={resolvedCode}
                   onChange={(e) => setCode(e.target.value)}
                   className={inputClass}
                   placeholder="Optional short code"
@@ -113,7 +115,7 @@ export default function OrganizationSetupEditPage() {
                   Description
                 </label>
                 <textarea
-                  value={description}
+                  value={resolvedDescription}
                   onChange={(e) => setDescription(e.target.value)}
                   className={textareaClass}
                   placeholder="What does your organization do?"
@@ -126,7 +128,7 @@ export default function OrganizationSetupEditPage() {
                 </label>
                 <input
                   type="text"
-                  value={motto}
+                  value={resolvedMotto}
                   onChange={(e) => setMotto(e.target.value)}
                   className={inputClass}
                   placeholder="Optional tagline"
@@ -135,7 +137,7 @@ export default function OrganizationSetupEditPage() {
               <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
                 <input
                   type="checkbox"
-                  checked={isActive}
+                  checked={resolvedIsActive}
                   onChange={(e) => setIsActive(e.target.checked)}
                   className="rounded border-zinc-300 dark:border-zinc-600"
                 />

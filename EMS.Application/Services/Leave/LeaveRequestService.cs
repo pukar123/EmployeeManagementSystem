@@ -44,6 +44,47 @@ public sealed class LeaveRequestService : ILeaveRequestService
         return LeaveMapper.ToResponse(entity);
     }
 
+    public async Task<LeaveAdminSummaryResponseModel> GetAdminSummaryAsync(
+        int organizationId,
+        DateTime asOfDateUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (organizationId <= 0)
+            throw new BusinessRuleException("Organization id must be greater than zero.");
+
+        var asOfDate = asOfDateUtc.Date;
+        var query = _leaveRequestRepository.GetQueryable()
+            .AsNoTracking()
+            .Where(x => x.OrganizationId == organizationId);
+
+        var appliedCount = await query.CountAsync(
+            x => x.Status == LeaveRequestStatus.Pending || x.Status == LeaveRequestStatus.ModifiedPending,
+            cancellationToken);
+        var approvedCount = await query.CountAsync(x => x.Status == LeaveRequestStatus.Approved, cancellationToken);
+        var rejectedCount = await query.CountAsync(x => x.Status == LeaveRequestStatus.Rejected, cancellationToken);
+        var cancelledCount = await query.CountAsync(x => x.Status == LeaveRequestStatus.Cancelled, cancellationToken);
+
+        var currentlyOnLeaveCount = await query.CountAsync(
+            x =>
+                (x.Status == LeaveRequestStatus.Pending
+                 || x.Status == LeaveRequestStatus.ModifiedPending
+                 || x.Status == LeaveRequestStatus.Approved)
+                && x.StartDateUtc <= asOfDate
+                && x.EndDateUtc >= asOfDate,
+            cancellationToken);
+
+        return new LeaveAdminSummaryResponseModel
+        {
+            OrganizationId = organizationId,
+            AsOfDateUtc = asOfDate,
+            AppliedCount = appliedCount,
+            ApprovedCount = approvedCount,
+            RejectedCount = rejectedCount,
+            CancelledCount = cancelledCount,
+            CurrentlyOnLeaveCount = currentlyOnLeaveCount,
+        };
+    }
+
     public async Task<LeaveRequestResponseModel> CreateAsync(
         CreateLeaveRequestRequestModel request,
         CancellationToken cancellationToken = default)
