@@ -9,12 +9,29 @@ import type {
   LeaveRequest,
   LeaveType,
   UpdateLeaveRequestPayload,
+  CreateLeaveTypePayload,
+  UpdateLeaveTypePayload,
 } from "../types/leave.types";
 
 export const leaveService = {
   getLeaveTypes: async (organizationId: number): Promise<LeaveType[]> => {
     const { data } = await httpClient.get<LeaveType[]>("/api/LeaveTypes", { params: { organizationId } });
     return data;
+  },
+
+
+  createLeaveType: async (payload: CreateLeaveTypePayload): Promise<LeaveType> => {
+    const { data } = await httpClient.post<LeaveType>("/api/LeaveTypes", payload);
+    return data;
+  },
+
+  updateLeaveType: async (id: number, payload: UpdateLeaveTypePayload): Promise<LeaveType> => {
+    const { data } = await httpClient.put<LeaveType>(`/api/LeaveTypes/${id}`, payload);
+    return data;
+  },
+
+  deleteLeaveType: async (id: number): Promise<void> => {
+    await httpClient.delete(`/api/LeaveTypes/${id}`);
   },
 
   getLeaveBalances: async (employeeId: number): Promise<LeaveBalance[]> => {

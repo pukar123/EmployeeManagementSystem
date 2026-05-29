@@ -1,9 +1,11 @@
+export type LeaveUnitValue = 1 | 2;
+
 export type LeaveType = {
   id: number;
   organizationId: number;
   name: string;
   description?: string | null;
-  unit: "Days" | "Hours";
+  unit: LeaveUnitValue;
   requiresAttachment: boolean;
   isActive: boolean;
   createdAtUtc: string;
@@ -33,7 +35,7 @@ export type LeaveRequest = {
   leaveTypeId: number;
   startDateUtc: string;
   endDateUtc: string;
-  unit: "Days" | "Hours";
+  unit: LeaveUnitValue;
   requestedAmount: number;
   reason?: string | null;
   status: string;
@@ -59,7 +61,7 @@ export type CreateLeaveRequestPayload = {
   leaveTypeId: number;
   startDateUtc: string;
   endDateUtc: string;
-  unit: "Days" | "Hours";
+  unit: LeaveUnitValue;
   requestedAmount: number;
   reason?: string;
 };
@@ -67,7 +69,7 @@ export type CreateLeaveRequestPayload = {
 export type UpdateLeaveRequestPayload = {
   startDateUtc: string;
   endDateUtc: string;
-  unit: "Days" | "Hours";
+  unit: LeaveUnitValue;
   requestedAmount: number;
   reason?: string;
 };
@@ -92,7 +94,7 @@ export type BulkLeaveImportItem = {
   leaveTypeId: number;
   startDateUtc: string;
   endDateUtc: string;
-  unit: "Days" | "Hours";
+  unit: LeaveUnitValue;
   requestedAmount: number;
   reason?: string;
 };
@@ -109,4 +111,22 @@ export type BulkLeaveImportResult = {
   importedRows: number;
   failedRows: number;
   rowResults: Array<{ rowNumber: number; success: boolean; leaveRequestId?: number; error?: string }>;
+};
+
+
+export type CreateLeaveTypePayload = {
+  organizationId: number;
+  name: string;
+  description?: string;
+  unit: LeaveUnitValue;
+  requiresAttachment: boolean;
+  isActive: boolean;
+};
+
+export type UpdateLeaveTypePayload = {
+  name: string;
+  description?: string;
+  unit: LeaveUnitValue;
+  requiresAttachment: boolean;
+  isActive: boolean;
 };

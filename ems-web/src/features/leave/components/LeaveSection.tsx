@@ -13,6 +13,10 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function leaveUnitLabel(unit: 1 | 2): string {
+  return unit === 2 ? "Hours" : "Days";
+}
+
 export function LeaveSection() {
   const { organizationId } = useOrganizationContext();
   const { data: employees = [], isLoading: employeesLoading } = useEmployees();
@@ -30,20 +34,24 @@ export function LeaveSection() {
   const { createRequest, cancelRequest } = useLeaveMutations(employeeId);
 
   const selectedLeaveTypeId = leaveTypeId ?? leaveTypesQuery.data?.[0]?.id ?? null;
+  const selectedLeaveType = useMemo(() => {
+    if (selectedLeaveTypeId == null) return null;
+    return leaveTypesQuery.data?.find((x) => x.id === selectedLeaveTypeId) ?? null;
+  }, [leaveTypesQuery.data, selectedLeaveTypeId]);
   const selectedBalance = useMemo(() => {
     if (selectedLeaveTypeId == null) return null;
     return balancesQuery.data?.find((x) => x.leaveTypeId === selectedLeaveTypeId) ?? null;
   }, [balancesQuery.data, selectedLeaveTypeId]);
 
   const submit = async () => {
-    if (!employeeId || !selectedLeaveTypeId) return;
+    if (!employeeId || !selectedLeaveTypeId || !selectedLeaveType) return;
     try {
       await createRequest.mutateAsync({
         employeeId,
         leaveTypeId: selectedLeaveTypeId,
         startDateUtc: startDate,
         endDateUtc: endDate,
-        unit: "Days",
+        unit: selectedLeaveType?.unit ?? 1,
         requestedAmount: Number(requestedAmount),
         reason: reason.trim() || undefined,
       });
@@ -101,6 +109,7 @@ export function LeaveSection() {
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950">
           <p className="text-xs text-zinc-500">Available balance</p>
           <p className="text-xl font-semibold">{selectedBalance?.availableAmount ?? 0}</p>
+          <p className="mt-1 text-xs text-zinc-500">{leaveUnitLabel(selectedLeaveType?.unit ?? 1)}</p>
         </div>
       </div>
 
@@ -122,7 +131,7 @@ export function LeaveSection() {
           <input value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900" />
         </label>
         <div className="md:col-span-4">
-          <Button type="button" onClick={() => void submit()} disabled={createRequest.isPending || !employeeId || !selectedLeaveTypeId}>
+          <Button type="button" onClick={() => void submit()} disabled={createRequest.isPending || !employeeId || !selectedLeaveTypeId || !selectedLeaveType}>
             Submit request
           </Button>
         </div>

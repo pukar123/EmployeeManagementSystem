@@ -12,6 +12,14 @@ import { leaveService } from "../services/leaveService";
 import { leaveKeys } from "../services/query-keys";
 import type { LeaveAdminSummary, LeaveRequest } from "../types/leave.types";
 
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function leaveUnitLabel(unit: 1 | 2): string {
+  return unit === 2 ? "Hours" : "Days";
+}
+
 function buildFallbackSummary(organizationId: number | null, requests: LeaveRequest[]): LeaveAdminSummary {
   const today = new Date().toISOString().slice(0, 10);
   const appliedCount = requests.filter((x) => x.status === "Pending" || x.status === "ModifiedPending").length;
@@ -39,9 +47,22 @@ function buildFallbackSummary(organizationId: number | null, requests: LeaveRequ
 export function LeaveAdminSection() {
   const { organizationId } = useOrganizationContext();
   const employeesQuery = useEmployees();
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [leaveTypeId, setLeaveTypeId] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState(todayIso());
+  const [endDate, setEndDate] = useState(todayIso());
+  const [requestedAmount, setRequestedAmount] = useState("1");
+  const [reason, setReason] = useState("");
   const leaveTypesQuery = useLeaveTypes(organizationId);
   const adminSummaryQuery = useLeaveAdminSummary(organizationId);
-  const { bulkImport } = useLeaveMutations(null);
+  const employeeId = selectedEmployeeId ?? employeesQuery.data?.[0]?.id ?? null;
+  const selectedLeaveTypeId = leaveTypeId ?? leaveTypesQuery.data?.[0]?.id ?? null;
+  const selectedLeaveType = useMemo(() => {
+    if (selectedLeaveTypeId == null) return null;
+    return (leaveTypesQuery.data ?? []).find((x) => x.id === selectedLeaveTypeId) ?? null;
+  }, [leaveTypesQuery.data, selectedLeaveTypeId]);
+  const leaveTypeUnitById = useMemo(() => new Map((leaveTypesQuery.data ?? []).map((x) => [x.id, x.unit])), [leaveTypesQuery.data]);
+  const { createRequest, bulkImport } = useLeaveMutations(employeeId);
   const [importText, setImportText] = useState("");
 
   const sampleRows = useMemo(() => {
@@ -51,17 +72,18 @@ export function LeaveAdminSection() {
       .filter(Boolean)
       .map((line) => {
         const [employeeId, leaveTypeId, startDateUtc, endDateUtc, requestedAmount] = line.split(",");
+        const parsedLeaveTypeId = Number(leaveTypeId);
         return {
           employeeId: Number(employeeId),
-          leaveTypeId: Number(leaveTypeId),
+          leaveTypeId: parsedLeaveTypeId,
           startDateUtc,
           endDateUtc,
-          unit: "Days" as const,
+          unit: leaveTypeUnitById.get(parsedLeaveTypeId) ?? 1,
           requestedAmount: Number(requestedAmount),
           reason: "Bulk import",
         };
       });
-  }, [importText]);
+  }, [importText, leaveTypeUnitById]);
 
   const employeeIds = useMemo(() => (employeesQuery.data ?? []).map((x) => x.id), [employeesQuery.data]);
   const fallbackRequestsQueries = useQueries({
@@ -92,6 +114,25 @@ export function LeaveAdminSection() {
         items: sampleRows,
       });
       toast.success(`Import complete: ${result.importedRows}/${result.totalRows} rows.`);
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    }
+  };
+
+  const submitManualEntry = async () => {
+    if (!employeeId || !selectedLeaveTypeId || !selectedLeaveType) return;
+    try {
+      await createRequest.mutateAsync({
+        employeeId,
+        leaveTypeId: selectedLeaveTypeId,
+        startDateUtc: startDate,
+        endDateUtc: endDate,
+        unit: selectedLeaveType.unit,
+        requestedAmount: Number(requestedAmount),
+        reason: reason.trim() || undefined,
+      });
+      toast.success("Leave request submitted.");
+      setReason("");
     } catch (e) {
       toast.error(getErrorMessage(e));
     }
@@ -132,9 +173,100 @@ export function LeaveAdminSection() {
         <h2 className="text-lg font-medium">Configured leave types</h2>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
           {(leaveTypesQuery.data ?? []).map((t) => (
-            <li key={t.id}>{t.name} ({t.unit})</li>
+            <li key={t.id}>{t.name} ({leaveUnitLabel(t.unit)})</li>
           ))}
         </ul>
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
+        <h2 className="text-lg font-medium">Manual leave entry</h2>
+        <p className="mt-1 text-xs text-zinc-500">Create leave for any employee.</p>
+        <div className="mt-3 grid gap-4 md:grid-cols-3">
+          <label className="block">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Employee</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              value={employeeId ?? ""}
+              onChange={(e) => setSelectedEmployeeId(Number(e.target.value))}
+            >
+              {(employeesQuery.data ?? []).map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.firstName} {employee.lastName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Leave type</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              value={selectedLeaveTypeId ?? ""}
+              onChange={(e) => setLeaveTypeId(Number(e.target.value))}
+            >
+              {(leaveTypesQuery.data ?? []).map((leaveType) => (
+                <option key={leaveType.id} value={leaveType.id}>
+                  {leaveType.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950">
+            <p className="text-xs text-zinc-500">Unit</p>
+            <p className="text-xl font-semibold">
+              {leaveUnitLabel(selectedLeaveType?.unit ?? 1)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
+          <label className="block">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Start date</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">End date</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Requested amount</span>
+            <input
+              type="number"
+              min="0.5"
+              step="0.5"
+              value={requestedAmount}
+              onChange={(e) => setRequestedAmount(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Reason</span>
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4">
+          <Button
+            type="button"
+            onClick={() => void submitManualEntry()}
+            disabled={createRequest.isPending || !employeeId || !selectedLeaveTypeId || !selectedLeaveType}
+          >
+            Add leave
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
