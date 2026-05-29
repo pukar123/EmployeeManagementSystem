@@ -32,6 +32,7 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.LeaveRequest> LeaveRequests { get; set; }
         public DbSet<DbModels.LeaveRequestAttachment> LeaveRequestAttachments { get; set; }
         public DbSet<DbModels.TaskItem> TaskItems { get; set; }
+        public DbSet<DbModels.Shift> Shifts { get; set; }
         public DbSet<DbModels.AuditTrailEntry> AuditTrailEntries { get; set; }
         public DbSet<DbModels.EmployeePositionHistory> EmployeePositionHistories { get; set; }
         public DbSet<DbModels.EmployeeDepartmentHistory> EmployeeDepartmentHistories { get; set; }

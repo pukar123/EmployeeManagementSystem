@@ -10,6 +10,7 @@ import {
   MapPin,
   PlusCircle,
   Settings,
+  UserCircle,
   Users,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ export const emsNavItemsSetup: readonly EmsNavItem[] = [
 /** Main app routes when organization exists (matches AppNav `mainLinks` + Organization). */
 export const emsNavItemsMain: readonly EmsNavItem[] = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/employee-portal", label: "Employee portal", icon: UserCircle },
   { href: "/employees", label: "Employees", icon: Users },
   { href: "/employee-transfers", label: "Transfers", icon: ArrowLeftRight },
   { href: "/departments", label: "Departments", icon: Building2 },

@@ -17,6 +17,8 @@ using EMS.Application.Services.Organizations;
 using EMS.Application.Services.Leave;
 using EMS.Application.Services.Sites;
 using EMS.Application.Services.Tasks;
+using EMS.Application.Services.Shifts;
+using EMS.Application.Services.EmployeePortal;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
 using Pukar.Usermanagement.Domain.Database;
@@ -145,6 +147,8 @@ try
     builder.Services.AddScoped<ILeaveAccrualService, LeaveAccrualService>();
     builder.Services.AddScoped<ILeaveImportService, LeaveImportService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
+    builder.Services.AddScoped<IShiftService, ShiftService>();
+    builder.Services.AddScoped<IEmployeePortalService, EmployeePortalService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
     builder.Services.AddScoped<LocalLeaveAttachmentStorage>();
