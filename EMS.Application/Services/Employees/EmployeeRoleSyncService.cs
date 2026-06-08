@@ -3,6 +3,7 @@ using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
+using Pukar.Shared;
 
 namespace EMS.Application.Services.Employees;
 
@@ -139,6 +140,7 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
         var externalKey = linkedUser.Id.ToString(CultureInfo.InvariantCulture);
         if (!string.Equals(employee.ExternalIdentityKey, externalKey, StringComparison.Ordinal))
         {
+            await EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(employee.Id, externalKey, cancellationToken);
             employee.ExternalIdentityKey = externalKey;
             _employeeRepository.Update(employee);
             await _employeeRepository.SaveChangesAsync(cancellationToken);
@@ -157,5 +159,24 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
         }
 
         return await _gateway.GetUserByEmailAsync(employee.Email, cancellationToken);
+    }
+
+    private async Task EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(
+        int employeeId,
+        string externalKey,
+        CancellationToken cancellationToken)
+    {
+        var conflict = await _employeeRepository.GetQueryable()
+            .AnyAsync(
+                e => !e.IsArchived
+                    && e.ExternalIdentityKey == externalKey
+                    && e.Id != employeeId,
+                cancellationToken);
+
+        if (conflict)
+        {
+            throw new BusinessRuleException(
+                "This user account is already linked to another active employee. Unlink or archive the other employee before linking here.");
+        }
     }
 }

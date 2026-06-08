@@ -2,11 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { employeePortalKeys } from "../services/query-keys";
 import { employeePortalService } from "../services/employeePortalService";
 
-export function useEmployeePortal() {
+export function useEmployeePortalEligibility() {
   return useQuery({
-    queryKey: employeePortalKeys.summary(),
-    queryFn: () => employeePortalService.getPortal(),
-    /** Portal link state can change without remounting; avoid long-lived stale "unlinked" snapshot. */
+    queryKey: employeePortalKeys.eligibility(),
+    queryFn: () => employeePortalService.getEligibility(),
     staleTime: 0,
     refetchOnMount: "always",
   });

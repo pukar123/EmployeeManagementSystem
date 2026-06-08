@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { OrganizationGate } from "@/providers/OrganizationGate";
 import { OrganizationProvider } from "@/providers/OrganizationProvider";
 import { useAuth } from "@/providers/AuthProvider";
+import { EmployeePortalShell } from "@/shared/components/layout/EmployeePortalShell";
 import { EmsTailAdminShell } from "@/shared/components/layout/EmsTailAdminShell";
 import { Spinner } from "@/shared/components/Spinner";
 
@@ -92,10 +93,16 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const isEmployeePortal = pathname.startsWith("/employee-portal");
+
   return (
     <OrganizationProvider>
       <OrganizationGate>
-        <EmsTailAdminShell>{children}</EmsTailAdminShell>
+        {isEmployeePortal ? (
+          <EmployeePortalShell>{children}</EmployeePortalShell>
+        ) : (
+          <EmsTailAdminShell>{children}</EmsTailAdminShell>
+        )}
       </OrganizationGate>
     </OrganizationProvider>
   );

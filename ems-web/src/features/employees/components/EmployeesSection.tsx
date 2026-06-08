@@ -11,6 +11,7 @@ import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
 import { Spinner } from "@/shared/components/Spinner";
 import { cn } from "@/shared/utils/cn";
+import { employeePortalKeys } from "@/features/employee-portal/services/query-keys";
 import { EmployeeTable } from "./EmployeeTable";
 import { EmployeeHistoryModal } from "./EmployeeHistoryModal";
 import { EmployeeForm } from "./EmployeeForm";
@@ -136,16 +137,13 @@ export function EmployeesSection() {
     setSelectedRoleIds(new Set());
   };
 
-  const handleEmployeeSuccess = (employee: Employee, mode: "create" | "edit") => {
-    refetchList();
-
-    if (mode !== "create") {
-      return;
-    }
-
+  const startProvisioning = (employee: Employee) => {
     setProvisioningEmployee(employee);
     provisionMutation.mutate(employee.id, {
       onSuccess: (result) => {
+        void queryClient.invalidateQueries({ queryKey: employeeKeys.list() });
+        void queryClient.invalidateQueries({ queryKey: employeePortalKeys.summary() });
+        void queryClient.refetchQueries({ queryKey: employeePortalKeys.summary(), type: "all" });
         setProvisioningResult(result);
         setSelectedRoleIds(new Set(result.assignedRoleIds));
         setWizardStep(result.temporaryPassword ? "password" : "roles");
@@ -155,6 +153,16 @@ export function EmployeesSection() {
         closeProvisioningModal();
       },
     });
+  };
+
+  const handleEmployeeSuccess = (employee: Employee, mode: "create" | "edit") => {
+    refetchList();
+
+    if (mode !== "create") {
+      return;
+    }
+
+    startProvisioning(employee);
   };
 
   const toggleRole = (roleId: number, checked: boolean) => {
@@ -178,6 +186,9 @@ export function EmployeesSection() {
         roleIds: Array.from(selectedRoleIds),
       });
       toast.success("Roles assigned.");
+      void queryClient.invalidateQueries({ queryKey: employeeKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: employeePortalKeys.summary() });
+      void queryClient.refetchQueries({ queryKey: employeePortalKeys.summary(), type: "all" });
       closeProvisioningModal();
     } catch (mutationError) {
       toast.error(getErrorMessage(mutationError));
@@ -290,6 +301,8 @@ export function EmployeesSection() {
           immediateManagerPositionByEmployeeId={immediateManagerPositionByEmployeeId}
           onViewHistory={(e) => setHistoryEmployee(e)}
           onManageRoles={openRolesModal}
+          onProvisionUser={startProvisioning}
+          provisionBusy={provisionMutation.isPending}
           onEdit={(e) => openEditForm(e)}
           onDelete={(e) => openDeleteDialog(e)}
         />

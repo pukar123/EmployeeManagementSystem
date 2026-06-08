@@ -12,6 +12,9 @@ type EmployeeTableProps = {
   immediateManagerPositionByEmployeeId: Map<number, string>;
   onViewHistory: (e: Employee) => void;
   onManageRoles: (e: Employee) => void;
+  onProvisionUser: (e: Employee) => void;
+  /** When true, disable row-level provision to avoid concurrent runs. */
+  provisionBusy?: boolean;
   onEdit: (e: Employee) => void;
   onDelete: (e: Employee) => void;
 };
@@ -30,6 +33,8 @@ export function EmployeeTable({
   immediateManagerPositionByEmployeeId,
   onViewHistory,
   onManageRoles,
+  onProvisionUser,
+  provisionBusy = false,
   onEdit,
   onDelete,
 }: EmployeeTableProps) {
@@ -71,12 +76,21 @@ export function EmployeeTable({
                 {formatJobPositionCell(row.jobPositionId, jobPositionLabelById)}
               </td>
               <td className="whitespace-nowrap px-4 py-3">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onViewHistory(row)}>
                     History
                   </Button>
                   <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onManageRoles(row)}>
                     Roles
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="!py-1 !text-xs"
+                    disabled={row.isArchived || provisionBusy}
+                    onClick={() => onProvisionUser(row)}
+                  >
+                    Link login
                   </Button>
                   <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onEdit(row)}>
                     Edit

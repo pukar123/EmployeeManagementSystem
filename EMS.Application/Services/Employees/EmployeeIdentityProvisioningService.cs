@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using EMS.Application.DTOs.Employee;
 using EMS.Domain.DbModels;
 using EMS.Domain.Repositories.Interface;
+using Microsoft.EntityFrameworkCore;
 using Pukar.Shared;
 
 namespace EMS.Application.Services.Employees;
@@ -62,6 +63,7 @@ public sealed class EmployeeIdentityProvisioningService : IEmployeeIdentityProvi
         var externalKey = existingUser.Id.ToString(CultureInfo.InvariantCulture);
         if (!string.Equals(employee.ExternalIdentityKey, externalKey, StringComparison.Ordinal))
         {
+            await EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(employee.Id, externalKey, cancellationToken);
             employee.ExternalIdentityKey = externalKey;
             _employees.Update(employee);
             await _employees.SaveChangesAsync(cancellationToken);
@@ -115,12 +117,32 @@ public sealed class EmployeeIdentityProvisioningService : IEmployeeIdentityProvi
         var externalKey = linkedUser.Id.ToString(CultureInfo.InvariantCulture);
         if (!string.Equals(employee.ExternalIdentityKey, externalKey, StringComparison.Ordinal))
         {
+            await EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(employee.Id, externalKey, cancellationToken);
             employee.ExternalIdentityKey = externalKey;
             _employees.Update(employee);
             await _employees.SaveChangesAsync(cancellationToken);
         }
 
         return linkedUser.Id;
+    }
+
+    private async Task EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(
+        int employeeId,
+        string externalKey,
+        CancellationToken cancellationToken)
+    {
+        var conflict = await _employees.GetQueryable()
+            .AnyAsync(
+                e => !e.IsArchived
+                    && e.ExternalIdentityKey == externalKey
+                    && e.Id != employeeId,
+                cancellationToken);
+
+        if (conflict)
+        {
+            throw new BusinessRuleException(
+                "This user account is already linked to another active employee. Unlink or archive the other employee before linking here.");
+        }
     }
 
     private static string BuildEmployeeName(Employee employee)

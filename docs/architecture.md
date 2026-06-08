@@ -36,6 +36,7 @@ flowchart TB
 - **Application services** orchestrate use cases: load or create entities via `IBaseRepository<T>`, map to/from DTOs, call `SaveChangesAsync` through the repository.
 - **Mappers** (static helpers in `EMS.Application/Mapping`) keep mapping logic in one place per aggregate.
 - **Domain** owns persistence model, EF configuration, and migrations; **Infrastructure** implements `IBaseRepository<T>` using `AppDbContext`.
+- **Employee–identity link:** at most one non-archived employee per `ExternalIdentityKey` (filtered unique index + application checks). Before applying that migration on a database, run the duplicate checks in [employee-external-identity-key-operations.md](employee-external-identity-key-operations.md).
 
 ## DTO conventions
 

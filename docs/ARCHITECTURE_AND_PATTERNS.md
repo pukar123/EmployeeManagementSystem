@@ -240,6 +240,12 @@ Standalone clone: build **`Pukar.Usermanagement.sln`** (includes `Pukar.Shared`)
   - `components`: report and analytics rendering
   - `types`: report/analytics contracts aligned with backend DTOs
 
+### Local build: MSB3027 / MSB3021 (file locked)
+
+If **`dotnet build`**, **`dotnet ef`**, or Visual Studio reports errors copying DLLs into **`EMS.API\bin\Debug\...`** (often after many **MSB3026** retries), the usual cause is that **EMS.API is already running** and has those assemblies loaded.
+
+**Fix:** stop the running API (debug session, `dotnet run` terminal, or Task Manager process **EMS.API**), then build again. This is not a C# compiler failure.
+
 ---
 
 *Keep this file updated when you add new cross-cutting patterns (validation, CQRS, MediatR, etc.) so future projects stay consistent.*

@@ -74,5 +74,9 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.HasIndex(x => x.JobPositionId);
         builder.HasIndex(x => x.IsArchived);
         builder.HasIndex(x => x.RetentionUntilUtc);
+
+        builder.HasIndex(x => x.ExternalIdentityKey)
+            .IsUnique()
+            .HasFilter("[ExternalIdentityKey] IS NOT NULL AND [IsArchived] = 0");
     }
 }

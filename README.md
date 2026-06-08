@@ -59,13 +59,15 @@ Replace placeholders in `appsettings*.json` with your own values for any environ
 
 ## Database migrations
 
+**Before** `dotnet ef` or a **full rebuild** of **EMS.API**: **stop the running API** (stop debugging, close the `dotnet run` terminal, or run `powershell -NoProfile -File scripts\stop-ems-api.ps1`). If **EMS.API.exe** is still running, MSBuild usually fails with **MSB3027 / MSB3021** (“cannot copy … file is being used by another process”) because it locks DLLs under `EMS.API\bin\Debug\net9.0\`.
+
 Migrations are in **EMS.Domain** (same assembly as `AppDbContext`). Apply them using the API project as startup (so configuration loads from `EMS.API`):
 
 ```bash
 dotnet ef database update --project EMS.Domain --startup-project EMS.API
 ```
 
-If the web app shows **Could not load organization** and the API logs report SQL **`Invalid column name`** (for example on `Description`, `LogoRelativePath`, or `Motto`), your database is behind the code: run the command above so pending migrations apply. If `dotnet ef` fails to **build** because **EMS.API is running** (file lock on DLLs), stop the API process, run the command again, or build only `EMS.Domain` and run `dotnet ef database update --project EMS.Domain --startup-project EMS.API --no-build` using a configuration that already built successfully.
+If the web app shows **Could not load organization** and the API logs report SQL **`Invalid column name`** (for example on `Description`, `LogoRelativePath`, or `Motto`), your database is behind the code: run the command above so pending migrations apply. If `dotnet ef` still fails to **build** after stopping the API, run `dotnet build EMS.Domain` then `dotnet ef database update --project EMS.Domain --startup-project EMS.API --no-build`.
 
 Add a new migration after model changes:
 

@@ -140,6 +140,8 @@ try
     builder.Services.AddScoped<ILeavePolicyRuleRepository, LeavePolicyRuleRepository>();
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
+    builder.Services.AddScoped<ILinkedEmployeeService, LinkedEmployeeService>();
+    builder.Services.AddScoped<ILeaveEmployeeAccessService, LeaveEmployeeAccessService>();
     builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
     builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
     builder.Services.AddScoped<ILeavePolicyRuleService, LeavePolicyRuleService>();

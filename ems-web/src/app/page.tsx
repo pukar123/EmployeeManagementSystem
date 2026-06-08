@@ -1,6 +1,5 @@
 import { HomeOverview } from "@/features/dashboard/components/HomeOverview";
 import { OrganizationSetupLinks } from "@/features/organizations/components/OrganizationSetupLinks";
-
 import Link from "next/link";
 
 export default function Home() {

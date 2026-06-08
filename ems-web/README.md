@@ -24,6 +24,8 @@ Edit `.env.local`:
 
 **First run:** if the database has no organization yet, the app opens **`/setup`** so you can create the single organization for this instance. After that, the app uses that organization for employees, departments, and positions (no manual organization id in forms).
 
+**Employee portal:** the home page shows the “Employee portal” shortcut for signed-in users. Personal shifts and leave appear when the login is linked to an employee record in EMS; otherwise the portal opens with a neutral empty state.
+
 **Option A — API and web together (one terminal):**
 
 ```bash

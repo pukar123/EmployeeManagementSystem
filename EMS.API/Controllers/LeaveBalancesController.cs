@@ -23,8 +23,15 @@ public class LeaveBalancesController : ControllerBase
         int employeeId,
         CancellationToken cancellationToken)
     {
-        var result = await _leaveBalanceService.GetByEmployeeAsync(employeeId, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _leaveBalanceService.GetByEmployeeAsync(employeeId, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
     }
 
     [HttpGet("employee/{employeeId:int}/type/{leaveTypeId:int}")]
@@ -49,6 +56,9 @@ public class LeaveBalancesController : ControllerBase
 
     private ActionResult HandleBusinessRule(BusinessRuleException ex)
     {
+        if (string.Equals(ex.Message, LeaveAccessMessages.Denied, StringComparison.Ordinal))
+            return Forbid();
+
         if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
             return NotFound(new { message = ex.Message });
         return BadRequest(new { message = ex.Message });

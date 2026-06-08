@@ -1,11 +1,8 @@
-using System.Globalization;
 using EMS.Application.DTOs.EmployeePortal;
 using EMS.Application.DTOs.Shift;
-using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Leave;
 using EMS.Application.Services.Shifts;
 using EMS.Domain.DbModels;
-using EMS.Domain.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 using Pukar.Shared;
 
@@ -15,29 +12,50 @@ public sealed class EmployeePortalService : IEmployeePortalService
 {
     private const int MaxLeaveRequestsInPortal = 50;
 
-    private readonly IIdentityContext _identityContext;
-    private readonly IBaseRepository<Employee> _employeeRepository;
+    private readonly ILinkedEmployeeService _linkedEmployeeService;
+    private readonly ILeaveEmployeeAccessService _leaveEmployeeAccessService;
     private readonly IShiftService _shiftService;
     private readonly ILeaveRequestService _leaveRequestService;
     private readonly ILeaveBalanceService _leaveBalanceService;
 
     public EmployeePortalService(
-        IIdentityContext identityContext,
-        IBaseRepository<Employee> employeeRepository,
+        ILinkedEmployeeService linkedEmployeeService,
+        ILeaveEmployeeAccessService leaveEmployeeAccessService,
         IShiftService shiftService,
         ILeaveRequestService leaveRequestService,
         ILeaveBalanceService leaveBalanceService)
     {
-        _identityContext = identityContext;
-        _employeeRepository = employeeRepository;
+        _linkedEmployeeService = linkedEmployeeService;
+        _leaveEmployeeAccessService = leaveEmployeeAccessService;
         _shiftService = shiftService;
         _leaveRequestService = leaveRequestService;
         _leaveBalanceService = leaveBalanceService;
     }
 
+    public async Task<EmployeePortalEligibilityResponseModel> GetEligibilityAsync(CancellationToken cancellationToken = default)
+    {
+        var employee = await _linkedEmployeeService.TryGetLinkedEmployeeAsync(cancellationToken);
+        var canManageOthers = await _leaveEmployeeAccessService.CanManageOtherEmployeesLeaveAsync(cancellationToken);
+
+        return new EmployeePortalEligibilityResponseModel
+        {
+            HasLinkedEmployeeProfile = employee is not null,
+            LinkedEmployeeId = employee?.Id,
+            LinkedOrganizationId = employee?.OrganizationId,
+            CanManageOtherEmployeesLeave = canManageOthers,
+        };
+    }
+
     public async Task<EmployeePortalResponseModel> GetPortalAsync(CancellationToken cancellationToken = default)
     {
-        var employee = await ResolveLinkedEmployeeAsync(cancellationToken);
+        var employee = await _linkedEmployeeService.TryGetLinkedEmployeeAsync(cancellationToken);
+        if (employee is null)
+        {
+            return new EmployeePortalResponseModel
+            {
+                HasLinkedEmployeeProfile = false,
+            };
+        }
 
         var fromUtc = DateTime.UtcNow;
         var upcoming = (await _shiftService.GetUpcomingByEmployeeAsync(employee.Id, fromUtc, cancellationToken)).ToList();
@@ -54,6 +72,7 @@ public sealed class EmployeePortalService : IEmployeePortalService
 
         return new EmployeePortalResponseModel
         {
+            HasLinkedEmployeeProfile = true,
             EmployeeId = employee.Id,
             OrganizationId = employee.OrganizationId,
             NearestUpcomingShift = nearest,
@@ -66,25 +85,7 @@ public sealed class EmployeePortalService : IEmployeePortalService
 
     public async Task<ShiftResponseModel?> StartShiftAsync(int shiftId, CancellationToken cancellationToken = default)
     {
-        var employee = await ResolveLinkedEmployeeAsync(cancellationToken);
+        var employee = await _linkedEmployeeService.GetLinkedEmployeeOrThrowAsync(cancellationToken);
         return await _shiftService.StartShiftAsync(shiftId, employee.Id, cancellationToken);
-    }
-
-    private async Task<Employee> ResolveLinkedEmployeeAsync(CancellationToken cancellationToken)
-    {
-        var identity = _identityContext.GetCurrent();
-        if (identity.UserId is null)
-            throw new BusinessRuleException("User is not authenticated.");
-
-        var externalKey = identity.UserId.Value.ToString(CultureInfo.InvariantCulture);
-        var employee = await _employeeRepository.GetQueryable()
-            .AsNoTracking()
-            .Where(e => !e.IsArchived && e.ExternalIdentityKey == externalKey)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (employee is null)
-            throw new BusinessRuleException("No employee profile is linked to this user account.");
-
-        return employee;
     }
 }

@@ -19,6 +19,13 @@ public sealed class EmployeePortalController : ControllerBase
         _employeePortalService = employeePortalService;
     }
 
+    [HttpGet("eligibility")]
+    public async Task<ActionResult<EmployeePortalEligibilityResponseModel>> GetEligibility(CancellationToken cancellationToken)
+    {
+        var result = await _employeePortalService.GetEligibilityAsync(cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet]
     public async Task<ActionResult<EmployeePortalResponseModel>> GetPortal(CancellationToken cancellationToken)
     {

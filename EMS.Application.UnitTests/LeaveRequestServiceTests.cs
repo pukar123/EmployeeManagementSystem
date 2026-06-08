@@ -18,6 +18,10 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
+        leaveEmployeeAccess
+            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var existing = new List<LeaveRequest>
         {
@@ -44,7 +48,8 @@ public class LeaveRequestServiceTests
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object);
 
         var request = new CreateLeaveRequestRequestModel
         {
@@ -66,6 +71,10 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
+        leaveEmployeeAccess
+            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         requestRepo.Setup(x => x.GetQueryable()).Returns(new List<LeaveRequest>().BuildMock());
         leaveTypeRepo.Setup(x => x.GetByIdAsync(3, It.IsAny<CancellationToken>()))
@@ -88,7 +97,8 @@ public class LeaveRequestServiceTests
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object);
 
         var request = new CreateLeaveRequestRequestModel
         {
@@ -110,6 +120,7 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
 
         var rows = new List<LeaveRequest>
         {
@@ -126,7 +137,8 @@ public class LeaveRequestServiceTests
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object);
 
         var result = await sut.GetAdminSummaryAsync(9, new DateTime(2026, 5, 2), CancellationToken.None);
 
@@ -148,13 +160,15 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
 
         requestRepo.Setup(x => x.GetQueryable()).Returns(new List<LeaveRequest>().BuildMock());
         var sut = new LeaveRequestService(
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object);
 
         var ex = Assert.ThrowsAsync<BusinessRuleException>(async () =>
             await sut.GetAdminSummaryAsync(0, DateTime.UtcNow, CancellationToken.None));

@@ -12,6 +12,14 @@ const ORG_UPDATE_PATH = "/organization/setup";
 /** Routes reachable before an organization exists (home shows create vs update links). */
 const allowedPathsWhenNeedsSetup = new Set<string>(["/", SETUP_CREATE_PATH]);
 
+function isAllowedWhenNeedsSetup(pathname: string): boolean {
+  return (
+    allowedPathsWhenNeedsSetup.has(pathname) ||
+    pathname === "/employee-portal" ||
+    pathname.startsWith("/employee-portal/")
+  );
+}
+
 export function OrganizationGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -25,7 +33,7 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
         router.replace("/");
         return;
       }
-      if (!allowedPathsWhenNeedsSetup.has(pathname)) {
+      if (!isAllowedWhenNeedsSetup(pathname)) {
         router.replace("/");
       }
       return;
@@ -62,7 +70,7 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (needsSetup && !allowedPathsWhenNeedsSetup.has(pathname)) {
+  if (needsSetup && !isAllowedWhenNeedsSetup(pathname)) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />

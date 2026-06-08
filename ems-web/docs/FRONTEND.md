@@ -25,7 +25,13 @@ The web app is a **browser UI** for managing employees against the existing REST
 
 ---
 
-## 3. Layered architecture (Clean / onion-style)
+## 3. Employee portal shell
+
+Routes under **`/employee-portal`** (including **`/employee-portal/leave`**) render inside **`EmployeePortalShell`**: no admin sidebar, minimal header with **Main app** (to `/`), theme toggle, and user menu. Self-service leave lives at **`/employee-portal/leave`**; the main app **`/leave`** page may still show an employee picker for users whose roles include the **Leave** menu permission (`leave` menu key on the API).
+
+---
+
+## 4. Layered architecture (Clean / onion-style)
 
 Layers map loosely to the backend style: **types** first, **infrastructure** (HTTP), **application** (hooks = use cases), **UI** (pages & components).
 
@@ -61,7 +67,7 @@ flowchart TB
 
 ---
 
-## 4. Folder structure
+## 5. Folder structure
 
 ```
 ems-web/
@@ -100,7 +106,7 @@ When you add another bounded context (e.g. departments), add `src/features/depar
 
 ---
 
-## 5. Environment variables
+## 6. Environment variables
 
 ### Local development (`.env.local`)
 
@@ -120,7 +126,7 @@ When building the **`ems-web`** image from the solution root, `NEXT_PUBLIC_*` is
 
 ---
 
-## 6. Running locally (recommended for development)
+## 7. Running locally (recommended for development)
 
 1. Start **EMS.API** (and database if not using Docker for SQL).
 2. Ensure **CORS** on the API allows your web origin (this repo allows `http://localhost:3000` and `https://localhost:3000`).
@@ -138,7 +144,7 @@ Open **http://localhost:3000**. Use **http://localhost:3000/employees** for the 
 
 ---
 
-## 7. Docker (production-style image)
+## 8. Docker (production-style image)
 
 From the **solution root** (parent of `ems-web`):
 
@@ -152,7 +158,7 @@ On Windows you can use **`start-ems-docker.bat`** / **`stop-ems-docker.bat`**. T
 
 ---
 
-## 8. API alignment (Employees)
+## 9. API alignment (Employees)
 
 The client targets the same contracts as the backend:
 
@@ -168,7 +174,7 @@ Types live under `src/features/employees/types/`. Field names follow **camelCase
 
 ---
 
-## 9. React Query conventions
+## 10. React Query conventions
 
 - **Query keys** are centralized in `src/features/employees/services/query-keys.ts` (e.g. `['employees']`, `['employees', 'detail', id]`).
 - **Mutations** invalidate list queries (and detail when updating) so lists stay fresh.
@@ -176,13 +182,13 @@ Types live under `src/features/employees/types/`. Field names follow **camelCase
 
 ---
 
-## 10. Zustand (UI-only state)
+## 11. Zustand (UI-only state)
 
 `src/features/employees/store/employee-ui-store.ts` holds **modal visibility**, **selected row for edit/delete**, and **form mode** (create vs edit). It does **not** perform HTTP; mutations stay in hooks.
 
 ---
 
-## 11. Quality checks
+## 12. Quality checks
 
 ```bash
 npm run lint
@@ -193,7 +199,7 @@ npm run build
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | Symptom | Likely cause | What to try |
 |---------|----------------|-------------|
@@ -204,7 +210,7 @@ npm run build
 
 ---
 
-## 13. Related documentation
+## 14. Related documentation
 
 | Document | Content |
 |----------|---------|
@@ -214,7 +220,7 @@ npm run build
 
 ---
 
-## 14. Conventions checklist (new feature)
+## 15. Conventions checklist (new feature)
 
 1. Add **types** under `features/<name>/types/`.
 2. Add **service** functions calling `httpClient` only.
@@ -224,7 +230,7 @@ npm run build
 
 ---
 
-## 15. Recent UI updates
+## 16. Recent UI updates
 
 ### Sidebar navigation
 

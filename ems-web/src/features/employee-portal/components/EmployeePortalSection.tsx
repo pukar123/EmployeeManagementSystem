@@ -82,6 +82,28 @@ export function EmployeePortalSection() {
   const data = portalQuery.data;
   if (!data) return null;
 
+  if (!data.hasLinkedEmployeeProfile) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <div className="space-y-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Employee portal</h1>
+          <div
+            className="rounded-xl border border-border bg-muted/30 px-4 py-5 text-sm text-muted-foreground"
+            role="status"
+          >
+            <p className="font-medium text-foreground">Employee portal is available</p>
+            <p className="mt-2 leading-relaxed">
+              You can access the employee portal. Personal shifts and leave appear when the{" "}
+              <span className="font-medium text-foreground">account you are signed in with</span> is linked to an
+              employee (same user id stored on the employee record). If you used &quot;Link login&quot; for someone else
+              or created a new login, sign in with that user to see their schedule here.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const topIds = new Set(data.topThreeUpcomingShifts.map((s) => s.id));
 
   return (
@@ -166,7 +188,7 @@ export function EmployeePortalSection() {
             Leave
           </h2>
           <Link
-            href="/leave"
+            href="/employee-portal/leave"
             className="inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             Open leave
