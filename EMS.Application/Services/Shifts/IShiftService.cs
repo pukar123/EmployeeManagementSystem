@@ -13,6 +13,10 @@ public interface IShiftService
         int? employeeId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Portal-relevant shifts: scheduled or started, not ended as of <paramref name="fromUtc"/> (UTC),
+    /// including scheduled blocks that already began but have not ended.
+    /// </summary>
     Task<IReadOnlyList<ShiftResponseModel>> GetUpcomingByEmployeeAsync(
         int employeeId,
         DateTime? fromUtc,

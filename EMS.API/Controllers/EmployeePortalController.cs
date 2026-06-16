@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.EmployeePortal;
 using EMS.Application.DTOs.Shift;
+using EMS.Application.DTOs.Task;
 using EMS.Application.Services.EmployeePortal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,20 @@ public sealed class EmployeePortalController : ControllerBase
         try
         {
             var updated = await _employeePortalService.StartShiftAsync(id, cancellationToken);
+            return updated is null ? NotFound() : Ok(updated);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpPost("tasks/{id:int}/start")]
+    public async Task<ActionResult<TaskResponseModel>> StartTask(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var updated = await _employeePortalService.StartTaskAsync(id, cancellationToken);
             return updated is null ? NotFound() : Ok(updated);
         }
         catch (BusinessRuleException ex)

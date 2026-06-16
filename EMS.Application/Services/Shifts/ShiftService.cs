@@ -72,6 +72,10 @@ public sealed class ShiftService : IShiftService
         return list.Select(ShiftMapper.ToResponse).ToList();
     }
 
+    /// <summary>
+    /// Shifts relevant to the employee portal: in-progress or not yet finished (scheduled/started),
+    /// so a scheduled block that already began but has not ended still appears.
+    /// </summary>
     public async Task<IReadOnlyList<ShiftResponseModel>> GetUpcomingByEmployeeAsync(
         int employeeId,
         DateTime? fromUtc,
@@ -83,9 +87,10 @@ public sealed class ShiftService : IShiftService
             .AsNoTracking()
             .Where(s =>
                 s.EmployeeId == employeeId
-                && s.Status == ShiftStatus.Scheduled
-                && s.StartAtUtc >= from)
-            .OrderBy(s => s.StartAtUtc)
+                && s.EndAtUtc >= from
+                && (s.Status == ShiftStatus.Scheduled || s.Status == ShiftStatus.Started))
+            .OrderByDescending(s => s.Status == ShiftStatus.Started ? 1 : 0)
+            .ThenBy(s => s.StartAtUtc)
             .ThenBy(s => s.Title)
             .ToListAsync(cancellationToken);
 
