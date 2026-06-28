@@ -5,10 +5,10 @@ import type { SelectOption } from "@/shared/types/select-option";
 import { cn } from "@/shared/utils/cn";
 
 const triggerClass =
-  "flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-left text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "flex w-full items-center justify-between gap-2 rounded-xl border border-input bg-background px-3 py-2 text-left text-sm text-foreground shadow-soft focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card";
 
 const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground shadow-soft focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card";
 
 export type SearchableSelectProps<TValue extends string | number> = {
   id?: string;
@@ -95,10 +95,10 @@ export function SearchableSelect<TValue extends string | number>({
         className={cn(triggerClass, disabled && "cursor-not-allowed opacity-60")}
         onClick={() => !disabled && setOpen((o) => !o)}
       >
-        <span className={cn("truncate", !selectedLabel && "text-zinc-500 dark:text-zinc-400")}>
+        <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
           {selectedLabel ?? placeholder}
         </span>
-        <span className="shrink-0 text-zinc-400" aria-hidden>
+        <span className="shrink-0 text-muted-foreground" aria-hidden>
           ▾
         </span>
       </button>
@@ -107,7 +107,7 @@ export function SearchableSelect<TValue extends string | number>({
         <div
           id={listboxId}
           role="listbox"
-          className="mt-2 space-y-2 rounded-lg border border-zinc-200 bg-white p-2 shadow-md dark:border-zinc-700 dark:bg-zinc-950"
+          className="mt-2 space-y-2 rounded-xl border border-border bg-card p-2 shadow-soft-lg"
         >
           <input
             type="search"
@@ -118,12 +118,12 @@ export function SearchableSelect<TValue extends string | number>({
             autoFocus
             aria-label="Filter options"
           />
-          <ul className="max-h-48 overflow-y-auto rounded-md border border-zinc-100 dark:border-zinc-800">
+          <ul className="max-h-48 overflow-y-auto rounded-lg border border-border">
             {allowClear ? (
               <li role="option" aria-selected={value === null}>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                  className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted/60"
                   onClick={() => handlePick(null)}
                 >
                   {emptyLabel}
@@ -131,7 +131,7 @@ export function SearchableSelect<TValue extends string | number>({
               </li>
             ) : null}
             {filtered.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-zinc-500">No matches.</li>
+              <li className="px-3 py-2 text-sm text-muted-foreground">No matches.</li>
             ) : (
               filtered.map((o) => (
                 <li key={String(o.value)} role="option" aria-selected={value === o.value}>
@@ -139,8 +139,8 @@ export function SearchableSelect<TValue extends string | number>({
                     type="button"
                     disabled={o.disabled}
                     className={cn(
-                      "w-full px-3 py-2 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900",
-                      value === o.value && "bg-zinc-100 font-medium dark:bg-zinc-800",
+                      "w-full px-3 py-2 text-left text-sm hover:bg-muted/60",
+                      value === o.value && "bg-primary/10 font-medium text-primary",
                       o.disabled && "cursor-not-allowed opacity-50",
                     )}
                     onClick={() => !o.disabled && handlePick(o.value)}

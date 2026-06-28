@@ -21,7 +21,7 @@ type TasksSectionProps = {
 export function TasksSection({ initialViewMode = "table" }: TasksSectionProps) {
   const { organizationId } = useOrganizationContext();
   const inputClassName =
-    "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+    "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
   const {
     search,

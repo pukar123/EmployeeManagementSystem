@@ -29,7 +29,7 @@ import { useEmployeeUiStore } from "../store/employee-ui-store";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 function formatDepartmentLabel(d: Department): string {
   return d.code ? `${d.name} (${d.code})` : d.name;
@@ -206,7 +206,7 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
   const pending = createMutation.isPending || updateMutation.isPending;
 
   if (currentOrgId == null) {
-    return <p className="text-sm text-zinc-500">Loading organization…</p>;
+    return <p className="text-sm text-muted-foreground">Loading organization…</p>;
   }
 
   return (
@@ -214,13 +214,13 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
       <div className="grid gap-4 sm:grid-cols-2">
         {mode === "edit" && employee ? (
           <div className="sm:col-span-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Employee number</p>
-            <p className="mt-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-100">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee number</p>
+            <p className="mt-1 rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
               {employee.employeeNumber}
             </p>
           </div>
         ) : (
-          <div className="sm:col-span-2 rounded-lg border border-dashed border-zinc-300 bg-zinc-50/80 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-900/30 dark:text-zinc-400">
+          <div className="sm:col-span-2 rounded-lg border border-dashed border-input bg-muted/50/80 px-3 py-2 text-sm text-muted-foreground dark:bg-card/30 dark:text-muted-foreground">
             Employee number will be assigned automatically when you save (e.g. <span className="font-mono">EMP001</span>,{" "}
             <span className="font-mono">EMP002</span>, …).
           </div>
@@ -345,7 +345,7 @@ function Field({
 }) {
   return (
     <div className="sm:col-span-1">
-      <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+      <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </label>
       {children}

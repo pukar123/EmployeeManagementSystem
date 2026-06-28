@@ -18,9 +18,9 @@ export function BreakTrackerCard({
   onEndBreak,
 }: BreakTrackerCardProps) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Break tracker</h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm dark:bg-card">
+      <h2 className="text-base font-semibold text-foreground">Break tracker</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         {hasOpenBreak ? "Break is active." : "No active break."}
       </p>
       <div className="mt-4 flex gap-2">

@@ -55,7 +55,7 @@ export function TaskFormModal({
         className="space-y-4"
       >
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Employee</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee</label>
           <select
             value={selectedEmployeeId ?? ""}
             onChange={(e) => onSelectedEmployeeIdChange(e.target.value ? Number(e.target.value) : null)}
@@ -73,23 +73,23 @@ export function TaskFormModal({
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Title</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title</label>
           <input type="text" value={title} onChange={(e) => onTitleChange(e.target.value)} className={inputClassName} required />
         </div>
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Description</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Description</label>
           <textarea value={description} onChange={(e) => onDescriptionChange(e.target.value)} className={inputClassName} rows={3} />
         </div>
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Start date</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Start date</label>
           <input type="datetime-local" value={startAtUtc} onChange={(e) => onStartAtUtcChange(e.target.value)} className={inputClassName} />
         </div>
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Due date</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Due date</label>
           <input type="datetime-local" value={dueAtUtc} onChange={(e) => onDueAtUtcChange(e.target.value)} className={inputClassName} />
         </div>
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Priority</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Priority</label>
           <select value={priority} onChange={(e) => onPriorityChange(Number(e.target.value) as TaskPriority)} className={inputClassName}>
             <option value={1}>Low</option>
             <option value={2}>Medium</option>

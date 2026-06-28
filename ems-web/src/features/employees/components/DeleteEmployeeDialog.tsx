@@ -46,9 +46,9 @@ export function DeleteEmployeeDialog({ employee, open, onClose, onDeleted }: Del
       }
     >
       {employee ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+        <p className="text-sm text-muted-foreground dark:text-muted-foreground">
           Are you sure you want to delete{" "}
-          <strong className="text-zinc-900 dark:text-white">
+          <strong className="text-foreground dark:text-white">
             {employee.firstName} {employee.lastName}
           </strong>{" "}
           ({employee.email})? This cannot be undone.

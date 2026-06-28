@@ -13,10 +13,10 @@ const links = [
 export default function UserManagementIndexPage() {
   return (
     <main className="mx-auto max-w-3xl flex-1 px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">
         User management
       </h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-2 text-sm text-muted-foreground">
         Choose a section to manage users and roles.
       </p>
       <ul className="mt-8 grid gap-4 sm:grid-cols-1">
@@ -24,10 +24,10 @@ export default function UserManagementIndexPage() {
           <li key={href}>
             <Link
               href={href}
-              className="block rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-zinc-300 hover:shadow dark:border-zinc-700 dark:bg-zinc-950 dark:hover:border-zinc-600"
+              className="block rounded-xl border border-border bg-card p-5 shadow-sm transition hover:border-input hover:shadow dark:bg-card dark:hover:border-input"
             >
-              <span className="font-medium text-zinc-900 dark:text-zinc-50">{title}</span>
-              <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">{description}</span>
+              <span className="font-medium text-foreground">{title}</span>
+              <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
             </Link>
           </li>
         ))}

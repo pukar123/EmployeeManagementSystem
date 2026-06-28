@@ -45,12 +45,12 @@ export function ManualEntryModal({
   return (
     <Modal open={open} title="Manual attendance entry" onClose={onClose} className="max-w-lg">
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Manual entries are auto-approved in this version.</p>
+        <p className="text-sm text-muted-foreground">Manual entries are auto-approved in this version.</p>
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Work date</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Work date</label>
           <input
             type="date"
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
             value={workDate}
             onChange={(e) => setWorkDate(e.target.value)}
             required
@@ -58,20 +58,20 @@ export function ManualEntryModal({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Check-in</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Check-in</label>
             <input
               type="time"
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
               value={checkInTime}
               onChange={(e) => setCheckInTime(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Check-out</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Check-out</label>
             <input
               type="time"
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
               value={checkOutTime}
               onChange={(e) => setCheckOutTime(e.target.value)}
               required
@@ -79,9 +79,9 @@ export function ManualEntryModal({
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Reason (optional)</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reason (optional)</label>
           <textarea
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
             rows={3}
             value={manualReason}
             onChange={(e) => setManualReason(e.target.value)}

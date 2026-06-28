@@ -47,7 +47,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
   }
@@ -57,7 +57,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
           <Spinner />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting…</p>
+          <p className="text-sm text-muted-foreground">Redirecting…</p>
         </div>
       );
     }
@@ -69,7 +69,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
           <Spinner />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting to sign in…</p>
+          <p className="text-sm text-muted-foreground">Redirecting to sign in…</p>
         </div>
       );
     }
@@ -77,7 +77,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
           <Spinner />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting…</p>
+          <p className="text-sm text-muted-foreground">Redirecting…</p>
         </div>
       );
     }
@@ -88,7 +88,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting to sign in…</p>
+        <p className="text-sm text-muted-foreground">Redirecting to sign in…</p>
       </div>
     );
   }

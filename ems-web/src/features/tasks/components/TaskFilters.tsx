@@ -21,7 +21,7 @@ export function TaskFilters({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div>
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Search
         </label>
         <input
@@ -33,7 +33,7 @@ export function TaskFilters({
         />
       </div>
       <div>
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Employee
         </label>
         <select

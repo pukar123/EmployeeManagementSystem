@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
+import { Search } from "lucide-react";
 import { ThemeToggleButton } from "@/components/tailadmin/ThemeToggleButton";
 import { useSidebar } from "@/context/SidebarContext";
+import { cn } from "@/lib/utils";
 import { EmsUserDropdown } from "./EmsUserDropdown";
 
 export function EmsTailAdminHeader() {
@@ -41,12 +43,12 @@ export function EmsTailAdminHeader() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-99999 flex w-full border-gray-200 bg-white lg:border-b dark:border-gray-800 dark:bg-gray-900">
+    <header className="sticky top-0 z-99999 border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
       <div className="flex grow flex-col items-center justify-between lg:flex-row lg:px-6">
-        <div className="flex w-full items-center justify-between gap-2 border-b border-gray-200 px-3 py-3 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
+        <div className="flex w-full items-center justify-between gap-2 border-b border-border/50 px-3 py-3 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-3.5">
           <button
             type="button"
-            className="z-99999 h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400 lg:flex lg:h-11 lg:w-11 lg:border"
+            className="z-99999 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-soft transition-colors hover:bg-muted hover:text-foreground lg:h-11 lg:w-11"
             onClick={handleToggle}
             aria-label="Toggle Sidebar"
           >
@@ -79,7 +81,7 @@ export function EmsTailAdminHeader() {
           <button
             type="button"
             onClick={toggleApplicationMenu}
-            className="z-99999 flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+            className="z-99999 flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
             aria-label="Toggle menu"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -94,41 +96,29 @@ export function EmsTailAdminHeader() {
 
           <div className="hidden lg:block">
             <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2">
-                <svg
-                  className="fill-gray-500 dark:fill-gray-400"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z"
-                    fill=""
-                  />
-                </svg>
-              </span>
+              <Search
+                className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <input
                 ref={inputRef}
                 type="search"
                 placeholder="Search or type command..."
-                className="shadow-theme-xs h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pr-14 pl-12 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
+                className="h-11 w-full rounded-xl border border-input bg-card/80 py-2.5 pr-14 pl-11 text-sm text-foreground shadow-soft placeholder:text-muted-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:outline-none xl:w-[400px]"
               />
 
-              <span className="absolute top-1/2 right-2.5 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs tracking-[-0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
-                <span> ⌘ </span>
-                <span> K </span>
+              <span className="absolute top-1/2 right-2.5 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-border bg-muted/60 px-2 py-1 text-[10px] font-medium tracking-wide text-muted-foreground">
+                <span>⌘</span>
+                <span>K</span>
               </span>
             </div>
           </div>
         </div>
         <div
-          className={`${
-            isApplicationMenuOpen ? "flex" : "hidden"
-          } shadow-theme-md w-full items-center justify-between gap-4 px-5 py-4 lg:flex lg:justify-end lg:px-0 lg:shadow-none`}
+          className={cn(
+            "w-full items-center justify-between gap-4 px-5 py-3 lg:flex lg:justify-end lg:px-0 lg:py-3.5",
+            isApplicationMenuOpen ? "flex" : "hidden",
+          )}
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
             <ThemeToggleButton />

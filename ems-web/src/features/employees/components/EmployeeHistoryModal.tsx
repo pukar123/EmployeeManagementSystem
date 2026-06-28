@@ -36,45 +36,45 @@ function actorLabel(item: { changedByUserName: string | null; changedByEmail: st
 
 function PositionRow({ item }: { item: PositionHistoryItem }) {
   return (
-    <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-      <p className="text-sm text-zinc-900 dark:text-zinc-100">
+    <li className="rounded-lg border border-border p-3 dark:border-border">
+      <p className="text-sm text-foreground">
         Position: <span className="font-medium">{item.previousJobPositionId ?? "—"}</span>
         {" -> "}
         <span className="font-medium">{item.newJobPositionId ?? "—"}</span>
       </p>
-      <p className="mt-1 text-xs text-zinc-500">Effective: {new Date(item.effectiveFromUtc).toLocaleString()}</p>
-      <p className="mt-1 text-xs text-zinc-500">Reason: {item.reason || "—"}</p>
-      <p className="mt-1 text-xs text-zinc-500">By: {actorLabel(item)}</p>
+      <p className="mt-1 text-xs text-muted-foreground">Effective: {new Date(item.effectiveFromUtc).toLocaleString()}</p>
+      <p className="mt-1 text-xs text-muted-foreground">Reason: {item.reason || "—"}</p>
+      <p className="mt-1 text-xs text-muted-foreground">By: {actorLabel(item)}</p>
     </li>
   );
 }
 
 function DepartmentRow({ item }: { item: DepartmentHistoryItem }) {
   return (
-    <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-      <p className="text-sm text-zinc-900 dark:text-zinc-100">
+    <li className="rounded-lg border border-border p-3 dark:border-border">
+      <p className="text-sm text-foreground">
         Department: <span className="font-medium">{item.previousDepartmentId ?? "—"}</span>
         {" -> "}
         <span className="font-medium">{item.newDepartmentId ?? "—"}</span>
       </p>
-      <p className="mt-1 text-xs text-zinc-500">Effective: {new Date(item.effectiveFromUtc).toLocaleString()}</p>
-      <p className="mt-1 text-xs text-zinc-500">Reason: {item.reason || "—"}</p>
-      <p className="mt-1 text-xs text-zinc-500">By: {actorLabel(item)}</p>
+      <p className="mt-1 text-xs text-muted-foreground">Effective: {new Date(item.effectiveFromUtc).toLocaleString()}</p>
+      <p className="mt-1 text-xs text-muted-foreground">Reason: {item.reason || "—"}</p>
+      <p className="mt-1 text-xs text-muted-foreground">By: {actorLabel(item)}</p>
     </li>
   );
 }
 
 function ManagerRow({ item }: { item: ManagerHistoryItem }) {
   return (
-    <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-      <p className="text-sm text-zinc-900 dark:text-zinc-100">
+    <li className="rounded-lg border border-border p-3 dark:border-border">
+      <p className="text-sm text-foreground">
         Manager: <span className="font-medium">{item.previousManagerId ?? "—"}</span>
         {" -> "}
         <span className="font-medium">{item.newManagerId ?? "—"}</span>
       </p>
-      <p className="mt-1 text-xs text-zinc-500">Effective: {new Date(item.effectiveFromUtc).toLocaleString()}</p>
-      <p className="mt-1 text-xs text-zinc-500">Reason: {item.reason || "—"}</p>
-      <p className="mt-1 text-xs text-zinc-500">By: {actorLabel(item)}</p>
+      <p className="mt-1 text-xs text-muted-foreground">Effective: {new Date(item.effectiveFromUtc).toLocaleString()}</p>
+      <p className="mt-1 text-xs text-muted-foreground">Reason: {item.reason || "—"}</p>
+      <p className="mt-1 text-xs text-muted-foreground">By: {actorLabel(item)}</p>
     </li>
   );
 }
@@ -90,8 +90,8 @@ function HistorySection({
 }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
-      {children.length > 0 ? <ul className="space-y-2">{children}</ul> : <p className="text-xs text-zinc-500">{emptyLabel}</p>}
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {children.length > 0 ? <ul className="space-y-2">{children}</ul> : <p className="text-xs text-muted-foreground">{emptyLabel}</p>}
     </section>
   );
 }
@@ -116,7 +116,7 @@ export function EmployeeHistoryModal({
           {errorMessage || "Could not load history."}
         </div>
       ) : !history ? (
-        <p className="text-sm text-zinc-500">No history recorded yet.</p>
+        <p className="text-sm text-muted-foreground">No history recorded yet.</p>
       ) : (
         <div className="space-y-6">
           <HistorySection title="Position History" emptyLabel="No history recorded yet.">

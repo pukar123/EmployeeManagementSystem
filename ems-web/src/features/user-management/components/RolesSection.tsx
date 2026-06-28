@@ -12,7 +12,7 @@ import type { RoleDto } from "../types";
 import { createRole, deleteRole, fetchRoles, updateRole } from "../services/userManagementApi";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 export function RolesSection() {
   const queryClient = useQueryClient();
@@ -132,8 +132,8 @@ export function RolesSection() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Roles</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Roles</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Create and edit roles here. System roles cannot be changed or removed.
           </p>
         </div>
@@ -142,28 +142,28 @@ export function RolesSection() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
-        <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
-          <thead className="bg-zinc-50 dark:bg-zinc-900/50">
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="min-w-full divide-y divide-border text-left text-sm ">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Name</th>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Description</th>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">System</th>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Description</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">System</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+          <tbody className="divide-y divide-border">
             {roles.map((r) => (
-              <tr key={r.id} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
-                <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{r.name}</td>
-                <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{r.description ?? "—"}</td>
+              <tr key={r.id} className="bg-card hover:bg-muted/40">
+                <td className="px-4 py-3 text-foreground">{r.name}</td>
+                <td className="px-4 py-3 text-muted-foreground">{r.description ?? "—"}</td>
                 <td className="px-4 py-3">
                   <span
                     className={cn(
                       "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                       r.isSystem
                         ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
-                        : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+                        : "bg-muted text-muted-foreground",
                     )}
                   >
                     {r.isSystem ? "Yes" : "No"}
@@ -196,7 +196,7 @@ export function RolesSection() {
           </tbody>
         </table>
         {roles.length === 0 ? (
-          <p className="p-6 text-center text-sm text-zinc-500">No roles yet.</p>
+          <p className="p-6 text-center text-sm text-muted-foreground">No roles yet.</p>
         ) : null}
       </div>
 
@@ -208,7 +208,7 @@ export function RolesSection() {
       >
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Name
             </label>
             <input
@@ -221,7 +221,7 @@ export function RolesSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Description
             </label>
             <input

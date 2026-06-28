@@ -48,7 +48,7 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading organization…</p>
+        <p className="text-sm text-muted-foreground">Loading organization…</p>
       </div>
     );
   }
@@ -62,7 +62,7 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
           <p className="font-medium">Could not load organization</p>
           <p className="mt-2">{getErrorMessage(error)}</p>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
+          <p className="mt-3 text-muted-foreground">
             Please try again in a moment. If this keeps happening, contact your administrator.
           </p>
         </div>
@@ -74,7 +74,7 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting…</p>
+        <p className="text-sm text-muted-foreground">Redirecting…</p>
       </div>
     );
   }
@@ -83,7 +83,7 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting…</p>
+        <p className="text-sm text-muted-foreground">Redirecting…</p>
       </div>
     );
   }

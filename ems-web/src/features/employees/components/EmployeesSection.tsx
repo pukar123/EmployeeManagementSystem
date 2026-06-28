@@ -9,6 +9,8 @@ import type { JobPosition } from "@/features/job-positions/types/job-position.ty
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { SearchInput } from "@/shared/components/SearchInput";
 import { Spinner } from "@/shared/components/Spinner";
 import { cn } from "@/shared/utils/cn";
 import { employeePortalKeys } from "@/features/employee-portal/services/query-keys";
@@ -255,33 +257,29 @@ export function EmployeesSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Employees</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            View and manage your employee records.
-          </p>
-          <Link href="/employee-transfers" className="mt-2 inline-block text-sm text-zinc-700 underline underline-offset-4 dark:text-zinc-300">
-            Open transfer workspace
-          </Link>
-        </div>
-        <Button type="button" onClick={openCreateForm}>
-          Add employee
-        </Button>
-      </div>
+      <PageHeader
+        title="Employees"
+        description={
+          <>
+            View and manage your employee records.{" "}
+            <Link href="/employee-transfers" className="font-medium text-primary underline-offset-4 hover:underline">
+              Open transfer workspace
+            </Link>
+          </>
+        }
+        actions={
+          <Button type="button" onClick={openCreateForm}>
+            Add employee
+          </Button>
+        }
+      />
 
-      <div className="max-w-md">
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Search
-        </label>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, email, or employee #"
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-        />
-      </div>
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Name, email, or employee #"
+        aria-label="Search employees"
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-16">
@@ -348,16 +346,16 @@ export function EmployeesSection() {
           </div>
         ) : wizardStep === "password" ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-              <p className="text-sm text-zinc-700 dark:text-zinc-200">
+            <div className="rounded-lg border border-border bg-muted/50 p-4 dark:border-border dark:bg-card/40">
+              <p className="text-sm text-muted-foreground">
                 Login account created for <span className="font-medium">{provisioningResult.employeeName}</span>.
               </p>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{provisioningResult.email}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{provisioningResult.email}</p>
             </div>
             {provisioningResult.temporaryPassword ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
                 <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Temporary password</p>
-                <p className="mt-2 rounded-md bg-white px-3 py-2 font-mono text-sm text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+                <p className="mt-2 rounded-md bg-card px-3 py-2 font-mono text-sm text-foreground">
                   {provisioningResult.temporaryPassword}
                 </p>
                 <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
@@ -365,7 +363,7 @@ export function EmployeesSection() {
                 </p>
               </div>
             ) : (
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200">
+              <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground dark:border-border dark:bg-card/40 dark:text-foreground">
                 An account already exists for this email. Continue to review and assign roles.
               </div>
             )}
@@ -388,23 +386,23 @@ export function EmployeesSection() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200">
+            <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground dark:border-border dark:bg-card/40 dark:text-foreground">
               Assign roles for <span className="font-medium">{provisioningResult.employeeName}</span>.
             </div>
             <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
               {availableRoles.map((role: RoleDto) => (
                 <li key={role.id}>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-3 py-2 dark:border-border">
                     <input
                       type="checkbox"
-                      className="mt-0.5 size-4 rounded border-zinc-300"
+                      className="mt-0.5 size-4 rounded border-input"
                       checked={selectedRoleIds.has(role.id)}
                       onChange={(e) => toggleRole(role.id, e.target.checked)}
                     />
                     <span>
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{role.name}</span>
+                      <span className="text-sm font-medium text-foreground">{role.name}</span>
                       {role.description ? (
-                        <span className="mt-0.5 block text-xs text-zinc-500">{role.description}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">{role.description}</span>
                       ) : null}
                       {role.isSystem ? (
                         <span
@@ -468,7 +466,7 @@ export function EmployeesSection() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200">
+            <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground dark:border-border dark:bg-card/40 dark:text-foreground">
               Effective roles are inherited from position plus direct overrides. Position-inherited roles are read-only.
             </div>
             <div className="space-y-2">
@@ -478,18 +476,18 @@ export function EmployeesSection() {
                 return (
                   <label
                     key={role.id}
-                    className="flex items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
+                    className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 dark:border-border"
                   >
                     <input
                       type="checkbox"
-                      className="mt-0.5 size-4 rounded border-zinc-300"
+                      className="mt-0.5 size-4 rounded border-input"
                       checked={checked}
                       disabled={inherited}
                       onChange={(e) => toggleDirectRole(role.id, e.target.checked)}
                     />
                     <span className="text-sm">
-                      <span className="font-medium text-zinc-900 dark:text-zinc-100">{role.name}</span>
-                      <span className="mt-0.5 block text-xs text-zinc-500">
+                      <span className="font-medium text-foreground">{role.name}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
                         {inherited ? "Source: position_inherited" : checked ? "Source: direct_override" : "Not assigned"}
                       </span>
                     </span>
@@ -498,9 +496,9 @@ export function EmployeesSection() {
               })}
             </div>
             {effectiveRoles.length > 0 ? (
-              <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Current effective roles</p>
-                <ul className="space-y-1 text-sm text-zinc-700 dark:text-zinc-200">
+              <div className="rounded-lg border border-border p-3 dark:border-border">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Current effective roles</p>
+                <ul className="space-y-1 text-sm text-muted-foreground">
                   {effectiveRoles.map((role) => (
                     <li key={`${role.roleId}-${role.source}-${role.jobPositionId ?? "none"}`}>
                       {role.roleName}

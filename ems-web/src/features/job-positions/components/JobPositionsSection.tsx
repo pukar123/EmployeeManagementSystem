@@ -21,7 +21,7 @@ import { fetchRoles } from "@/features/user-management/services/userManagementAp
 import { useQuery } from "@tanstack/react-query";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 export function JobPositionsSection() {
   const { organizationId: currentOrgId } = useOrganizationContext();
@@ -185,8 +185,8 @@ export function JobPositionsSection() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Positions</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Manage available job positions.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Positions</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Manage available job positions.</p>
         </div>
         <Button type="button" onClick={openCreate}>
           Add position
@@ -194,7 +194,7 @@ export function JobPositionsSection() {
       </div>
 
       <div className="max-w-md">
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Search
         </label>
         <input
@@ -218,27 +218,27 @@ export function JobPositionsSection() {
           {getErrorMessage(error)}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-          <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
-            <thead className="bg-zinc-50 dark:bg-zinc-900/50">
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="min-w-full divide-y divide-border text-left text-sm ">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">#</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Title</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Code</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Description</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Active</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">#</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Title</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Code</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Description</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Active</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+            <tbody className="divide-y divide-border">
               {filtered.map((row, index) => (
-                <tr key={row.id} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
+                <tr key={row.id} className="bg-card hover:bg-muted/40">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-muted-foreground">
                     {index + 1}
                   </td>
-                  <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{row.title}</td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{row.code ?? "—"}</td>
-                  <td className="max-w-xs truncate px-4 py-3 text-zinc-600 dark:text-zinc-400" title={row.description ?? ""}>
+                  <td className="px-4 py-3 text-foreground">{row.title}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{row.code ?? "—"}</td>
+                  <td className="max-w-xs truncate px-4 py-3 text-muted-foreground" title={row.description ?? ""}>
                     {row.description ?? "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -247,7 +247,7 @@ export function JobPositionsSection() {
                         "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                         row.isActive
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                          : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+                          : "bg-muted text-muted-foreground",
                       )}
                     >
                       {row.isActive ? "Yes" : "No"}
@@ -277,7 +277,7 @@ export function JobPositionsSection() {
             </tbody>
           </table>
           {filtered.length === 0 ? (
-            <p className="p-6 text-center text-sm text-zinc-500">No positions yet (or no matches).</p>
+            <p className="p-6 text-center text-sm text-muted-foreground">No positions yet (or no matches).</p>
           ) : null}
         </div>
       )}
@@ -290,7 +290,7 @@ export function JobPositionsSection() {
       >
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Title</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title</label>
             <input
               type="text"
               value={title}
@@ -300,7 +300,7 @@ export function JobPositionsSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Description
             </label>
             <textarea
@@ -312,7 +312,7 @@ export function JobPositionsSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Code</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Code</label>
             <input
               type="text"
               value={code}
@@ -321,12 +321,12 @@ export function JobPositionsSection() {
               placeholder="Optional"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded border-zinc-300 dark:border-zinc-600"
+              className="rounded border-input"
             />
             Active
           </label>
@@ -368,17 +368,17 @@ export function JobPositionsSection() {
         ) : (
           <div className="space-y-3">
             {(rolesCatalogQuery.data ?? []).map((role) => (
-              <label key={role.id} className="flex items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+              <label key={role.id} className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 dark:border-border">
                 <input
                   type="checkbox"
-                  className="mt-0.5 size-4 rounded border-zinc-300"
+                  className="mt-0.5 size-4 rounded border-input"
                   checked={displayRoleIds.has(role.id)}
                   onChange={(e) => toggleRoleSelection(role.id, e.target.checked)}
                 />
                 <span className="text-sm">
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{role.name}</span>
+                  <span className="font-medium text-foreground">{role.name}</span>
                   {role.description ? (
-                    <span className="mt-0.5 block text-xs text-zinc-500">{role.description}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{role.description}</span>
                   ) : null}
                 </span>
               </label>

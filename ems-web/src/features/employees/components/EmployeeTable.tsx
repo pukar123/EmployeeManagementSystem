@@ -1,19 +1,25 @@
 "use client";
 
 import type { Employee } from "../types/employee.types";
-import { employmentStatusLabels } from "../types/employment-status";
+import { EmploymentStatusPill } from "./EmploymentStatusPill";
 import { Button } from "@/shared/components/Button";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableElement,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/shared/components/DataTable";
 
 type EmployeeTableProps = {
   employees: Employee[];
-  /** Resolved display labels for job positions; avoids showing raw ids in the grid. */
   jobPositionLabelById: Map<number, string>;
-  /** Per employee, shows immediate manager's position code; top-level falls back to own position code. */
   immediateManagerPositionByEmployeeId: Map<number, string>;
   onViewHistory: (e: Employee) => void;
   onManageRoles: (e: Employee) => void;
   onProvisionUser: (e: Employee) => void;
-  /** When true, disable row-level provision to avoid concurrent runs. */
   provisionBusy?: boolean;
   onEdit: (e: Employee) => void;
   onDelete: (e: Employee) => void;
@@ -39,74 +45,71 @@ export function EmployeeTable({
   onDelete,
 }: EmployeeTableProps) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-      <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
-        <thead className="bg-zinc-50 dark:bg-zinc-900/50">
+    <DataTable isEmpty={employees.length === 0} emptyMessage="No employees match the current filter.">
+      <DataTableElement>
+        <DataTableHead>
           <tr>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">#</th>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Employee #</th>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Name</th>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Email</th>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Status</th>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Immediate Manager</th>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Position</th>
-            <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
+            <DataTableHeaderCell>#</DataTableHeaderCell>
+            <DataTableHeaderCell>Employee #</DataTableHeaderCell>
+            <DataTableHeaderCell>Name</DataTableHeaderCell>
+            <DataTableHeaderCell>Email</DataTableHeaderCell>
+            <DataTableHeaderCell>Status</DataTableHeaderCell>
+            <DataTableHeaderCell>Immediate Manager</DataTableHeaderCell>
+            <DataTableHeaderCell>Position</DataTableHeaderCell>
+            <DataTableHeaderCell>Actions</DataTableHeaderCell>
           </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+        </DataTableHead>
+        <DataTableBody>
           {employees.map((row, index) => (
-            <tr key={row.id} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
+            <DataTableRow key={row.id}>
+              <DataTableCell className="whitespace-nowrap font-mono text-muted-foreground">
                 {index + 1}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
+              </DataTableCell>
+              <DataTableCell className="whitespace-nowrap font-mono text-muted-foreground">
                 {row.employeeNumber}
-              </td>
-              <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
+              </DataTableCell>
+              <DataTableCell className="font-medium">
                 {row.firstName} {row.lastName}
-              </td>
-              <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{row.email}</td>
-              <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                {employmentStatusLabels[row.employmentStatus] ?? row.employmentStatus}
-              </td>
-              <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+              </DataTableCell>
+              <DataTableCell className="text-muted-foreground">{row.email}</DataTableCell>
+              <DataTableCell>
+                <EmploymentStatusPill status={row.employmentStatus} />
+              </DataTableCell>
+              <DataTableCell className="text-muted-foreground">
                 {immediateManagerPositionByEmployeeId.get(row.id) ?? "—"}
-              </td>
-              <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+              </DataTableCell>
+              <DataTableCell className="text-muted-foreground">
                 {formatJobPositionCell(row.jobPositionId, jobPositionLabelById)}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3">
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onViewHistory(row)}>
+              </DataTableCell>
+              <DataTableCell className="whitespace-nowrap">
+                <div className="flex flex-wrap gap-1.5">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => onViewHistory(row)}>
                     History
                   </Button>
-                  <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onManageRoles(row)}>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => onManageRoles(row)}>
                     Roles
                   </Button>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="!py-1 !text-xs"
+                    size="sm"
                     disabled={row.isArchived || provisionBusy}
                     onClick={() => onProvisionUser(row)}
                   >
                     Link login
                   </Button>
-                  <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => onEdit(row)}>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => onEdit(row)}>
                     Edit
                   </Button>
-                  <Button type="button" variant="danger" className="!py-1 !text-xs" onClick={() => onDelete(row)}>
+                  <Button type="button" variant="danger" size="sm" onClick={() => onDelete(row)}>
                     Delete
                   </Button>
                 </div>
-              </td>
-            </tr>
+              </DataTableCell>
+            </DataTableRow>
           ))}
-        </tbody>
-      </table>
-      {employees.length === 0 ? (
-        <p className="p-6 text-center text-sm text-zinc-500">No employees match the current filter.</p>
-      ) : null}
-    </div>
+        </DataTableBody>
+      </DataTableElement>
+    </DataTable>
   );
 }
