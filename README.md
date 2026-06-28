@@ -2,7 +2,7 @@
 
 Backend API for employee and organization directory data. The solution uses a layered structure: **Domain** (entities, EF Core context, migrations), **Application** (DTOs, services, mapping), **Infrastructure** (repository implementations), and **API** (HTTP endpoints, hosting).
 
-**Architecture, patterns, and methods (shared across projects):** [docs/ARCHITECTURE_AND_PATTERNS.md](docs/ARCHITECTURE_AND_PATTERNS.md). For an EMS-only diagram and request flow, see [docs/architecture.md](docs/architecture.md). For business goals, personas, and capability scope, see [docs/business-perspective.md](docs/business-perspective.md).
+**Architecture, patterns, and methods (shared across projects):** [docs/ARCHITECTURE_AND_PATTERNS.md](docs/ARCHITECTURE_AND_PATTERNS.md). For an EMS-only diagram and request flow, see [docs/architecture.md](docs/architecture.md). For business goals, personas, and capability scope, see [docs/business-perspective.md](docs/business-perspective.md). For a step-by-step guide to using the web app (HR, admins, employees), see [docs/END_USER_GUIDE.md](docs/END_USER_GUIDE.md).
 
 ## Prerequisites
 
