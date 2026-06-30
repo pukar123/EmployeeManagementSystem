@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { fetchRoles, fetchUsers } from "@/features/user-management/services/userManagementApi";
@@ -14,9 +14,9 @@ import {
   useEmployeeEffectiveRoles,
   useEmployeeHistory,
   useEmployeeProfile,
-  useProvisionEmployeeUser,
   useSetEmployeeDirectRoles,
 } from "../hooks";
+import { useEmployeeCapabilities } from "../hooks/useEmployeeCapabilities";
 import { employeeService } from "../services/employeeService";
 import { employeeKeys } from "../services/query-keys";
 import type {
@@ -36,6 +36,8 @@ import {
 } from "./EmployeeLifecycleDialogs";
 import { EmploymentStatusPill } from "./EmploymentStatusPill";
 import { EmployeeTransferDialog } from "./EmployeeTransferDialog";
+import { EmployeeUpcomingChanges } from "./EmployeeUpcomingChanges";
+import { EmployeeInvitationPanel } from "./EmployeeInvitationPanel";
 
 type ProfileTab = "overview" | "employment" | "history" | "access" | "documents";
 
@@ -80,6 +82,7 @@ export function profileToEmployee(profile: EmployeeProfile): Employee {
 
 export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
   const queryClient = useQueryClient();
+  const { capabilities, isLoading: capabilitiesLoading } = useEmployeeCapabilities();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -97,11 +100,18 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
   const profileQuery = useEmployeeProfile(employeeId);
   const historyQuery = useEmployeeHistory(employeeId);
   const rolesQuery = useEmployeeEffectiveRoles(employeeId);
-  const provisionMutation = useProvisionEmployeeUser();
   const setDirectRolesMutation = useSetEmployeeDirectRoles();
 
-  const allRolesQuery = useQuery({ queryKey: ["roles"], queryFn: fetchRoles });
-  const usersQuery = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
+  const allRolesQuery = useQuery({
+    queryKey: ["roles"],
+    queryFn: fetchRoles,
+    enabled: activeTab === "access" && capabilities.access,
+  });
+  const usersQuery = useQuery({
+    queryKey: ["users"],
+    queryFn: fetchUsers,
+    enabled: activeTab === "access" && capabilities.access,
+  });
 
   const profile = profileQuery.data;
   const employeeForForm = profile ? profileToEmployee(profile) : null;
@@ -135,15 +145,28 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
   };
 
   const handleProvision = () => {
-    provisionMutation.mutate(employeeId, {
+    sendInvitationMut.mutate(undefined, {
       onSuccess: () => {
-        toast.success("Sign-in invitation sent.");
         setProvisionConfirmOpen(false);
         invalidateEmployee();
       },
-      onError: (e) => toast.error(getErrorMessage(e)),
     });
   };
+
+  const sendInvitationMut = useMutation({
+    mutationFn: () => employeeService.sendInvitation(employeeId),
+    onSuccess: () => toast.success("Invitation email sent."),
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
+
+  const reactivateLoginMut = useMutation({
+    mutationFn: () => employeeService.reactivateLogin(employeeId),
+    onSuccess: () => {
+      toast.success("Login reactivated.");
+      invalidateEmployee();
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
 
   const handleLinkUser = async () => {
     if (linkUserId == null) return;
@@ -173,7 +196,7 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
     );
   };
 
-  if (profileQuery.isLoading) {
+  if (capabilitiesLoading || profileQuery.isLoading) {
     return (
       <div className="flex justify-center py-20">
         <Spinner />
@@ -193,12 +216,23 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
     );
   }
 
-  const showLifecycleActions = !profile.isArchived;
-  const showRestore = profile.isArchived;
+  if (!capabilities.view) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-8 text-center">
+        <p className="text-sm text-muted-foreground">You do not have permission to view this employee.</p>
+        <Link href="/employees" className="mt-4 inline-block text-sm text-primary hover:underline">
+          Back to employees
+        </Link>
+      </div>
+    );
+  }
+
+  const showLifecycleActions = !profile.isArchived && capabilities.manage;
+  const showRestore = profile.isArchived && capabilities.manage;
   const showTerminate =
-    !profile.isArchived && profile.employmentStatus !== EmploymentStatus.Terminated;
+    !profile.isArchived && profile.employmentStatus !== EmploymentStatus.Terminated && capabilities.manage;
   const showChangeStatus =
-    !profile.isArchived && profile.employmentStatus !== EmploymentStatus.Terminated;
+    !profile.isArchived && profile.employmentStatus !== EmploymentStatus.Terminated && capabilities.manage;
 
   return (
     <div className="space-y-6">
@@ -280,7 +314,7 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
         <section className="space-y-4 rounded-xl border border-border p-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-foreground">Contact information</h2>
-            {!profile.isArchived ? (
+            {!profile.isArchived && capabilities.manage ? (
               <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
                 Edit profile
               </Button>
@@ -294,6 +328,12 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
             <DetailItem label="Address location" value={profile.locationLabel ?? "—"} />
             <DetailItem label="Primary site" value={profile.primarySiteName ?? "—"} />
           </dl>
+          <div className="border-t border-border pt-4">
+            <h3 className="text-sm font-semibold text-foreground">Upcoming changes</h3>
+            <div className="mt-3">
+              <EmployeeUpcomingChanges employeeId={employeeId} canManage={capabilities.manage} />
+            </div>
+          </div>
         </section>
       ) : null}
 
@@ -301,7 +341,7 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
         <section className="space-y-4 rounded-xl border border-border p-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-foreground">Organization assignment</h2>
-            {!profile.isArchived ? (
+            {!profile.isArchived && capabilities.manage ? (
               <Button type="button" onClick={() => setTransferOpen(true)}>
                 Transfer
               </Button>
@@ -405,17 +445,39 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
               />
               <DetailItem label="Login email" value={profile.linkedUserEmail ?? "—"} />
             </dl>
-            {!profile.isArchived ? (
-              <div className="mt-4 flex flex-wrap gap-2">
+            {profile.isArchived ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Restoring an archived employee record does not re-enable login access. Use Reactivate login after restore when appropriate.
+              </p>
+            ) : null}
+            {!profile.isArchived && profile.hasLinkedLogin && profile.linkedLoginIsActive === false && capabilities.access ? (
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={reactivateLoginMut.isPending || profile.employmentStatus !== EmploymentStatus.Active}
+                  onClick={() => reactivateLoginMut.mutate()}
+                >
+                  Reactivate login
+                </Button>
+              </div>
+            ) : null}
+            {!profile.isArchived && capabilities.access ? (
+              <div className="mt-4 space-y-4">
+                <EmployeeInvitationPanel
+                  employeeId={employeeId}
+                  hasLinkedLogin={profile.hasLinkedLogin}
+                  linkedLoginIsActive={profile.linkedLoginIsActive}
+                />
                 {!profile.hasLinkedLogin ? (
-                  <>
+                  <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="secondary" onClick={() => setProvisionConfirmOpen(true)}>
-                      Provision login
+                      Send login invitation
                     </Button>
                     <Button type="button" variant="secondary" onClick={() => setLinkUserOpen(true)}>
                       Link existing user
                     </Button>
-                  </>
+                  </div>
                 ) : null}
               </div>
             ) : null}
@@ -424,7 +486,7 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
           <div>
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-semibold text-foreground">Effective roles</h2>
-              {!profile.isArchived && profile.hasLinkedLogin ? (
+              {!profile.isArchived && profile.hasLinkedLogin && capabilities.access ? (
                 <Button type="button" variant="secondary" size="sm" onClick={openDirectRolesEditor}>
                   Edit direct roles
                 </Button>
@@ -511,12 +573,12 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
               type="button"
               variant="secondary"
               onClick={() => setProvisionConfirmOpen(false)}
-              disabled={provisionMutation.isPending}
+              disabled={sendInvitationMut.isPending}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={handleProvision} disabled={provisionMutation.isPending}>
-              {provisionMutation.isPending ? "Sending…" : "Send invitation"}
+            <Button type="button" onClick={handleProvision} disabled={sendInvitationMut.isPending}>
+              {sendInvitationMut.isPending ? "Sending…" : "Send invitation"}
             </Button>
           </>
         }

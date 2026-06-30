@@ -13,29 +13,71 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/shared/components/DataTable";
+import { cn } from "@/shared/utils/cn";
 
 type EmployeeTableProps = {
   employees: EmployeeDirectoryItem[];
   isArchiveView: boolean;
   onRestore?: (employee: EmployeeDirectoryItem) => void;
   restoreBusy?: boolean;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
+  onSort?: (sortBy: string) => void;
 };
 
-export function EmployeeTable({ employees, isArchiveView, onRestore, restoreBusy }: EmployeeTableProps) {
+type SortableColumn = {
+  key: string;
+  label: string;
+  sortKey?: string;
+};
+
+const columns: SortableColumn[] = [
+  { key: "number", label: "Employee #", sortKey: "employeenumber" },
+  { key: "name", label: "Name", sortKey: "name" },
+  { key: "email", label: "Email" },
+  { key: "status", label: "Status", sortKey: "employmentstatus" },
+  { key: "manager", label: "Manager" },
+  { key: "position", label: "Position" },
+  { key: "site", label: "Site" },
+  { key: "actions", label: "Actions" },
+];
+
+export function EmployeeTable({
+  employees,
+  isArchiveView,
+  onRestore,
+  restoreBusy,
+  sortBy = "name",
+  sortDirection = "asc",
+  onSort,
+}: EmployeeTableProps) {
   return (
     <div className="overflow-x-auto">
       <DataTable isEmpty={employees.length === 0} emptyMessage="No employees match the current filters.">
         <DataTableElement>
           <DataTableHead>
             <tr>
-              <DataTableHeaderCell>Employee #</DataTableHeaderCell>
-              <DataTableHeaderCell>Name</DataTableHeaderCell>
-              <DataTableHeaderCell>Email</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell>Manager</DataTableHeaderCell>
-              <DataTableHeaderCell>Position</DataTableHeaderCell>
-              <DataTableHeaderCell>Site</DataTableHeaderCell>
-              <DataTableHeaderCell>Actions</DataTableHeaderCell>
+              {columns.map((col) => (
+                <DataTableHeaderCell key={col.key}>
+                  {col.sortKey && onSort ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        "inline-flex items-center gap-1 font-medium hover:text-primary",
+                        sortBy === col.sortKey && "text-primary",
+                      )}
+                      onClick={() => onSort(col.sortKey!)}
+                    >
+                      {col.label}
+                      {sortBy === col.sortKey ? (
+                        <span aria-hidden>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      ) : null}
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </DataTableHeaderCell>
+              ))}
             </tr>
           </DataTableHead>
           <DataTableBody>

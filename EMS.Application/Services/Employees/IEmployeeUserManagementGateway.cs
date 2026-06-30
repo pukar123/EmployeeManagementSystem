@@ -13,6 +13,10 @@ public interface IEmployeeUserManagementGateway
 
     Task<EmployeeLinkedUserSnapshot?> GetUserByEmailAsync(string email, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<int, EmployeeLinkedUserSnapshot>> GetUsersByIdsAsync(
+        IReadOnlyList<int> userIds,
+        CancellationToken cancellationToken = default);
+
     Task<EmployeeLinkedUserSnapshot> CreateUserAsync(
         CreateEmployeeLinkedUserRequest request,
         CancellationToken cancellationToken = default);
@@ -24,4 +28,8 @@ public interface IEmployeeUserManagementGateway
     Task DeactivateLinkedUserAsync(int userId, CancellationToken cancellationToken = default);
 
     Task RevokeOperationalAccessAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task ActivateLinkedUserAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task SetLinkedUserPasswordAsync(int userId, string newPassword, bool requirePasswordChange, CancellationToken cancellationToken = default);
 }

@@ -603,6 +603,65 @@ namespace EMS.Domain.Database.Migrations
                     b.ToTable("EmployeeEmploymentStatusHistories", "org");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeInvitation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeliveryFailureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("DeliveryStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("EmployeeId", "RevokedAtUtc", "UsedAtUtc");
+
+                    b.ToTable("EmployeeInvitations", "emp");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeManagerHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -805,6 +864,76 @@ namespace EMS.Domain.Database.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeScheduledChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChangeType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedByUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("EffectiveAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetReferenceId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetStatus")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EffectiveAtUtc");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("EmployeeId", "ChangeType", "Status")
+                        .IsUnique()
+                        .HasFilter("[Status] = 1");
+
+                    b.ToTable("EmployeeScheduledChanges", "emp");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeSite", b =>
                 {
                     b.Property<int>("Id")
@@ -829,6 +958,47 @@ namespace EMS.Domain.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("EmployeeSites", "org");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.IntegrationOutboxMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("MessageType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "NextAttemptAtUtc");
+
+                    b.ToTable("IntegrationOutboxMessages", "ems");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.JobPosition", b =>
@@ -1344,6 +1514,35 @@ namespace EMS.Domain.Database.Migrations
                     b.ToTable("PositionRoles", "org");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.RoleKeyCapability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Allowed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CapabilityKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleKey", "CapabilityKey")
+                        .IsUnique();
+
+                    b.ToTable("RoleKeyCapabilities", "ems");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.RoleKeyPermission", b =>
                 {
                     b.Property<int>("Id")
@@ -1696,6 +1895,17 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeInvitation", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeManagerHistory", b =>
                 {
                     b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
@@ -1764,6 +1974,17 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("JobPosition");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeScheduledChange", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeSite", b =>

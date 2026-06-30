@@ -262,10 +262,18 @@ public sealed class EmployeeDirectoryService : IEmployeeDirectoryService
 
         enriched.Sort((a, b) => order[a.Id].CompareTo(order[b.Id]));
 
+        var userIds = enriched
+            .Select(e => e.ExternalIdentityKey)
+            .Where(k => !string.IsNullOrWhiteSpace(k) && int.TryParse(k, out _))
+            .Select(k => int.Parse(k!, CultureInfo.InvariantCulture))
+            .Distinct()
+            .ToList();
+        var usersById = await _gateway.GetUsersByIdsAsync(userIds, cancellationToken);
+
         var results = new List<EmployeeDirectoryItemResponseModel>();
         foreach (var entity in enriched)
         {
-            var linked = await ResolveLinkedLoginAsync(entity, cancellationToken);
+            var linked = ResolveLinkedLoginFromBatch(entity, usersById);
             results.Add(new EmployeeDirectoryItemResponseModel
             {
                 Id = entity.Id,
@@ -295,6 +303,22 @@ public sealed class EmployeeDirectoryService : IEmployeeDirectoryService
         }
 
         return results;
+    }
+
+    private static (bool HasLogin, bool? IsActive) ResolveLinkedLoginFromBatch(
+        Employee entity,
+        IReadOnlyDictionary<int, EmployeeLinkedUserSnapshot> usersById)
+    {
+        if (string.IsNullOrWhiteSpace(entity.ExternalIdentityKey))
+            return (false, null);
+
+        if (!int.TryParse(entity.ExternalIdentityKey, out var userId))
+            return (true, null);
+
+        if (!usersById.TryGetValue(userId, out var user))
+            return (true, null);
+
+        return (true, user.IsActive);
     }
 
     private async Task<(bool HasLogin, bool? IsActive)> ResolveLinkedLoginAsync(

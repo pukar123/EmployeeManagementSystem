@@ -1,19 +1,21 @@
+using EMS.Application.DTOs.Employee;
+
 namespace EMS.Application.Services.Employees;
 
 /// <summary>
-/// Ensures the current user may view or manage employee records (Employees menu or Admin).
+/// Ensures the current user may view, manage, access, or export employee records via role capabilities.
 /// </summary>
 public interface IEmployeeAccessService
 {
-    /// <summary>
-    /// Throws <c>BusinessRuleException</c> with message <see cref="EmployeeAccessMessages.Denied"/> if view access is not allowed.
-    /// </summary>
     Task EnsureCanViewEmployeesAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Throws <c>BusinessRuleException</c> with message <see cref="EmployeeAccessMessages.Denied"/> if manage access is not allowed.
-    /// </summary>
     Task EnsureCanManageEmployeesAsync(CancellationToken cancellationToken = default);
+
+    Task EnsureCanAccessEmployeesAsync(CancellationToken cancellationToken = default);
+
+    Task EnsureCanExportEmployeesAsync(CancellationToken cancellationToken = default);
+
+    Task<EmployeeAccessCapabilitiesResponseModel> GetMyCapabilitiesAsync(CancellationToken cancellationToken = default);
 }
 
 public static class EmployeeAccessMessages

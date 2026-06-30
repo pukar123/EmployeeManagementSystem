@@ -15,4 +15,6 @@ public interface IEmployeeIdentityProvisioningService
         int employeeId,
         AssignEmployeeUserRolesRequestModel request,
         CancellationToken cancellationToken = default);
+
+    Task ReactivateLoginAsync(int employeeId, CancellationToken cancellationToken = default);
 }

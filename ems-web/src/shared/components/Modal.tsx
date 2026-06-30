@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/shared/utils/cn";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useModalFocusTrap } from "@/shared/hooks/useUnsavedChangesWarning";
 
 type ModalProps = {
@@ -9,22 +9,29 @@ type ModalProps = {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  /** Return false to prevent closing (e.g. unsaved changes). */
+  onRequestClose?: () => boolean;
   footer?: ReactNode;
   className?: string;
 };
 
-export function Modal({ open, title, children, onClose, footer, className }: ModalProps) {
+export function Modal({ open, title, children, onClose, onRequestClose, footer, className }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalFocusTrap(open, dialogRef);
+
+  const requestClose = useCallback(() => {
+    if (onRequestClose && !onRequestClose()) return;
+    onClose();
+  }, [onClose, onRequestClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") requestClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  }, [open, requestClose]);
 
   if (!open) return null;
 
@@ -34,7 +41,7 @@ export function Modal({ open, title, children, onClose, footer, className }: Mod
         type="button"
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         aria-label="Close dialog overlay"
-        onClick={onClose}
+        onClick={requestClose}
       />
       <div
         ref={dialogRef}
@@ -53,7 +60,7 @@ export function Modal({ open, title, children, onClose, footer, className }: Mod
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Close"
           >

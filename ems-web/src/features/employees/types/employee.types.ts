@@ -247,6 +247,41 @@ export type EmployeeProfile = {
   updatedAtUtc: string;
 };
 
+export type EmployeeScheduledChange = {
+  id: number;
+  employeeId: number;
+  changeType: number;
+  targetReferenceId: number | null;
+  targetStatus: number | null;
+  effectiveAtUtc: string;
+  reason: string | null;
+  status: number;
+  createdAtUtc: string;
+  processedAtUtc: string | null;
+  failureReason: string | null;
+};
+
+export type CreateEmployeeScheduledChangeRequest = {
+  changeType: number;
+  effectiveAtUtc: string;
+  reason?: string | null;
+  targetReferenceId?: number | null;
+  targetStatus?: number | null;
+};
+
+export type EmployeeInvitation = {
+  id: number;
+  employeeId: number;
+  expiresAtUtc: string;
+  usedAtUtc: string | null;
+  revokedAtUtc: string | null;
+  lastSentAtUtc: string | null;
+  deliveryStatus: number;
+  deliveryFailureReason: string | null;
+  canResend: boolean;
+  resendCooldownSecondsRemaining: number;
+};
+
 export type PossibleDuplicateEmployee = {
   id: number;
   employeeNumber: string;

@@ -35,6 +35,29 @@ public sealed class UserAdminService : IUserAdminService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<UserSummaryResponseModel>> GetByIdsAsync(
+        IReadOnlyList<int> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return Array.Empty<UserSummaryResponseModel>();
+
+        var distinct = ids.Distinct().ToList();
+        return await _users.GetQueryable()
+            .AsNoTracking()
+            .Where(u => distinct.Contains(u.Id))
+            .Select(u => new UserSummaryResponseModel
+            {
+                Id = u.Id,
+                Email = u.Email,
+                UserName = u.UserName,
+                IsActive = u.IsActive,
+                CreatedAtUtc = u.CreatedAtUtc,
+                LastLoginAtUtc = u.LastLoginAtUtc,
+            })
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<UserSummaryResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         return await _users.GetQueryable()

@@ -328,5 +328,49 @@ export const employeeService = {
 
   },
 
+  listScheduledChanges: async (employeeId: number) => {
+    const { data } = await httpClient.get<import("../types/employee.types").EmployeeScheduledChange[]>(
+      `${EMPLOYEES_PATH}/${employeeId}/scheduled-changes`,
+    );
+    return data;
+  },
+
+  createScheduledChange: async (
+    employeeId: number,
+    body: import("../types/employee.types").CreateEmployeeScheduledChangeRequest,
+  ) => {
+    const { data } = await httpClient.post<import("../types/employee.types").EmployeeScheduledChange>(
+      `${EMPLOYEES_PATH}/${employeeId}/scheduled-changes`,
+      body,
+    );
+    return data;
+  },
+
+  cancelScheduledChange: async (employeeId: number, changeId: number): Promise<void> => {
+    await httpClient.delete(`${EMPLOYEES_PATH}/${employeeId}/scheduled-changes/${changeId}`);
+  },
+
+  listInvitations: async (employeeId: number) => {
+    const { data } = await httpClient.get<
+      import("../types/employee.types").EmployeeInvitation[]
+    >(`${EMPLOYEES_PATH}/${employeeId}/invitations`);
+    return data;
+  },
+
+  sendInvitation: async (employeeId: number) => {
+    const { data } = await httpClient.post<
+      import("../types/employee.types").EmployeeInvitation
+    >(`${EMPLOYEES_PATH}/${employeeId}/invitations`);
+    return data;
+  },
+
+  revokeInvitation: async (employeeId: number, invitationId: number): Promise<void> => {
+    await httpClient.delete(`${EMPLOYEES_PATH}/${employeeId}/invitations/${invitationId}`);
+  },
+
+  reactivateLogin: async (employeeId: number): Promise<void> => {
+    await httpClient.post(`${EMPLOYEES_PATH}/${employeeId}/reactivate-login`);
+  },
+
 };
 

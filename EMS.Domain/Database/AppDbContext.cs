@@ -23,6 +23,7 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.EmployeeSite> EmployeeSites { get; set; }
         public DbSet<DbModels.Menu> Menus { get; set; }
         public DbSet<DbModels.RoleKeyPermission> RoleKeyPermissions { get; set; }
+        public DbSet<DbModels.RoleKeyCapability> RoleKeyCapabilities { get; set; }
         public DbSet<DbModels.AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<DbModels.AttendanceBreak> AttendanceBreaks { get; set; }
         public DbSet<DbModels.AttendancePolicy> AttendancePolicies { get; set; }
@@ -42,6 +43,9 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.PositionRole> PositionRoles { get; set; }
         public DbSet<DbModels.EmployeeRoleAssignment> EmployeeRoleAssignments { get; set; }
         public DbSet<DbModels.OrganizationEmployeeNumberSequence> OrganizationEmployeeNumberSequences { get; set; }
+        public DbSet<DbModels.EmployeeScheduledChange> EmployeeScheduledChanges { get; set; }
+        public DbSet<DbModels.EmployeeInvitation> EmployeeInvitations { get; set; }
+        public DbSet<DbModels.IntegrationOutboxMessage> IntegrationOutboxMessages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

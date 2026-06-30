@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDepartments } from "@/features/departments/hooks";
 import { useJobPositions } from "@/features/job-positions/hooks";
@@ -12,7 +12,7 @@ import { getErrorMessage } from "@/shared/api/http-client";
 import { useCreateEmployee, useEmployees } from "../hooks";
 import { employeeService } from "../services/employeeService";
 import type { CreateEmployeeRequest, Employee, PossibleDuplicateEmployee } from "../types/employee.types";
-import { EmploymentStatus } from "../types/employment-status";
+import { EmploymentStatus, employmentStatusLabels } from "../types/employment-status";
 import { dateInputToApiIso } from "../utils/date-format";
 import { useUnsavedChangesWarning, confirmDiscardChanges } from "@/shared/hooks/useUnsavedChangesWarning";
 
@@ -38,9 +38,10 @@ const inputClass =
 type CreateEmployeeWizardProps = {
   onClose: () => void;
   onCreated: () => void;
+  onRegisterCloseGuard?: (guard: () => boolean) => void;
 };
 
-export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizardProps) {
+export function CreateEmployeeWizard({ onClose, onCreated, onRegisterCloseGuard }: CreateEmployeeWizardProps) {
   const { organizationId } = useOrganizationContext();
   const createMutation = useCreateEmployee();
   const { data: departments = [] } = useDepartments();
@@ -51,6 +52,7 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
   const [step, setStep] = useState<WizardStep>("personal");
   const [dirty, setDirty] = useState(false);
   const [duplicates, setDuplicates] = useState<PossibleDuplicateEmployee[]>([]);
+  const [duplicateAcknowledged, setDuplicateAcknowledged] = useState(false);
   const [createdEmployee, setCreatedEmployee] = useState<Employee | null>(null);
   const [form, setForm] = useState<FormState>({
     firstName: "",
@@ -67,6 +69,10 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
   });
 
   useUnsavedChangesWarning(dirty && !createdEmployee);
+
+  useEffect(() => {
+    onRegisterCloseGuard?.(() => confirmDiscardChanges(dirty && !createdEmployee));
+  }, [dirty, createdEmployee, onRegisterCloseGuard]);
 
   const managers = useMemo(
     () => employees.filter((e) => e.isActive && e.employmentStatus === EmploymentStatus.Active && !e.isArchived),
@@ -129,6 +135,7 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
           dateOfBirth: form.dateOfBirth ? dateInputToApiIso(form.dateOfBirth) : undefined,
         });
         setDuplicates(matches);
+        setDuplicateAcknowledged(matches.length === 0);
       } catch (err) {
         toast.error(getErrorMessage(err));
         return;
@@ -141,6 +148,10 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
   };
 
   const handleCreate = async () => {
+    if (duplicates.length > 0 && !duplicateAcknowledged) {
+      toast.error("Acknowledge possible duplicates before creating this employee.");
+      return;
+    }
     try {
       const created = await createMutation.mutateAsync(buildPayload());
       setCreatedEmployee(created);
@@ -171,20 +182,6 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
           <Button
             type="button"
             variant="secondary"
-            onClick={async () => {
-              try {
-                await employeeService.provisionEmployeeUser(createdEmployee.id);
-                toast.success("Sign-in invitation sent.");
-              } catch (err) {
-                toast.error(getErrorMessage(err));
-              }
-            }}
-          >
-            Send login invitation
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
             onClick={() => {
               setCreatedEmployee(null);
               setStep("personal");
@@ -202,6 +199,7 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
                 jobPositionId: "",
               });
               setDuplicates([]);
+              setDuplicateAcknowledged(false);
               setDirty(false);
             }}
           >
@@ -281,7 +279,10 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
         <div className="space-y-4 text-sm">
           <ReviewRow label="Name" value={`${form.firstName} ${form.lastName}`} />
           <ReviewRow label="Email" value={form.email} />
-          <ReviewRow label="Status" value="Preboarding or selected status" />
+          <ReviewRow
+            label="Employment status"
+            value={employmentStatusLabels[form.employmentStatus as keyof typeof employmentStatusLabels] ?? String(form.employmentStatus)}
+          />
           <ReviewRow label="Date joined" value={form.dateJoined} />
           {duplicates.length > 0 ? (
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
@@ -296,6 +297,15 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
                   </li>
                 ))}
               </ul>
+              <label className="mt-3 flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={duplicateAcknowledged}
+                  onChange={(e) => setDuplicateAcknowledged(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>I reviewed possible duplicates and want to create this employee anyway.</span>
+              </label>
             </div>
           ) : null}
         </div>
@@ -318,7 +328,11 @@ export function CreateEmployeeWizard({ onClose, onCreated }: CreateEmployeeWizar
             </Button>
           ) : null}
           {step === "review" ? (
-            <Button type="button" disabled={createMutation.isPending} onClick={() => void handleCreate()}>
+            <Button
+              type="button"
+              disabled={createMutation.isPending || (duplicates.length > 0 && !duplicateAcknowledged)}
+              onClick={() => void handleCreate()}
+            >
               {createMutation.isPending ? "Creating…" : "Confirm and create"}
             </Button>
           ) : (

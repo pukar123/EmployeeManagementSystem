@@ -1,8 +1,5 @@
 using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Employees;
-using EMS.Domain.DbModels;
-using EMS.Domain.Repositories.Interface;
-using MockQueryable;
 using Moq;
 using Pukar.Shared;
 
@@ -16,39 +13,51 @@ public class EmployeeAccessServiceTests
         var identity = new Mock<IIdentityContext>();
         identity.Setup(x => x.GetCurrent()).Returns(new UserIdentitySnapshot { RoleKeys = ["HR"] });
 
-        var menus = new List<Menu> { new() { Id = 5, Key = "employees" } };
-        var menuRepo = new Mock<IBaseRepository<Menu>>();
-        menuRepo.Setup(x => x.GetQueryable()).Returns(menus.BuildMock());
-
         var permissions = new Mock<IPermissionEvaluator>();
         permissions
-            .Setup(x => x.IsMenuAllowedAsync(It.IsAny<IReadOnlyList<string>>(), 5, It.IsAny<CancellationToken>()))
+            .Setup(x => x.HasCapabilityAsync(It.IsAny<IReadOnlyList<string>>(), EmployeeCapabilities.View, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var sut = new EmployeeAccessService(identity.Object, permissions.Object, menuRepo.Object);
+        var sut = new EmployeeAccessService(identity.Object, permissions.Object);
 
         var ex = Assert.ThrowsAsync<BusinessRuleException>(() => sut.EnsureCanViewEmployeesAsync(CancellationToken.None));
         Assert.That(ex!.Message, Is.EqualTo(EmployeeAccessMessages.Denied));
     }
 
     [Test]
-    public async Task EnsureCanViewEmployeesAsync_Allows_WhenEmployeesMenuGranted()
+    public async Task EnsureCanViewEmployeesAsync_Allows_WhenViewCapabilityGranted()
     {
         var identity = new Mock<IIdentityContext>();
         identity.Setup(x => x.GetCurrent()).Returns(new UserIdentitySnapshot { RoleKeys = ["HR"] });
 
-        var menus = new List<Menu> { new() { Id = 5, Key = "employees" } };
-        var menuRepo = new Mock<IBaseRepository<Menu>>();
-        menuRepo.Setup(x => x.GetQueryable()).Returns(menus.BuildMock());
+        var permissions = new Mock<IPermissionEvaluator>();
+        permissions
+            .Setup(x => x.HasCapabilityAsync(It.IsAny<IReadOnlyList<string>>(), EmployeeCapabilities.View, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var sut = new EmployeeAccessService(identity.Object, permissions.Object);
+
+        Assert.DoesNotThrowAsync(() => sut.EnsureCanViewEmployeesAsync(CancellationToken.None));
+    }
+
+    [Test]
+    public void EnsureCanManageEmployeesAsync_Throws_WhenOnlyViewGranted()
+    {
+        var identity = new Mock<IIdentityContext>();
+        identity.Setup(x => x.GetCurrent()).Returns(new UserIdentitySnapshot { RoleKeys = ["HR"] });
 
         var permissions = new Mock<IPermissionEvaluator>();
         permissions
-            .Setup(x => x.IsMenuAllowedAsync(It.IsAny<IReadOnlyList<string>>(), 5, It.IsAny<CancellationToken>()))
+            .Setup(x => x.HasCapabilityAsync(It.IsAny<IReadOnlyList<string>>(), EmployeeCapabilities.View, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        permissions
+            .Setup(x => x.HasCapabilityAsync(It.IsAny<IReadOnlyList<string>>(), EmployeeCapabilities.Manage, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
-        var sut = new EmployeeAccessService(identity.Object, permissions.Object, menuRepo.Object);
+        var sut = new EmployeeAccessService(identity.Object, permissions.Object);
 
-        Assert.DoesNotThrowAsync(() => sut.EnsureCanViewEmployeesAsync(CancellationToken.None));
+        var ex = Assert.ThrowsAsync<BusinessRuleException>(() => sut.EnsureCanManageEmployeesAsync(CancellationToken.None));
+        Assert.That(ex!.Message, Is.EqualTo(EmployeeAccessMessages.Denied));
     }
 
     [Test]
@@ -57,11 +66,27 @@ public class EmployeeAccessServiceTests
         var identity = new Mock<IIdentityContext>();
         identity.Setup(x => x.GetCurrent()).Returns(new UserIdentitySnapshot { RoleKeys = ["ADMIN"] });
 
-        var menuRepo = new Mock<IBaseRepository<Menu>>();
         var permissions = new Mock<IPermissionEvaluator>();
 
-        var sut = new EmployeeAccessService(identity.Object, permissions.Object, menuRepo.Object);
+        var sut = new EmployeeAccessService(identity.Object, permissions.Object);
 
         Assert.DoesNotThrowAsync(() => sut.EnsureCanManageEmployeesAsync(CancellationToken.None));
+    }
+
+    [Test]
+    public async Task GetMyCapabilitiesAsync_ReturnsAllForAdmin()
+    {
+        var identity = new Mock<IIdentityContext>();
+        identity.Setup(x => x.GetCurrent()).Returns(new UserIdentitySnapshot { RoleKeys = ["ADMIN"] });
+
+        var permissions = new Mock<IPermissionEvaluator>();
+        var sut = new EmployeeAccessService(identity.Object, permissions.Object);
+
+        var caps = await sut.GetMyCapabilitiesAsync(CancellationToken.None);
+
+        Assert.That(caps.View, Is.True);
+        Assert.That(caps.Manage, Is.True);
+        Assert.That(caps.Access, Is.True);
+        Assert.That(caps.Export, Is.True);
     }
 }

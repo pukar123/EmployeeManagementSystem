@@ -1,6 +1,7 @@
 using EMS.Application.DTOs.Employee;
 using EMS.Application.Mapping;
 using EMS.Application.Services.Authorization;
+using EMS.Application.Services.Integrations;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -17,6 +18,9 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
     private readonly IIdentityContext _identityContext;
     private readonly IEmployeeUserManagementGateway _gateway;
     private readonly EmployeeRelationshipValidator _validator;
+    private readonly IEmployeeBusinessDateHelper _businessDates;
+    private readonly IBaseRepository<EmployeeInvitation> _invitations;
+    private readonly IIntegrationOutboxWriter _outboxWriter;
 
     public EmployeeLifecycleService(
         IBaseRepository<Employee> employees,
@@ -24,7 +28,10 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         IBaseRepository<EmployeeRetentionPolicy> retentionPolicyRepository,
         IIdentityContext identityContext,
         IEmployeeUserManagementGateway gateway,
-        EmployeeRelationshipValidator validator)
+        EmployeeRelationshipValidator validator,
+        IEmployeeBusinessDateHelper businessDates,
+        IBaseRepository<EmployeeInvitation> invitations,
+        IIntegrationOutboxWriter outboxWriter)
     {
         _employees = employees;
         _statusHistory = statusHistory;
@@ -32,6 +39,9 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         _identityContext = identityContext;
         _gateway = gateway;
         _validator = validator;
+        _businessDates = businessDates;
+        _invitations = invitations;
+        _outboxWriter = outboxWriter;
     }
 
     public async Task<EmployeeResponseModel?> TerminateAsync(
@@ -53,6 +63,7 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
             throw new BusinessRuleException("Termination reason is required.");
         reason = StringHelper.NormalizeRequired(reason);
         var effectiveDate = request.EffectiveDateUtc.ToUniversalTime();
+        _businessDates.EnsureNotFutureForImmediateAction(effectiveDate, "termination");
 
         var previous = entity.EmploymentStatus;
         entity.EmploymentStatus = EmploymentStatus.Terminated;
@@ -60,8 +71,9 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         entity.UpdatedAtUtc = DateTime.UtcNow;
 
         await ApplyRetentionFromPolicyAsync(entity, DateTime.UtcNow, cancellationToken);
-        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(entity, _gateway, cancellationToken);
+        await EmployeeInvitationService.RevokePendingForEmployeeAsync(_invitations, entity.Id, cancellationToken);
         await AddStatusHistoryAsync(entity, previous, EmploymentStatus.Terminated, effectiveDate, reason, cancellationToken);
+        await _outboxWriter.EnqueueRevokeLinkedIdentityAsync(entity.Id, cancellationToken);
 
         _employees.Update(entity);
         await _employees.SaveChangesAsync(cancellationToken);
@@ -92,7 +104,8 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         entity.UpdatedAtUtc = now;
 
         await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
-        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(entity, _gateway, cancellationToken);
+        await EmployeeInvitationService.RevokePendingForEmployeeAsync(_invitations, entity.Id, cancellationToken);
+        await _outboxWriter.EnqueueRevokeLinkedIdentityAsync(entity.Id, cancellationToken);
 
         _employees.Update(entity);
         await _employees.SaveChangesAsync(cancellationToken);
@@ -149,6 +162,7 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
             throw new BusinessRuleException("Employee already has this employment status.");
 
         var effectiveDate = request.EffectiveDateUtc.ToUniversalTime();
+        _businessDates.EnsureNotFutureForImmediateAction(effectiveDate, "employment status change");
         var reason = StringHelper.NormalizeOptional(request.Reason);
 
         entity.EmploymentStatus = request.NewStatus;

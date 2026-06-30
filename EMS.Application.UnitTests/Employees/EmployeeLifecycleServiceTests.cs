@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Employee;
 using EMS.Application.Services.Authorization;
+using EMS.Application.Services.Integrations;
 using EMS.Application.Services.Employees;
 using EMS.Application.UnitTests.Infrastructure;
 using EMS.Domain.DbModels;
@@ -104,7 +105,10 @@ public class EmployeeLifecycleServiceTests
             retention,
             identity.Object,
             Mock.Of<IEmployeeUserManagementGateway>(),
-            CreateValidator(employees));
+            CreateValidator(employees),
+            Mock.Of<IEmployeeBusinessDateHelper>(),
+            new InMemoryRepositoryMock<EmployeeInvitation>(e => e.Id, (e, id) => e.Id = id).CreateMock().Object,
+            Mock.Of<IIntegrationOutboxWriter>());
     }
 
     private static EmployeeRelationshipValidator CreateValidator(IBaseRepository<Employee> employees)

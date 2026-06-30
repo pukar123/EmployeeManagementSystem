@@ -5,6 +5,10 @@
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Application\Pukar.Usermanagement.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.11.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

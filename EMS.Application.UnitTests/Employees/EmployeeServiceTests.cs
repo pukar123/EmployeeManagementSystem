@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Employee;
 using EMS.Application.Services.Authorization;
+using EMS.Application.Services.Integrations;
 using EMS.Application.Services.Employees;
 using EMS.Application.UnitTests.Infrastructure;
 using EMS.Domain.DbModels;
@@ -312,6 +313,7 @@ public class EmployeeServiceTests
             roleSync.Object,
             allocator.Object,
             gateway,
+            Mock.Of<IIntegrationOutboxWriter>(),
             validator);
     }
 }

@@ -20,6 +20,8 @@ public class EmployeesController : ControllerBase
     private readonly IEmployeeSiteService _employeeSiteService;
     private readonly IEmployeeAccessService _employeeAccessService;
     private readonly IEmployeeTransferService _employeeTransferService;
+    private readonly IEmployeeScheduledChangeService _employeeScheduledChangeService;
+    private readonly IEmployeeInvitationService _employeeInvitationService;
 
     public EmployeesController(
         IEmployeeService employeeService,
@@ -28,7 +30,9 @@ public class EmployeesController : ControllerBase
         IEmployeeIdentityProvisioningService employeeIdentityProvisioningService,
         IEmployeeSiteService employeeSiteService,
         IEmployeeAccessService employeeAccessService,
-        IEmployeeTransferService employeeTransferService)
+        IEmployeeTransferService employeeTransferService,
+        IEmployeeScheduledChangeService employeeScheduledChangeService,
+        IEmployeeInvitationService employeeInvitationService)
     {
         _employeeService = employeeService;
         _employeeDirectoryService = employeeDirectoryService;
@@ -37,9 +41,12 @@ public class EmployeesController : ControllerBase
         _employeeSiteService = employeeSiteService;
         _employeeAccessService = employeeAccessService;
         _employeeTransferService = employeeTransferService;
+        _employeeScheduledChangeService = employeeScheduledChangeService;
+        _employeeInvitationService = employeeInvitationService;
     }
 
     [HttpGet]
+    [Obsolete("Use GET /api/Employees/directory for searchable paged employee lists.")]
     public async Task<ActionResult<IReadOnlyList<EmployeeResponseModel>>> GetAll(
         CancellationToken cancellationToken,
         [FromQuery] bool includeArchived = false)
@@ -81,7 +88,7 @@ public class EmployeesController : ControllerBase
     {
         try
         {
-            await _employeeAccessService.EnsureCanViewEmployeesAsync(cancellationToken);
+            await _employeeAccessService.EnsureCanExportEmployeesAsync(cancellationToken);
             if (!format.Trim().Equals("csv", StringComparison.OrdinalIgnoreCase))
                 throw new BusinessRuleException("Only csv export is supported for the employee directory.");
 
@@ -192,15 +199,83 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPost("{id:int}/provision-user")]
-    public async Task<ActionResult<ProvisionEmployeeUserResponseModel>> ProvisionUser(
+    [Obsolete("Use POST /api/Employees/{id}/invitations instead.")]
+    public async Task<ActionResult<EmployeeInvitationResponseModel>> ProvisionUser(
         int id,
         CancellationToken cancellationToken)
     {
         try
         {
-            await _employeeAccessService.EnsureCanManageEmployeesAsync(cancellationToken);
-            var response = await _employeeIdentityProvisioningService.ProvisionAsync(id, cancellationToken);
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
+            var response = await _employeeInvitationService.SendAsync(id, cancellationToken);
             return Ok(response);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpGet("{id:int}/invitations")]
+    public async Task<ActionResult<IReadOnlyList<EmployeeInvitationResponseModel>>> ListInvitations(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
+            var items = await _employeeInvitationService.ListAsync(id, cancellationToken);
+            return Ok(items);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpPost("{id:int}/invitations")]
+    public async Task<ActionResult<EmployeeInvitationResponseModel>> SendInvitation(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
+            var response = await _employeeInvitationService.SendAsync(id, cancellationToken);
+            return Ok(response);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpDelete("{id:int}/invitations/{invitationId:int}")]
+    public async Task<IActionResult> RevokeInvitation(
+        int id,
+        int invitationId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
+            await _employeeInvitationService.RevokeAsync(id, invitationId, cancellationToken);
+            return NoContent();
+        }
+        catch (BusinessRuleException ex)
+        {
+            return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpPost("{id:int}/reactivate-login")]
+    public async Task<IActionResult> ReactivateLogin(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
+            await _employeeIdentityProvisioningService.ReactivateLoginAsync(id, cancellationToken);
+            return NoContent();
         }
         catch (BusinessRuleException ex)
         {
@@ -216,7 +291,7 @@ public class EmployeesController : ControllerBase
     {
         try
         {
-            await _employeeAccessService.EnsureCanManageEmployeesAsync(cancellationToken);
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
             var response = await _employeeIdentityProvisioningService.LinkExistingUserAsync(id, request, cancellationToken);
             return Ok(response);
         }
@@ -234,7 +309,7 @@ public class EmployeesController : ControllerBase
     {
         try
         {
-            await _employeeAccessService.EnsureCanManageEmployeesAsync(cancellationToken);
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
             await _employeeIdentityProvisioningService.AssignRolesAsync(id, request, cancellationToken);
             return NoContent();
         }
@@ -378,6 +453,59 @@ public class EmployeesController : ControllerBase
             await _employeeAccessService.EnsureCanManageEmployeesAsync(cancellationToken);
             var updated = await _employeeLifecycleService.ChangeEmploymentStatusAsync(id, request, cancellationToken);
             return updated is null ? NotFound() : Ok(updated);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpGet("{id:int}/scheduled-changes")]
+    public async Task<ActionResult<IReadOnlyList<EmployeeScheduledChangeResponseModel>>> ListScheduledChanges(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeAccessService.EnsureCanViewEmployeesAsync(cancellationToken);
+            var items = await _employeeScheduledChangeService.ListAsync(id, cancellationToken);
+            return Ok(items);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpPost("{id:int}/scheduled-changes")]
+    public async Task<ActionResult<EmployeeScheduledChangeResponseModel>> CreateScheduledChange(
+        int id,
+        [FromBody] CreateEmployeeScheduledChangeRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeAccessService.EnsureCanManageEmployeesAsync(cancellationToken);
+            var created = await _employeeScheduledChangeService.CreateAsync(id, request, cancellationToken);
+            return Ok(created);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpDelete("{id:int}/scheduled-changes/{changeId:int}")]
+    public async Task<IActionResult> CancelScheduledChange(
+        int id,
+        int changeId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _employeeAccessService.EnsureCanManageEmployeesAsync(cancellationToken);
+            await _employeeScheduledChangeService.CancelAsync(id, changeId, cancellationToken);
+            return NoContent();
         }
         catch (BusinessRuleException ex)
         {

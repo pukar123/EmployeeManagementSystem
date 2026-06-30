@@ -6,6 +6,8 @@ public interface IUserAdminService
 {
     Task<IReadOnlyList<UserSummaryResponseModel>> GetAllAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<UserSummaryResponseModel>> GetByIdsAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken = default);
+
     Task<UserSummaryResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
 
     Task<UserSummaryResponseModel?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);

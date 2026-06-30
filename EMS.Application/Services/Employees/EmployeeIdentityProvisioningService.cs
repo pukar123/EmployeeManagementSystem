@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using EMS.Application.DTOs.Employee;
 using EMS.Domain.DbModels;
+using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
 using Pukar.Shared;
 
@@ -145,6 +146,24 @@ public sealed class EmployeeIdentityProvisioningService : IEmployeeIdentityProvi
             throw new BusinessRuleException("Linked user account has not been provisioned for this employee.");
 
         await _gateway.SetRoleIdsForUserAsync(linkedUser.Id, request.RoleIds ?? Array.Empty<int>(), cancellationToken);
+    }
+
+    public async Task ReactivateLoginAsync(int employeeId, CancellationToken cancellationToken = default)
+    {
+        var employee = await _employees.GetByIdAsync(employeeId, cancellationToken);
+        if (employee is null)
+            throw new BusinessRuleException("Employee was not found.");
+
+        _validator.EnsureNotArchived(employee);
+
+        if (employee.EmploymentStatus != EmploymentStatus.Active)
+            throw new BusinessRuleException("Login can only be reactivated for active employees.");
+
+        var linkedUser = await EmployeeLinkedIdentityHelper.TryResolveLinkedUserAsync(employee, _gateway, cancellationToken);
+        if (linkedUser is null)
+            throw new BusinessRuleException("Linked user account has not been provisioned for this employee.");
+
+        await _gateway.ActivateLinkedUserAsync(linkedUser.Id, cancellationToken);
     }
 
     private async Task LinkEmployeeToUserAsync(

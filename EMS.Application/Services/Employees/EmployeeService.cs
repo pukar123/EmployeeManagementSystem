@@ -2,6 +2,7 @@ using EMS.Application.DTOs.Employee;
 using Pukar.Shared;
 using EMS.Application.Mapping;
 using EMS.Application.Services.Authorization;
+using EMS.Application.Services.Integrations;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -23,6 +24,7 @@ public sealed class EmployeeService : IEmployeeService
     private readonly IEmployeeRoleSyncService _employeeRoleSyncService;
     private readonly IEmployeeNumberAllocator _employeeNumberAllocator;
     private readonly IEmployeeUserManagementGateway _gateway;
+    private readonly IIntegrationOutboxWriter _outboxWriter;
     private readonly EmployeeRelationshipValidator _validator;
 
     public EmployeeService(
@@ -38,6 +40,7 @@ public sealed class EmployeeService : IEmployeeService
         IEmployeeRoleSyncService employeeRoleSyncService,
         IEmployeeNumberAllocator employeeNumberAllocator,
         IEmployeeUserManagementGateway gateway,
+        IIntegrationOutboxWriter outboxWriter,
         EmployeeRelationshipValidator validator)
     {
         _repository = repository;
@@ -52,6 +55,7 @@ public sealed class EmployeeService : IEmployeeService
         _employeeRoleSyncService = employeeRoleSyncService;
         _employeeNumberAllocator = employeeNumberAllocator;
         _gateway = gateway;
+        _outboxWriter = outboxWriter;
         _validator = validator;
     }
 
@@ -96,16 +100,16 @@ public sealed class EmployeeService : IEmployeeService
             if (entity.EmploymentStatus == EmploymentStatus.Terminated)
                 await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
 
+            await _outboxWriter.EnqueueSyncEmployeeRolesAsync(entity.Id, cancellationToken);
             await _repository.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            await _employeeRoleSyncService.SyncEmployeeAsync(entity.Id, cancellationToken);
             return EmployeeMapper.ToResponse(entity);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new BusinessRuleException("Employee number allocation conflict; please retry.");
+            throw EmployeePersistenceExceptionMapper.MapDbUpdateException(ex);
         }
         catch
         {

@@ -8,4 +8,6 @@ export const employeeKeys = {
   profile: (id: number) => [...employeeKeys.all, "profile", id] as const,
   history: (id: number) => [...employeeKeys.all, "history", id] as const,
   effectiveRoles: (id: number) => [...employeeKeys.all, "effective-roles", id] as const,
+  scheduledChanges: (id: number) => [...employeeKeys.all, "scheduled-changes", id] as const,
+  invitations: (id: number) => [...employeeKeys.all, "invitations", id] as const,
 };

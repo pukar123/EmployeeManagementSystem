@@ -8,6 +8,11 @@ const links = [
     title: "Menu access",
     description: "Choose which menus each role can see in the sidebar.",
   },
+  {
+    href: "/user-management/employee-capabilities",
+    title: "Employee capabilities",
+    description: "Assign view, manage, account access, and export permissions for employees.",
+  },
 ] as const;
 
 export default function UserManagementIndexPage() {

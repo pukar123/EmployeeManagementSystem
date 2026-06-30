@@ -69,7 +69,8 @@ public class EmployeeTransferServiceTests
             Mock.Of<IBaseRepository<EmployeeManagerHistory>>(),
             identity.Object,
             Mock.Of<IEmployeeRoleSyncService>(),
-            validator);
+            validator,
+            Mock.Of<IEmployeeBusinessDateHelper>());
 
         var effectiveFrom = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         await sut.TransferDepartmentAsync(
@@ -108,7 +109,8 @@ public class EmployeeTransferServiceTests
             Mock.Of<IBaseRepository<EmployeeManagerHistory>>(),
             Mock.Of<IIdentityContext>(),
             Mock.Of<IEmployeeRoleSyncService>(),
-            validator);
+            validator,
+            Mock.Of<IEmployeeBusinessDateHelper>());
 
         var ex = Assert.ThrowsAsync<BusinessRuleException>(() =>
             sut.TransferDepartmentAsync(

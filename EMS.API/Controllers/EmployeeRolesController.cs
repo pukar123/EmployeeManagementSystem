@@ -47,7 +47,7 @@ public sealed class EmployeeRolesController : ControllerBase
     {
         try
         {
-            await _employeeAccessService.EnsureCanManageEmployeesAsync(cancellationToken);
+            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
             var updated = await _employeeRoleService.SetDirectRolesAsync(employeeId, request, cancellationToken);
             return updated ? NoContent() : NotFound();
         }

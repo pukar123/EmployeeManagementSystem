@@ -23,6 +23,7 @@ This guide explains how to use the **Employee Management System (EMS)** web appl
 13. [Leave](#13-leave)
 14. [Tasks](#14-tasks)
 15. [User management](#15-user-management)
+    - Employee capabilities editor at `/user-management/employee-capabilities`
 16. [Employee portal (self-service)](#16-employee-portal-self-service)
 17. [Recommended setup order](#17-recommended-setup-order)
 18. [Common workflows](#18-common-workflows)
@@ -158,9 +159,31 @@ Manage your workforce as lifecycle records—not just table rows.
 - **Filters:** employment status (including Preboarding), department, position, manager, site, and login-link status.
 - See the **result count** and **active filter chips**; use **Clear all filters** to reset.
 - **Archive view** shows archived employees with **Restore** when retention rules allow.
-- **Export CSV** downloads the current filtered set (not only the current page).
+- **Export CSV** downloads the current filtered set (not only the current page); requires the **Export employee directory** capability.
+- **Sortable columns** and **page size** controls are available in the directory header and pagination row.
 - Click a name or **View profile** to open `/employees/{id}`.
 - Employee numbers (for example `EMP014`) are stable identifiers in the directory—not row indexes.
+
+### Employee capabilities (administrators)
+
+The **Employees** menu controls navigation only. Data access is granted separately under **User management → Employee capabilities**:
+
+| Capability | Allows |
+|------------|--------|
+| **View employees** | Directory, profiles, history |
+| **Manage employees** | Create, edit, lifecycle, transfers, scheduled changes |
+| **Employee account access** | Invitations, link user, roles, reactivate login |
+| **Export employee directory** | CSV export |
+
+Manage, account access, and export automatically include view.
+
+### Login invitations
+
+From the profile **Access** tab, users with account access can **Send invitation**. The employee receives an email with a single-use link (`/accept-invitation`) that expires in 24 hours. Delivery failures do not show success—the invitation stays pending for retry. **Restore** reopens the employee record only; login remains disabled until **Reactivate login** (active employees with account access).
+
+### Scheduled changes
+
+Future-dated terminations, archives, status changes, and transfers are scheduled from the profile (or via API) and appear under **Upcoming changes**. They apply automatically on the effective date (business timezone, default Australia/Sydney). Pending scheduled changes can be cancelled before they run.
 
 ### Employee profile (`/employees/{id}`)
 

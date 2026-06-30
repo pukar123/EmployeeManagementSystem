@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDepartments } from "@/features/departments/hooks";
@@ -14,6 +14,7 @@ import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
 import { cn } from "@/shared/utils/cn";
 import { useEmployeeDirectory } from "../hooks";
+import { useEmployeeCapabilities } from "../hooks/useEmployeeCapabilities";
 import { employeeService } from "../services/employeeService";
 import { employeeKeys } from "../services/query-keys";
 import type { EmployeeDirectoryItem, EmployeeDirectoryQuery } from "../types/employee.types";
@@ -24,7 +25,14 @@ import { CreateEmployeeWizard } from "./CreateEmployeeWizard";
 export function EmployeesSection() {
   const queryClient = useQueryClient();
   const { organizationId } = useOrganizationContext();
+  const { capabilities, isLoading: capabilitiesLoading } = useEmployeeCapabilities();
   const [filterState, setFilterState] = useState<EmployeeDirectoryQuery | null>(null);
+
+  useEffect(() => {
+    if (organizationId) {
+      setFilterState((prev) => prev ?? defaultDirectoryQuery(organizationId));
+    }
+  }, [organizationId]);
 
   const directoryQuery = useMemo(() => {
     if (!organizationId) return null;
@@ -32,6 +40,7 @@ export function EmployeesSection() {
     return { ...base, organizationId };
   }, [organizationId, filterState]);
   const [createOpen, setCreateOpen] = useState(false);
+  const createCloseGuardRef = useRef<(() => boolean) | null>(null);
   const [exportBusy, setExportBusy] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
 
@@ -57,7 +66,18 @@ export function EmployeesSection() {
   const { data, isLoading, isError, error, refetch, isFetching } = useEmployeeDirectory(directoryQuery);
 
   const updateQuery = (patch: Partial<EmployeeDirectoryQuery>) => {
-    setFilterState((prev) => (prev ? { ...prev, ...patch } : prev));
+    setFilterState((prev) => {
+      if (!organizationId) return prev;
+      const base = prev ?? defaultDirectoryQuery(organizationId);
+      return { ...base, ...patch };
+    });
+  };
+
+  const handleSort = (sortBy: string) => {
+    const current = directoryQuery?.sortBy ?? "name";
+    const currentDir = directoryQuery?.sortDirection ?? "asc";
+    const nextDir = current === sortBy && currentDir === "asc" ? "desc" : "asc";
+    updateQuery({ sortBy, sortDirection: nextDir, page: 1 });
   };
 
   const clearFilters = () => {
@@ -111,6 +131,22 @@ export function EmployeesSection() {
   const totalPages = data?.totalPages ?? 1;
   const isArchiveView = directoryQuery?.isArchived ?? false;
 
+  if (capabilitiesLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!capabilities.view) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-8 text-center">
+        <p className="text-sm text-muted-foreground">You do not have permission to view employees.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -125,10 +161,10 @@ export function EmployeesSection() {
             >
               {isArchiveView ? "Active directory" : "Archive view"}
             </Button>
-            <Button type="button" variant="secondary" disabled={exportBusy || isLoading} onClick={() => void handleExport()}>
+            <Button type="button" variant="secondary" disabled={exportBusy || isLoading || !capabilities.export} onClick={() => void handleExport()}>
               {exportBusy ? "Exporting…" : "Export CSV"}
             </Button>
-            {!isArchiveView ? (
+            {!isArchiveView && capabilities.manage ? (
               <Button type="button" onClick={() => setCreateOpen(true)}>
                 Add employee
               </Button>
@@ -167,7 +203,7 @@ export function EmployeesSection() {
         <div className="rounded-xl border border-dashed border-border p-10 text-center">
           <p className="text-lg font-medium">No employees yet</p>
           <p className="mt-1 text-sm text-muted-foreground">Add your first employee to start building the directory.</p>
-          <Button type="button" className="mt-4" onClick={() => setCreateOpen(true)}>
+          <Button type="button" className="mt-4" onClick={() => setCreateOpen(true)} disabled={!capabilities.manage}>
             Add employee
           </Button>
         </div>
@@ -177,15 +213,36 @@ export function EmployeesSection() {
             <EmployeeTable
               employees={items}
               isArchiveView={isArchiveView}
-              onRestore={isArchiveView ? handleRestore : undefined}
+              onRestore={isArchiveView && capabilities.manage ? handleRestore : undefined}
               restoreBusy={restoreBusy}
+              sortBy={directoryQuery?.sortBy ?? "name"}
+              sortDirection={directoryQuery?.sortDirection ?? "asc"}
+              onSort={handleSort}
             />
           </div>
-          {totalPages > 1 ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
-              </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <label className="flex items-center gap-2">
+                <span>Rows per page</span>
+                <select
+                  className="rounded-lg border border-input bg-background px-2 py-1 text-sm"
+                  value={directoryQuery?.pageSize ?? 25}
+                  onChange={(e) => updateQuery({ pageSize: Number(e.target.value), page: 1 })}
+                >
+                  {[10, 25, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {totalPages > 1 ? (
+                <p>
+                  Page {page} of {totalPages}
+                </p>
+              ) : null}
+            </div>
+            {totalPages > 1 ? (
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -206,16 +263,25 @@ export function EmployeesSection() {
                   Next
                 </Button>
               </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </>
       )}
 
-      <Modal open={createOpen} title="Add employee" onClose={() => setCreateOpen(false)} className="max-w-3xl">
+      <Modal
+        open={createOpen}
+        title="Add employee"
+        onClose={() => setCreateOpen(false)}
+        onRequestClose={() => createCloseGuardRef.current?.() ?? true}
+        className="max-w-3xl"
+      >
         <CreateEmployeeWizard
           onClose={() => setCreateOpen(false)}
           onCreated={() => {
             invalidateDirectory();
+          }}
+          onRegisterCloseGuard={(guard) => {
+            createCloseGuardRef.current = guard;
           }}
         />
       </Modal>

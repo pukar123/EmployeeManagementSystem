@@ -71,8 +71,12 @@ try
     builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection(SeedAdminOptions.SectionName));
     builder.Services.Configure<AuthorizationModeOptions>(builder.Configuration.GetSection(AuthorizationModeOptions.SectionName));
     builder.Services.Configure<UserManagementApiOptions>(builder.Configuration.GetSection(UserManagementApiOptions.SectionName));
+    builder.Services.Configure<EMS.Application.Options.EmployeeSchedulingOptions>(
+        builder.Configuration.GetSection(EMS.Application.Options.EmployeeSchedulingOptions.SectionName));
     builder.Services.AddHostedService<AdminUserSeedHostedService>();
     builder.Services.AddHostedService<EmsRbacSeedHostedService>();
+    builder.Services.AddHostedService<EmployeeScheduledChangeWorker>();
+    builder.Services.AddHostedService<IntegrationOutboxDispatcher>();
 
     builder.Services.AddControllers(options =>
         {
@@ -105,6 +109,7 @@ try
     builder.Services.AddScoped<IAuditContextAccessor, HttpContextAuditContextAccessor>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
     builder.Services.AddScoped<IRoleKeyPermissionService, RoleKeyPermissionService>();
+    builder.Services.AddScoped<IRoleKeyCapabilityService, RoleKeyCapabilityService>();
     builder.Services.AddHttpClient<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>((sp, client) =>
     {
         var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<UserManagementApiOptions>>().Value;
@@ -124,11 +129,19 @@ try
     builder.Services.AddScoped<IEmployeeDirectoryService, EmployeeDirectoryService>();
     builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
     builder.Services.AddScoped<IEmployeeTransferService, EmployeeTransferService>();
-    builder.Services.AddScoped<IEmployeeNumberAllocator, EmployeeNumberAllocator>();
+    builder.Services.AddScoped<IEmployeeNumberAllocator, EMS.Infrastructure.Repositories.Implementations.SqlEmployeeNumberAllocator>();
     builder.Services.AddScoped<IEmployeeRoleSyncService, EmployeeRoleSyncService>();
     builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
     builder.Services.AddScoped<IEmployeeUserManagementGateway, EmployeeUserManagementGateway>();
     builder.Services.AddScoped<IEmployeeIdentityProvisioningService, EmployeeIdentityProvisioningService>();
+    builder.Services.AddScoped<IEmployeeBusinessDateHelper, EmployeeBusinessDateHelper>();
+    builder.Services.AddScoped<IEmployeeScheduledChangeService, EmployeeScheduledChangeService>();
+    builder.Services.AddScoped<IEmployeeScheduledChangeApplier, EmployeeScheduledChangeApplier>();
+    builder.Services.AddScoped<IEmployeeInvitationService, EmployeeInvitationService>();
+    builder.Services.Configure<EMS.Application.Options.SmtpOptions>(builder.Configuration.GetSection(EMS.Application.Options.SmtpOptions.SectionName));
+    builder.Services.AddScoped<EMS.Application.Services.Email.IEmailSender, EMS.Infrastructure.Email.SmtpEmailSender>();
+    builder.Services.AddScoped<EMS.Application.Services.Integrations.IIntegrationOutboxWriter, EMS.Application.Services.Integrations.IntegrationOutboxWriter>();
+    builder.Services.AddScoped<EMS.Application.Services.Integrations.IIntegrationOutboxProcessor, EMS.Application.Services.Integrations.IntegrationOutboxProcessor>();
     builder.Services.AddScoped<IOrganizationService, OrganizationService>();
     builder.Services.AddScoped<IDepartmentService, DepartmentService>();
     builder.Services.AddScoped<ILocationService, LocationService>();

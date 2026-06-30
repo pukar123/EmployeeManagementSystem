@@ -17,6 +17,7 @@ public sealed class EmployeeTransferService : IEmployeeTransferService
     private readonly IIdentityContext _identityContext;
     private readonly IEmployeeRoleSyncService _employeeRoleSyncService;
     private readonly EmployeeRelationshipValidator _validator;
+    private readonly IEmployeeBusinessDateHelper _businessDates;
 
     public EmployeeTransferService(
         IBaseRepository<Employee> employees,
@@ -25,7 +26,8 @@ public sealed class EmployeeTransferService : IEmployeeTransferService
         IBaseRepository<EmployeeManagerHistory> managerHistoryRepository,
         IIdentityContext identityContext,
         IEmployeeRoleSyncService employeeRoleSyncService,
-        EmployeeRelationshipValidator validator)
+        EmployeeRelationshipValidator validator,
+        IEmployeeBusinessDateHelper businessDates)
     {
         _employees = employees;
         _positionHistoryRepository = positionHistoryRepository;
@@ -34,6 +36,7 @@ public sealed class EmployeeTransferService : IEmployeeTransferService
         _identityContext = identityContext;
         _employeeRoleSyncService = employeeRoleSyncService;
         _validator = validator;
+        _businessDates = businessDates;
     }
 
     public Task<EmployeeResponseModel?> TransferDepartmentAsync(
@@ -87,7 +90,8 @@ public sealed class EmployeeTransferService : IEmployeeTransferService
         _validator.EnsureNotArchived(entity);
 
         var normalizedReason = StringHelper.NormalizeOptional(reason);
-        var effectiveFrom = effectiveFromUtc == default ? DateTime.UtcNow : effectiveFromUtc;
+        var effectiveFrom = effectiveFromUtc == default ? DateTime.UtcNow : effectiveFromUtc.ToUniversalTime();
+        _businessDates.EnsureNotFutureForImmediateAction(effectiveFrom, "transfer");
         var now = DateTime.UtcNow;
 
         await using var transaction = await _employees.BeginTransactionAsync(cancellationToken);

@@ -37,6 +37,6 @@ public sealed class EmployeeNumberAllocator : IEmployeeNumberAllocator
         return FormatEmployeeNumber(sequence.LastAllocatedNumber);
     }
 
-    internal static string FormatEmployeeNumber(int number)
+    public static string FormatEmployeeNumber(int number)
         => $"EMP{number.ToString("D3", CultureInfo.InvariantCulture)}";
 }

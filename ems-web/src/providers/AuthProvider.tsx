@@ -25,6 +25,17 @@ export type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function readAuthFromStorage(): { user: AuthUser | null; mustChangePassword: boolean } {
+  if (typeof window === "undefined") {
+    return { user: null, mustChangePassword: false };
+  }
+  const token = getAccessToken();
+  return {
+    user: token ? getStoredUser() : null,
+    mustChangePassword: token ? getMustChangePassword() : false,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   /** false until client reads localStorage — avoids SSR (no token) vs client (has token) hydration mismatch. */
   const [isReady, setIsReady] = useState(false);
@@ -32,9 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [mustChangePassword, setMustChangePasswordState] = useState(false);
 
   const syncFromStorage = useCallback(() => {
-    const token = getAccessToken();
-    setUser(token ? getStoredUser() : null);
-    setMustChangePasswordState(token ? getMustChangePassword() : false);
+    const snapshot = readAuthFromStorage();
+    setUser(snapshot.user);
+    setMustChangePasswordState(snapshot.mustChangePassword);
   }, []);
 
   useEffect(() => {
@@ -42,9 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsReady(true);
 
     setAuthChangeHandler(() => {
-      const token = getAccessToken();
-      setUser(token ? getStoredUser() : null);
-      setMustChangePasswordState(token ? getMustChangePassword() : false);
+      syncFromStorage();
     });
     return () => setAuthChangeHandler(undefined);
   }, [syncFromStorage]);

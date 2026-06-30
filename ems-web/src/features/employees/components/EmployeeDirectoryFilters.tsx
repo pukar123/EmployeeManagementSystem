@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Department } from "@/features/departments/types/department.types";
 import type { JobPosition } from "@/features/job-positions/types/job-position.types";
 import type { Site } from "@/features/sites/types/site.types";
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import type { EmployeeDirectoryItem, EmployeeDirectoryQuery } from "../types/employee.types";
 import { employmentStatusLabels, type EmploymentStatusValue } from "../types/employment-status";
 import { Button } from "@/shared/components/Button";
@@ -33,6 +34,19 @@ export function EmployeeDirectoryFilters({
   sites,
   totalCount,
 }: EmployeeDirectoryFiltersProps) {
+  const [searchText, setSearchText] = useState(query.search ?? "");
+  const debouncedSearch = useDebouncedValue(searchText, 300);
+
+  useEffect(() => {
+    if (debouncedSearch !== (query.search ?? "")) {
+      onChange({ search: debouncedSearch, page: 1 });
+    }
+  }, [debouncedSearch, onChange, query.search]);
+
+  useEffect(() => {
+    setSearchText(query.search ?? "");
+  }, [query.search]);
+
   const activeFilters = useMemo(() => {
     const chips: string[] = [];
     if (query.search?.trim()) chips.push(`Search: ${query.search.trim()}`);
@@ -64,8 +78,8 @@ export function EmployeeDirectoryFilters({
         <div className="flex-1">
           <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground">Search</label>
           <SearchInput
-            value={query.search ?? ""}
-            onChange={(e) => onChange({ search: e.target.value, page: 1 })}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
             placeholder="Name, email, employee number, phone…"
           />
         </div>
