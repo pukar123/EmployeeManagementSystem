@@ -1,6 +1,7 @@
 "use client";
 
-import type { Employee } from "../types/employee.types";
+import Link from "next/link";
+import type { EmployeeDirectoryItem } from "../types/employee.types";
 import { EmploymentStatusPill } from "./EmploymentStatusPill";
 import { Button } from "@/shared/components/Button";
 import {
@@ -14,102 +15,77 @@ import {
 } from "@/shared/components/DataTable";
 
 type EmployeeTableProps = {
-  employees: Employee[];
-  jobPositionLabelById: Map<number, string>;
-  immediateManagerPositionByEmployeeId: Map<number, string>;
-  onViewHistory: (e: Employee) => void;
-  onManageRoles: (e: Employee) => void;
-  onProvisionUser: (e: Employee) => void;
-  provisionBusy?: boolean;
-  onEdit: (e: Employee) => void;
-  onDelete: (e: Employee) => void;
+  employees: EmployeeDirectoryItem[];
+  isArchiveView: boolean;
+  onRestore?: (employee: EmployeeDirectoryItem) => void;
+  restoreBusy?: boolean;
 };
 
-function formatJobPositionCell(
-  jobPositionId: number | null,
-  jobPositionLabelById: Map<number, string>,
-): string {
-  if (jobPositionId == null) return "—";
-  return jobPositionLabelById.get(jobPositionId) ?? "—";
-}
-
-export function EmployeeTable({
-  employees,
-  jobPositionLabelById,
-  immediateManagerPositionByEmployeeId,
-  onViewHistory,
-  onManageRoles,
-  onProvisionUser,
-  provisionBusy = false,
-  onEdit,
-  onDelete,
-}: EmployeeTableProps) {
+export function EmployeeTable({ employees, isArchiveView, onRestore, restoreBusy }: EmployeeTableProps) {
   return (
-    <DataTable isEmpty={employees.length === 0} emptyMessage="No employees match the current filter.">
-      <DataTableElement>
-        <DataTableHead>
-          <tr>
-            <DataTableHeaderCell>#</DataTableHeaderCell>
-            <DataTableHeaderCell>Employee #</DataTableHeaderCell>
-            <DataTableHeaderCell>Name</DataTableHeaderCell>
-            <DataTableHeaderCell>Email</DataTableHeaderCell>
-            <DataTableHeaderCell>Status</DataTableHeaderCell>
-            <DataTableHeaderCell>Immediate Manager</DataTableHeaderCell>
-            <DataTableHeaderCell>Position</DataTableHeaderCell>
-            <DataTableHeaderCell>Actions</DataTableHeaderCell>
-          </tr>
-        </DataTableHead>
-        <DataTableBody>
-          {employees.map((row, index) => (
-            <DataTableRow key={row.id}>
-              <DataTableCell className="whitespace-nowrap font-mono text-muted-foreground">
-                {index + 1}
-              </DataTableCell>
-              <DataTableCell className="whitespace-nowrap font-mono text-muted-foreground">
-                {row.employeeNumber}
-              </DataTableCell>
-              <DataTableCell className="font-medium">
-                {row.firstName} {row.lastName}
-              </DataTableCell>
-              <DataTableCell className="text-muted-foreground">{row.email}</DataTableCell>
-              <DataTableCell>
-                <EmploymentStatusPill status={row.employmentStatus} />
-              </DataTableCell>
-              <DataTableCell className="text-muted-foreground">
-                {immediateManagerPositionByEmployeeId.get(row.id) ?? "—"}
-              </DataTableCell>
-              <DataTableCell className="text-muted-foreground">
-                {formatJobPositionCell(row.jobPositionId, jobPositionLabelById)}
-              </DataTableCell>
-              <DataTableCell className="whitespace-nowrap">
-                <div className="flex flex-wrap gap-1.5">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => onViewHistory(row)}>
-                    History
-                  </Button>
-                  <Button type="button" variant="secondary" size="sm" onClick={() => onManageRoles(row)}>
-                    Roles
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    disabled={row.isArchived || provisionBusy}
-                    onClick={() => onProvisionUser(row)}
-                  >
-                    Link login
-                  </Button>
-                  <Button type="button" variant="secondary" size="sm" onClick={() => onEdit(row)}>
-                    Edit
-                  </Button>
-                  <Button type="button" variant="danger" size="sm" onClick={() => onDelete(row)}>
-                    Delete
-                  </Button>
-                </div>
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-        </DataTableBody>
-      </DataTableElement>
-    </DataTable>
+    <div className="overflow-x-auto">
+      <DataTable isEmpty={employees.length === 0} emptyMessage="No employees match the current filters.">
+        <DataTableElement>
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Employee #</DataTableHeaderCell>
+              <DataTableHeaderCell>Name</DataTableHeaderCell>
+              <DataTableHeaderCell>Email</DataTableHeaderCell>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell>Manager</DataTableHeaderCell>
+              <DataTableHeaderCell>Position</DataTableHeaderCell>
+              <DataTableHeaderCell>Site</DataTableHeaderCell>
+              <DataTableHeaderCell>Actions</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {employees.map((row) => (
+              <DataTableRow key={row.id}>
+                <DataTableCell className="whitespace-nowrap font-mono text-muted-foreground">
+                  {row.employeeNumber}
+                </DataTableCell>
+                <DataTableCell className="font-medium">
+                  <Link href={`/employees/${row.id}`} className="text-primary hover:underline">
+                    {row.firstName} {row.lastName}
+                  </Link>
+                </DataTableCell>
+                <DataTableCell className="text-muted-foreground">{row.email}</DataTableCell>
+                <DataTableCell>
+                  <EmploymentStatusPill status={row.employmentStatus} />
+                </DataTableCell>
+                <DataTableCell className="text-muted-foreground">
+                  {row.managerName
+                    ? `${row.managerName}${row.managerEmployeeNumber ? ` (${row.managerEmployeeNumber})` : ""}`
+                    : "No manager"}
+                </DataTableCell>
+                <DataTableCell className="text-muted-foreground">{row.jobPositionTitle ?? "—"}</DataTableCell>
+                <DataTableCell className="text-muted-foreground">{row.primarySiteName ?? "—"}</DataTableCell>
+                <DataTableCell>
+                  <div className="flex flex-wrap gap-1">
+                    <Link
+                      href={`/employees/${row.id}`}
+                      className="inline-flex items-center rounded-lg px-2 py-1 text-sm font-medium text-primary hover:underline"
+                    >
+                      View profile
+                    </Link>
+                    {isArchiveView && onRestore ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={restoreBusy}
+                        onClick={() => onRestore(row)}
+                      >
+                        Restore
+                      </Button>
+                    ) : null}
+                  </div>
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTableElement>
+      </DataTable>
+    </div>
   );
 }

@@ -37,9 +37,11 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.EmployeePositionHistory> EmployeePositionHistories { get; set; }
         public DbSet<DbModels.EmployeeDepartmentHistory> EmployeeDepartmentHistories { get; set; }
         public DbSet<DbModels.EmployeeManagerHistory> EmployeeManagerHistories { get; set; }
+        public DbSet<DbModels.EmployeeEmploymentStatusHistory> EmployeeEmploymentStatusHistories { get; set; }
         public DbSet<DbModels.EmployeeRetentionPolicy> EmployeeRetentionPolicies { get; set; }
         public DbSet<DbModels.PositionRole> PositionRoles { get; set; }
         public DbSet<DbModels.EmployeeRoleAssignment> EmployeeRoleAssignments { get; set; }
+        public DbSet<DbModels.OrganizationEmployeeNumberSequence> OrganizationEmployeeNumberSequences { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

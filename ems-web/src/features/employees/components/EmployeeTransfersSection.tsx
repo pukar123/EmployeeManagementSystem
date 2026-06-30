@@ -30,8 +30,24 @@ export function EmployeeTransfersSection() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
   const transferMutation = useMutation({
-    mutationFn: async (args: { employeeId: number; data: Parameters<typeof employeeService.updateEmployee>[1] }) =>
-      employeeService.updateEmployee(args.employeeId, args.data),
+    mutationFn: async (args: {
+      employeeId: number;
+      kind: "department" | "position";
+      payload:
+        | Parameters<typeof employeeService.transferDepartment>[1]
+        | Parameters<typeof employeeService.transferPosition>[1];
+    }) => {
+      if (args.kind === "department") {
+        return employeeService.transferDepartment(
+          args.employeeId,
+          args.payload as Parameters<typeof employeeService.transferDepartment>[1],
+        );
+      }
+      return employeeService.transferPosition(
+        args.employeeId,
+        args.payload as Parameters<typeof employeeService.transferPosition>[1],
+      );
+    },
     onSuccess: async (updatedEmployee) => {
       await queryClient.invalidateQueries({ queryKey: employeeKeys.list() });
       await queryClient.invalidateQueries({ queryKey: employeeKeys.detail(updatedEmployee.id) });
@@ -105,13 +121,15 @@ export function EmployeeTransfersSection() {
             loadingOptions={departmentsLoading}
             saving={transferMutation.isPending}
             onSubmit={async (values) => {
-              const payload = {
-                ...selectedEmployee,
-                departmentId: values.newDepartmentId,
-                departmentEffectiveFromUtc: new Date(values.effectiveFromUtc).toISOString(),
-                departmentChangeReason: values.reason?.trim() || null,
-              };
-              await transferMutation.mutateAsync({ employeeId: selectedEmployee.id, data: payload });
+              await transferMutation.mutateAsync({
+                employeeId: selectedEmployee.id,
+                kind: "department",
+                payload: {
+                  newDepartmentId: values.newDepartmentId ?? null,
+                  effectiveFromUtc: new Date(values.effectiveFromUtc).toISOString(),
+                  reason: values.reason?.trim() || null,
+                },
+              });
               toast.success("Department transfer saved.");
             }}
           />
@@ -122,13 +140,15 @@ export function EmployeeTransfersSection() {
             loadingOptions={positionsLoading}
             saving={transferMutation.isPending}
             onSubmit={async (values) => {
-              const payload = {
-                ...selectedEmployee,
-                jobPositionId: values.newJobPositionId,
-                positionEffectiveFromUtc: new Date(values.effectiveFromUtc).toISOString(),
-                positionChangeReason: values.reason?.trim() || null,
-              };
-              await transferMutation.mutateAsync({ employeeId: selectedEmployee.id, data: payload });
+              await transferMutation.mutateAsync({
+                employeeId: selectedEmployee.id,
+                kind: "position",
+                payload: {
+                  newJobPositionId: values.newJobPositionId ?? null,
+                  effectiveFromUtc: new Date(values.effectiveFromUtc).toISOString(),
+                  reason: values.reason?.trim() || null,
+                },
+              });
               toast.success("Position transfer saved.");
             }}
           />

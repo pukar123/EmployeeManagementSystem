@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -22,7 +23,7 @@ import {
   type EmployeeFormValues,
 } from "../types/employee-form.schema";
 import type { Employee } from "../types/employee.types";
-import { employmentStatusLabels } from "../types/employment-status";
+import { employmentStatusLabels, EmploymentStatus } from "../types/employment-status";
 import { dateInputToApiIso, toDateInputValue } from "../utils/date-format";
 import type { CreateEmployeeRequest, UpdateEmployeeRequest } from "../types/employee.types";
 import { useEmployeeUiStore } from "../store/employee-ui-store";
@@ -78,13 +79,13 @@ function employeeToFormInput(emp: Employee): EmployeeFormInput {
   };
 }
 
-function toApiPayload(values: EmployeeFormValues): CreateEmployeeRequest {
+function toApiPayload(values: EmployeeFormValues, employee?: Employee | null): CreateEmployeeRequest {
   return {
     organizationId: values.organizationId,
-    departmentId: values.departmentId,
+    departmentId: employee?.departmentId ?? values.departmentId,
     locationId: values.locationId,
-    managerId: values.managerId,
-    jobPositionId: values.jobPositionId,
+    managerId: employee?.managerId ?? values.managerId,
+    jobPositionId: employee?.jobPositionId ?? values.jobPositionId,
     firstName: values.firstName,
     lastName: values.lastName,
     email: values.email,
@@ -136,6 +137,7 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
   const managerCandidates = useMemo(() => {
     return employees.filter((e) => {
       if (e.organizationId !== currentOrgId) return false;
+      if (e.isArchived || !e.isActive || e.employmentStatus !== EmploymentStatus.Active) return false;
       if (mode === "edit" && employee && e.id === employee.id) return false;
       return true;
     });
@@ -175,7 +177,7 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
       return;
     }
     const payload = {
-      ...toApiPayload(values),
+      ...toApiPayload(values, mode === "edit" ? employee : null),
       organizationId: currentOrgId,
     } as UpdateEmployeeRequest;
 
@@ -243,33 +245,85 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
         <Field label="Date joined" error={form.formState.errors.dateJoined?.message}>
           <input type="date" className={inputClass} {...form.register("dateJoined")} />
         </Field>
-        <Field label="Employment status" error={form.formState.errors.employmentStatus?.message}>
-          <select className={inputClass} {...form.register("employmentStatus", { valueAsNumber: true })}>
-            {Object.entries(employmentStatusLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Department (optional)" error={form.formState.errors.departmentId?.message}>
-          <Controller
-            name="departmentId"
-            control={form.control}
-            render={({ field }) => (
-              <SearchableSelect<number>
-                options={departmentOptions}
-                value={stringIdFieldToNullableNumber(field.value)}
-                onChange={(v) => field.onChange(nullableNumberToStringId(v))}
-                placeholder="Search departments…"
-                emptyLabel="No department"
-                disabled={departmentsLoading}
-                aria-invalid={!!form.formState.errors.departmentId}
+        {mode === "create" ? (
+          <Field label="Employment status" error={form.formState.errors.employmentStatus?.message}>
+            <select className={inputClass} {...form.register("employmentStatus", { valueAsNumber: true })}>
+              {Object.entries(employmentStatusLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : (
+          <div className="sm:col-span-2 rounded-lg border border-dashed border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            Employment status is changed from dedicated lifecycle actions on the employee profile.
+          </div>
+        )}
+        {mode === "create" ? (
+          <>
+            <Field label="Department (optional)" error={form.formState.errors.departmentId?.message}>
+              <Controller
+                name="departmentId"
+                control={form.control}
+                render={({ field }) => (
+                  <SearchableSelect<number>
+                    options={departmentOptions}
+                    value={stringIdFieldToNullableNumber(field.value)}
+                    onChange={(v) => field.onChange(nullableNumberToStringId(v))}
+                    placeholder="Search departments…"
+                    emptyLabel="No department"
+                    disabled={departmentsLoading}
+                    aria-invalid={!!form.formState.errors.departmentId}
+                  />
+                )}
               />
-            )}
-          />
-        </Field>
-        <Field label="Location (optional)" error={form.formState.errors.locationId?.message}>
+            </Field>
+            <Field label="Manager (optional)" error={form.formState.errors.managerId?.message}>
+              <Controller
+                name="managerId"
+                control={form.control}
+                render={({ field }) => (
+                  <SearchableSelect<number>
+                    options={managerOptions}
+                    value={stringIdFieldToNullableNumber(field.value)}
+                    onChange={(v) => field.onChange(nullableNumberToStringId(v))}
+                    placeholder="Search employees…"
+                    emptyLabel="No manager"
+                    disabled={employeesLoading}
+                    aria-invalid={!!form.formState.errors.managerId}
+                  />
+                )}
+              />
+            </Field>
+            <Field label="Job position (optional)" error={form.formState.errors.jobPositionId?.message}>
+              <Controller
+                name="jobPositionId"
+                control={form.control}
+                render={({ field }) => (
+                  <SearchableSelect<number>
+                    options={jobOptions}
+                    value={stringIdFieldToNullableNumber(field.value)}
+                    onChange={(v) => field.onChange(nullableNumberToStringId(v))}
+                    placeholder="Search job positions…"
+                    emptyLabel="No job position"
+                    disabled={jobPositionsLoading}
+                    aria-invalid={!!form.formState.errors.jobPositionId}
+                  />
+                )}
+              />
+            </Field>
+          </>
+        ) : (
+          <div className="sm:col-span-2 rounded-lg border border-dashed border-input bg-muted/50/80 px-3 py-2 text-sm text-muted-foreground dark:bg-card/30">
+            Department, position, and manager changes are recorded through{" "}
+            <Link href="/employee-transfers" className="font-medium text-primary underline-offset-4 hover:underline">
+              employee transfers
+            </Link>
+            .
+          </div>
+        )}
+        <Field label="Address location (optional)" error={form.formState.errors.locationId?.message}>
           <Controller
             name="locationId"
             control={form.control}
@@ -282,40 +336,6 @@ export function EmployeeForm({ mode, employee, onSuccess, onCancel }: EmployeeFo
                 emptyLabel="No location"
                 disabled={locationsLoading}
                 aria-invalid={!!form.formState.errors.locationId}
-              />
-            )}
-          />
-        </Field>
-        <Field label="Manager (optional)" error={form.formState.errors.managerId?.message}>
-          <Controller
-            name="managerId"
-            control={form.control}
-            render={({ field }) => (
-              <SearchableSelect<number>
-                options={managerOptions}
-                value={stringIdFieldToNullableNumber(field.value)}
-                onChange={(v) => field.onChange(nullableNumberToStringId(v))}
-                placeholder="Search employees…"
-                emptyLabel="No manager"
-                disabled={employeesLoading}
-                aria-invalid={!!form.formState.errors.managerId}
-              />
-            )}
-          />
-        </Field>
-        <Field label="Job position (optional)" error={form.formState.errors.jobPositionId?.message}>
-          <Controller
-            name="jobPositionId"
-            control={form.control}
-            render={({ field }) => (
-              <SearchableSelect<number>
-                options={jobOptions}
-                value={stringIdFieldToNullableNumber(field.value)}
-                onChange={(v) => field.onChange(nullableNumberToStringId(v))}
-                placeholder="Search job positions…"
-                emptyLabel="No job position"
-                disabled={jobPositionsLoading}
-                aria-invalid={!!form.formState.errors.jobPositionId}
               />
             )}
           />

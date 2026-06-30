@@ -148,64 +148,84 @@ The home page gives a quick overview:
 
 ## 7. Employees
 
-**Route:** `/employees`
+**Routes:** `/employees` (directory), `/employees/{id}` (profile)
 
-Manage your workforce master data.
+Manage your workforce as lifecycle records—not just table rows.
 
-### View and search
+### Directory (`/employees`)
 
-- Browse all employees in a table.
-- **Search** by name, email, or employee number.
-- See **employment status** (Active, Inactive, Terminated) at a glance.
+- **Server-backed search** across name, email, employee number, and phone (mixed case and surrounding spaces are trimmed).
+- **Filters:** employment status (including Preboarding), department, position, manager, site, and login-link status.
+- See the **result count** and **active filter chips**; use **Clear all filters** to reset.
+- **Archive view** shows archived employees with **Restore** when retention rules allow.
+- **Export CSV** downloads the current filtered set (not only the current page).
+- Click a name or **View profile** to open `/employees/{id}`.
+- Employee numbers (for example `EMP014`) are stable identifiers in the directory—not row indexes.
 
-### Add an employee
+### Employee profile (`/employees/{id}`)
 
-1. Click **Add employee** (or equivalent create action).
-2. Complete the form:
-   - First name, last name, email, phone
-   - Date of birth, date joined
-   - **Employment status**
-   - Department, site (location), manager, job position
-3. Save. The system assigns an employee number automatically (for example `EMP001`).
+Open any employee directly by URL. The profile has tabs:
 
-### Edit or delete
+| Tab | Contents |
+|-----|----------|
+| **Overview** | Contact details and key employment summary; **Edit profile** for personal/contact fields only |
+| **Employment** | Organization assignment, dates, linked **sites**; **Transfer** for department, position, or manager changes |
+| **History** | Readable timeline (names, effective dates, reasons, who made the change) |
+| **Access** | Linked sign-in account status, inherited and direct roles; send login invitation or link an account |
+| **Documents** | Placeholder for a future documents experience |
 
-- Open an employee row to **edit** details.
-- **Delete** removes the employee record (confirm when prompted).
+**Lifecycle actions** (on the profile, not in ordinary edit):
 
-### Link a login account (provision user)
+| Status | Meaning |
+|--------|---------|
+| Preboarding | Hired, not yet started |
+| Active | Currently employed |
+| Inactive | Temporarily not working |
+| Terminated | Employment ended (requires effective date and reason) |
+| Archived | Hidden from active lists; separate from termination |
 
-To let an employee sign in and use the Employee Portal:
+Use **Change status**, **Terminate**, **Archive**, and **Restore**—never **Delete**. Archiving does not automatically terminate employment.
 
-1. Open the employee and choose **Link login** (provision user).
-2. The system creates a user account and shows a **one-time temporary password** — copy it and share it securely with the employee.
-3. Assign **roles** for the new user (inherited from job position plus any direct overrides).
+### Add an employee (wizard)
 
-### Manage roles per employee
+1. Click **Add employee** on the directory.
+2. Complete sections: **Personal** → **Employment** → **Organization** → **Review**.
+3. Required fields are marked; optional fields include address **location** (geographical record) and work **sites** (assigned separately).
+4. If a possible duplicate is found (same email, phone, or name + date of birth), review warnings such as “This email is already used by employee EMP014” before confirming.
+5. After creation, choose **View profile**, **Send login invitation**, or **Add another employee**. Temporary passwords are not shown in the UI.
 
-- **Inherited roles** come from the employee’s job position (read-only on the employee screen).
-- **Direct override roles** can be added or removed for that individual.
+### Edit profile
 
-### View history
+- Personal and contact fields only on the profile **Edit** action.
+- **Employment status** and **department / position / manager** are changed through dedicated lifecycle and **Transfer** actions—not the profile form.
 
-Open **History** on an employee to see recorded changes such as department and position transfers.
+### Terminology
 
-### Go to transfers
+| Term | Meaning |
+|------|---------|
+| **Sign in / Sign out** | EMS account session |
+| **Site** | Work site (many-to-many on the employee) |
+| **Address location** | Geographical address record (`location` in forms) |
+| **Archive** | Soft-hide a retained record (not delete) |
 
-Use the link to **Employee transfers** to move someone to a new department or position.
+### Link a sign-in account
+
+From the profile **Access** tab:
+
+1. **Send login invitation** provisions a new account (no predictable password shown).
+2. If an account already exists, use **Link existing account** with the user ID from User management.
+3. Confirm **role** changes; inherited roles come from the job position.
 
 ---
 
 ## 8. Employee transfers
 
-**Route:** `/employee-transfers` (linked from Employees)
+Transfers are recorded from the employee profile **Employment** tab (the former `/employee-transfers` route redirects to the directory).
 
-Record formal moves with an audit trail.
-
-1. **Select an employee.**
-2. **Department transfer** — choose the new department, effective date, and reason.
-3. **Position transfer** — choose the new job position, effective date, and reason.
-4. Submit. The change appears in the employee’s **history**.
+1. Open the employee profile → **Employment** → **Transfer**.
+2. Choose **department**, **position**, or **manager**.
+3. Enter effective date and reason; confirm current vs new values.
+4. The change appears immediately in **History** with readable names.
 
 You need existing departments and positions before transferring.
 

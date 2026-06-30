@@ -429,6 +429,10 @@ namespace EMS.Domain.Database.Migrations
 
                     b.HasIndex("DepartmentId");
 
+                    b.HasIndex("ExternalIdentityKey")
+                        .IsUnique()
+                        .HasFilter("[ExternalIdentityKey] IS NOT NULL AND [IsArchived] = 0");
+
                     b.HasIndex("IsArchived");
 
                     b.HasIndex("JobPositionId");
@@ -438,10 +442,6 @@ namespace EMS.Domain.Database.Migrations
                     b.HasIndex("ManagerId");
 
                     b.HasIndex("RetentionUntilUtc");
-
-                    b.HasIndex("ExternalIdentityKey")
-                        .IsUnique()
-                        .HasFilter("[ExternalIdentityKey] IS NOT NULL AND [IsArchived] = 0");
 
                     b.HasIndex("OrganizationId", "Email")
                         .IsUnique();
@@ -550,6 +550,57 @@ namespace EMS.Domain.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("EmployeeDocuments", "org");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeEmploymentStatusHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ChangedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("ChangedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ChangedByUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateTime>("EffectiveDateUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NewStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PreviousStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("EffectiveDateUtc");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("EmployeeEmploymentStatusHistories", "org");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeManagerHistory", b =>
@@ -1251,6 +1302,19 @@ namespace EMS.Domain.Database.Migrations
                     b.ToTable("Organizations", "org");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.OrganizationEmployeeNumberSequence", b =>
+                {
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LastAllocatedNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("OrganizationId");
+
+                    b.ToTable("OrganizationEmployeeNumberSequences", "org");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.PositionRole", b =>
                 {
                     b.Property<int>("Id")
@@ -1621,6 +1685,17 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeEmploymentStatusHistory", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeManagerHistory", b =>
                 {
                     b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
@@ -1842,6 +1917,17 @@ namespace EMS.Domain.Database.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ParentMenu");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.OrganizationEmployeeNumberSequence", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.PositionRole", b =>

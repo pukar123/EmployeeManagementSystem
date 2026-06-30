@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text.RegularExpressions;
 using EMS.Application.DTOs.Employee;
 using Pukar.Shared;
 using EMS.Application.Mapping;
@@ -8,70 +6,112 @@ using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
-using JobPositionEntity = EMS.Domain.DbModels.JobPosition;
 
 namespace EMS.Application.Services.Employees;
 
 public sealed class EmployeeService : IEmployeeService
 {
-    private static readonly Regex EmployeeNumberSequence = new(
-        @"^EMP(\d+)$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-        TimeSpan.FromMilliseconds(250));
-
     private readonly IBaseRepository<Employee> _repository;
-    private readonly IBaseRepository<JobPositionEntity> _jobPositionRepository;
     private readonly IBaseRepository<EmployeePositionHistory> _positionHistoryRepository;
     private readonly IBaseRepository<EmployeeDepartmentHistory> _departmentHistoryRepository;
     private readonly IBaseRepository<EmployeeManagerHistory> _managerHistoryRepository;
+    private readonly IBaseRepository<EmployeeEmploymentStatusHistory> _statusHistoryRepository;
     private readonly IBaseRepository<EmployeeRetentionPolicy> _retentionPolicyRepository;
+    private readonly IBaseRepository<JobPosition> _jobPositions;
+    private readonly IBaseRepository<Department> _departments;
     private readonly IIdentityContext _identityContext;
     private readonly IEmployeeRoleSyncService _employeeRoleSyncService;
+    private readonly IEmployeeNumberAllocator _employeeNumberAllocator;
+    private readonly IEmployeeUserManagementGateway _gateway;
+    private readonly EmployeeRelationshipValidator _validator;
 
     public EmployeeService(
         IBaseRepository<Employee> repository,
-        IBaseRepository<JobPositionEntity> jobPositionRepository,
         IBaseRepository<EmployeePositionHistory> positionHistoryRepository,
         IBaseRepository<EmployeeDepartmentHistory> departmentHistoryRepository,
         IBaseRepository<EmployeeManagerHistory> managerHistoryRepository,
+        IBaseRepository<EmployeeEmploymentStatusHistory> statusHistoryRepository,
         IBaseRepository<EmployeeRetentionPolicy> retentionPolicyRepository,
+        IBaseRepository<JobPosition> jobPositions,
+        IBaseRepository<Department> departments,
         IIdentityContext identityContext,
-        IEmployeeRoleSyncService employeeRoleSyncService)
+        IEmployeeRoleSyncService employeeRoleSyncService,
+        IEmployeeNumberAllocator employeeNumberAllocator,
+        IEmployeeUserManagementGateway gateway,
+        EmployeeRelationshipValidator validator)
     {
         _repository = repository;
-        _jobPositionRepository = jobPositionRepository;
         _positionHistoryRepository = positionHistoryRepository;
         _departmentHistoryRepository = departmentHistoryRepository;
         _managerHistoryRepository = managerHistoryRepository;
+        _statusHistoryRepository = statusHistoryRepository;
         _retentionPolicyRepository = retentionPolicyRepository;
+        _jobPositions = jobPositions;
+        _departments = departments;
         _identityContext = identityContext;
         _employeeRoleSyncService = employeeRoleSyncService;
+        _employeeNumberAllocator = employeeNumberAllocator;
+        _gateway = gateway;
+        _validator = validator;
     }
 
     public async Task<EmployeeResponseModel> CreateAsync(CreateEmployeeRequestModel request, CancellationToken cancellationToken = default)
     {
-        request.Email = StringHelper.NormalizeRequired(request.Email);
-        if (!StringHelper.IsValidEmail(request.Email))
-            throw new BusinessRuleException("Invalid email address.");
+        EmployeeMapper.NormalizeCreateRequest(request);
+        var (normalizedEmail, normalizedPhone) = _validator.NormalizeAndValidateProfile(
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            request.PhoneNumber,
+            request.DateOfBirth,
+            request.DateJoined,
+            request.EmploymentStatus);
+        request.Email = normalizedEmail;
+        request.PhoneNumber = normalizedPhone;
 
-        await EnsureJobPositionMatchesOrganizationAsync(request.OrganizationId, request.JobPositionId, cancellationToken);
+        await _validator.ValidateRelationshipsForCreateOrUpdateAsync(
+            employeeId: 0,
+            request.OrganizationId,
+            request.DepartmentId,
+            request.LocationId,
+            request.JobPositionId,
+            request.ManagerId,
+            request.Email,
+            cancellationToken);
 
         var now = DateTime.UtcNow;
-        var entity = EmployeeMapper.ToEntity(request);
-        entity.EmployeeNumber = await AllocateNextEmployeeNumberAsync(request.OrganizationId, cancellationToken);
-        entity.CreatedAtUtc = now;
-        entity.UpdatedAtUtc = now;
 
-        await _repository.AddAsync(entity, cancellationToken);
-        await AddHistoryEntriesAsync(entity, request, previousDepartmentId: null, previousJobPositionId: null, previousManagerId: null, now, cancellationToken);
-        if (entity.EmploymentStatus == EmploymentStatus.Terminated)
+        await using var transaction = await _repository.BeginTransactionAsync(cancellationToken);
+        try
         {
-            await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
-        }
-        await _repository.SaveChangesAsync(cancellationToken);
-        await _employeeRoleSyncService.SyncEmployeeAsync(entity.Id, cancellationToken);
+            var entity = EmployeeMapper.ToEntity(request);
+            entity.EmployeeNumber = await _employeeNumberAllocator.AllocateAsync(request.OrganizationId, cancellationToken);
+            entity.CreatedAtUtc = now;
+            entity.UpdatedAtUtc = now;
 
-        return EmployeeMapper.ToResponse(entity);
+            await _repository.AddAsync(entity, cancellationToken);
+            await AddCreateHistoryEntriesAsync(entity, request, now, cancellationToken);
+            await AddInitialStatusHistoryAsync(entity, null, entity.EmploymentStatus, request.DateJoined, "Employee created.", now, cancellationToken);
+
+            if (entity.EmploymentStatus == EmploymentStatus.Terminated)
+                await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
+
+            await _repository.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            await _employeeRoleSyncService.SyncEmployeeAsync(entity.Id, cancellationToken);
+            return EmployeeMapper.ToResponse(entity);
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw new BusinessRuleException("Employee number allocation conflict; please retry.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<EmployeeResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -82,10 +122,135 @@ public sealed class EmployeeService : IEmployeeService
         return entity is null ? null : EmployeeMapper.ToResponse(entity);
     }
 
-    public async Task<IReadOnlyList<EmployeeResponseModel>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<EmployeeResponseModel>> GetAllAsync(bool includeArchived = false, CancellationToken cancellationToken = default)
     {
-        var list = await _repository.GetQueryable().Where(e => !e.IsArchived).ToListAsync(cancellationToken);
+        var query = _repository.GetQueryable();
+        if (!includeArchived)
+            query = query.Where(e => !e.IsArchived);
+
+        var list = await query.ToListAsync(cancellationToken);
         return list.Select(EmployeeMapper.ToResponse).ToList();
+    }
+
+    public async Task<EmployeeProfileResponseModel?> GetProfileAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _repository.GetQueryable()
+            .AsNoTracking()
+            .Include(e => e.Department)
+            .Include(e => e.JobPosition)
+            .Include(e => e.Manager)
+            .Include(e => e.Location)
+            .Include(e => e.EmployeeSites)
+            .ThenInclude(es => es.Site)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+
+        if (entity is null)
+            return null;
+
+        var sites = entity.EmployeeSites
+            .Select(es => es.Site)
+            .Where(s => !s.IsDeleted)
+            .OrderBy(s => s.SiteName)
+            .ToList();
+
+        var linkedUser = await EmployeeLinkedIdentityHelper.TryResolveLinkedUserAsync(entity, _gateway, cancellationToken);
+        var locationLabel = entity.Location is null
+            ? null
+            : string.IsNullOrWhiteSpace(entity.Location.Line1)
+                ? entity.Location.Name
+                : $"{entity.Location.Name} — {entity.Location.Line1}";
+
+        return EmployeeMapper.ToProfile(
+            entity,
+            entity.Department?.Name,
+            entity.JobPosition?.Title,
+            entity.JobPosition?.Code,
+            entity.Manager is null ? null : $"{entity.Manager.FirstName} {entity.Manager.LastName}",
+            entity.Manager?.EmployeeNumber,
+            locationLabel,
+            sites.Select(s => s.SiteName).ToList(),
+            sites.FirstOrDefault()?.SiteName,
+            linkedUser is not null,
+            linkedUser?.Id,
+            linkedUser?.Email,
+            linkedUser?.IsActive);
+    }
+
+    public async Task<IReadOnlyList<PossibleDuplicateEmployeeModel>> FindPossibleDuplicatesAsync(
+        int organizationId,
+        string? email,
+        string? firstName,
+        string? lastName,
+        string? phoneNumber,
+        DateTime? dateOfBirth,
+        CancellationToken cancellationToken = default)
+    {
+        if (organizationId <= 0)
+            throw new BusinessRuleException("OrganizationId is required.");
+
+        var results = new List<PossibleDuplicateEmployeeModel>();
+        var seen = new HashSet<int>();
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var normalizedEmail = EmailNormalizer.Normalize(email.Trim());
+            var matches = await _repository.GetQueryable()
+                .AsNoTracking()
+                .Where(e => e.OrganizationId == organizationId && e.Email.ToUpper() == normalizedEmail)
+                .ToListAsync(cancellationToken);
+
+            foreach (var match in matches)
+            {
+                if (seen.Add(match.Id))
+                {
+                    results.Add(ToDuplicate(match, $"This email is already used by employee {match.EmployeeNumber}."));
+                }
+            }
+        }
+
+        var normalizedPhone = EmployeeRelationshipValidator.NormalizePhoneNumber(phoneNumber);
+        if (normalizedPhone is not null)
+        {
+            var matches = await _repository.GetQueryable()
+                .AsNoTracking()
+                .Where(e => e.OrganizationId == organizationId && e.PhoneNumber == normalizedPhone)
+                .ToListAsync(cancellationToken);
+
+            foreach (var match in matches)
+            {
+                if (seen.Add(match.Id))
+                {
+                    results.Add(ToDuplicate(match, $"This phone number is already used by employee {match.EmployeeNumber}."));
+                }
+            }
+        }
+
+        if (dateOfBirth.HasValue
+            && !string.IsNullOrWhiteSpace(firstName)
+            && !string.IsNullOrWhiteSpace(lastName))
+        {
+            var fn = StringHelper.NormalizeRequired(firstName);
+            var ln = StringHelper.NormalizeRequired(lastName);
+            var dob = dateOfBirth.Value.Date;
+
+            var matches = await _repository.GetQueryable()
+                .AsNoTracking()
+                .Where(e => e.OrganizationId == organizationId
+                    && e.FirstName == fn
+                    && e.LastName == ln
+                    && e.DateOfBirth.Date == dob)
+                .ToListAsync(cancellationToken);
+
+            foreach (var match in matches)
+            {
+                if (seen.Add(match.Id))
+                {
+                    results.Add(ToDuplicate(match, $"An employee with the same name and date of birth exists ({match.EmployeeNumber})."));
+                }
+            }
+        }
+
+        return results;
     }
 
     public async Task<EmployeeResponseModel?> UpdateAsync(int id, UpdateEmployeeRequestModel request, CancellationToken cancellationToken = default)
@@ -94,61 +259,61 @@ public sealed class EmployeeService : IEmployeeService
         if (entity is null)
             return null;
 
-        request.Email = StringHelper.NormalizeRequired(request.Email);
-        if (!StringHelper.IsValidEmail(request.Email))
-            throw new BusinessRuleException("Invalid email address.");
+        _validator.EnsureNotArchived(entity);
+        _validator.EnsureProfileDoesNotChangeOrganizationalFields(entity, request);
 
-        await EnsureJobPositionMatchesOrganizationAsync(request.OrganizationId, request.JobPositionId, cancellationToken);
+        EmployeeMapper.NormalizeUpdateRequest(request);
+        var storedStatus = entity.EmploymentStatus;
+        var (normalizedEmail, normalizedPhone) = _validator.NormalizeAndValidateProfile(
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            request.PhoneNumber,
+            request.DateOfBirth,
+            request.DateJoined,
+            storedStatus);
+        request.Email = normalizedEmail;
+        request.PhoneNumber = normalizedPhone;
 
-        var previousDepartmentId = entity.DepartmentId;
-        var previousJobPositionId = entity.JobPositionId;
-        var previousManagerId = entity.ManagerId;
-        var previousEmploymentStatus = entity.EmploymentStatus;
-        var now = DateTime.UtcNow;
-
-        EmployeeMapper.ApplyUpdate(entity, request);
-        entity.UpdatedAtUtc = now;
-        await AddHistoryEntriesAsync(
-            entity,
-            request,
-            previousDepartmentId,
-            previousJobPositionId,
-            previousManagerId,
-            now,
+        await _validator.ValidateRelationshipsForCreateOrUpdateAsync(
+            id,
+            request.OrganizationId,
+            entity.DepartmentId,
+            request.LocationId,
+            entity.JobPositionId,
+            entity.ManagerId,
+            request.Email,
             cancellationToken);
 
-        if (previousEmploymentStatus != EmploymentStatus.Terminated &&
-            entity.EmploymentStatus == EmploymentStatus.Terminated)
-        {
-            await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
-        }
+        var now = DateTime.UtcNow;
+
+        EmployeeMapper.ApplyProfileUpdate(entity, request);
+        entity.UpdatedAtUtc = now;
 
         _repository.Update(entity);
         await _repository.SaveChangesAsync(cancellationToken);
-        if (previousJobPositionId != entity.JobPositionId)
-            await _employeeRoleSyncService.SyncEmployeeAsync(entity.Id, cancellationToken);
 
         return EmployeeMapper.ToResponse(entity);
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(int id, ArchiveEmployeeRequestModel? request = null, CancellationToken cancellationToken = default)
     {
         var entity = await _repository.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return false;
 
+        if (entity.IsArchived)
+            return true;
+
         var now = DateTime.UtcNow;
         entity.IsArchived = true;
         entity.ArchivedAtUtc = now;
-        entity.ArchiveReason = "Archived via delete request.";
+        entity.ArchiveReason = StringHelper.NormalizeOptional(request?.Reason) ?? "Archived via archive request.";
         entity.UpdatedAtUtc = now;
-        if (entity.EmploymentStatus != EmploymentStatus.Terminated)
-        {
-            entity.EmploymentStatus = EmploymentStatus.Terminated;
-            entity.IsActive = false;
-        }
 
         await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
+        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(entity, _gateway, cancellationToken);
+
         _repository.Update(entity);
         await _repository.SaveChangesAsync(cancellationToken);
         return true;
@@ -161,55 +326,118 @@ public sealed class EmployeeService : IEmployeeService
         if (!employeeExists)
             return null;
 
-        var positions = await _positionHistoryRepository.GetQueryable()
+        var positionIds = new HashSet<int>();
+        var departmentIds = new HashSet<int>();
+        var managerIds = new HashSet<int>();
+
+        var positionsRaw = await _positionHistoryRepository.GetQueryable()
             .Where(h => h.EmployeeId == employeeId)
             .OrderBy(h => h.EffectiveFromUtc)
             .ThenBy(h => h.Id)
-            .Select(h => new PositionHistoryItemResponseModel
-            {
-                Id = h.Id,
-                PreviousJobPositionId = h.PreviousJobPositionId,
-                NewJobPositionId = h.NewJobPositionId,
-                EffectiveFromUtc = h.EffectiveFromUtc,
-                EffectiveToUtc = h.EffectiveToUtc,
-                Reason = h.Reason,
-                ChangedByUserId = h.ChangedByUserId,
-                ChangedByUserName = h.ChangedByUserName,
-                ChangedByEmail = h.ChangedByEmail,
-                CreatedAtUtc = h.CreatedAtUtc,
-            })
             .ToListAsync(cancellationToken);
 
-        var departments = await _departmentHistoryRepository.GetQueryable()
+        var departmentsRaw = await _departmentHistoryRepository.GetQueryable()
             .Where(h => h.EmployeeId == employeeId)
             .OrderBy(h => h.EffectiveFromUtc)
             .ThenBy(h => h.Id)
-            .Select(h => new DepartmentHistoryItemResponseModel
-            {
-                Id = h.Id,
-                PreviousDepartmentId = h.PreviousDepartmentId,
-                NewDepartmentId = h.NewDepartmentId,
-                EffectiveFromUtc = h.EffectiveFromUtc,
-                EffectiveToUtc = h.EffectiveToUtc,
-                Reason = h.Reason,
-                ChangedByUserId = h.ChangedByUserId,
-                ChangedByUserName = h.ChangedByUserName,
-                ChangedByEmail = h.ChangedByEmail,
-                CreatedAtUtc = h.CreatedAtUtc,
-            })
             .ToListAsync(cancellationToken);
 
-        var managers = await _managerHistoryRepository.GetQueryable()
+        var managersRaw = await _managerHistoryRepository.GetQueryable()
             .Where(h => h.EmployeeId == employeeId)
             .OrderBy(h => h.EffectiveFromUtc)
             .ThenBy(h => h.Id)
-            .Select(h => new ManagerHistoryItemResponseModel
+            .ToListAsync(cancellationToken);
+
+        foreach (var h in positionsRaw)
+        {
+            if (h.PreviousJobPositionId is int p) positionIds.Add(p);
+            if (h.NewJobPositionId is int n) positionIds.Add(n);
+        }
+
+        foreach (var h in departmentsRaw)
+        {
+            if (h.PreviousDepartmentId is int p) departmentIds.Add(p);
+            if (h.NewDepartmentId is int n) departmentIds.Add(n);
+        }
+
+        foreach (var h in managersRaw)
+        {
+            if (h.PreviousManagerId is int p) managerIds.Add(p);
+            if (h.NewManagerId is int n) managerIds.Add(n);
+        }
+
+        var positionTitleMap = await LoadJobPositionTitlesAsync(positionIds, cancellationToken);
+        var departmentNameMap = await LoadDepartmentNamesAsync(departmentIds, cancellationToken);
+        var managerLabelMap = await LoadManagerLabelsAsync(managerIds, cancellationToken);
+
+        var positions = positionsRaw.Select(h => new PositionHistoryItemResponseModel
+        {
+            Id = h.Id,
+            PreviousJobPositionId = h.PreviousJobPositionId,
+            PreviousJobPositionTitle = h.PreviousJobPositionId is int pp ? positionTitleMap.GetValueOrDefault(pp) : null,
+            NewJobPositionId = h.NewJobPositionId,
+            NewJobPositionTitle = h.NewJobPositionId is int np ? positionTitleMap.GetValueOrDefault(np) : null,
+            EffectiveFromUtc = h.EffectiveFromUtc,
+            EffectiveToUtc = h.EffectiveToUtc,
+            Reason = h.Reason,
+            ChangedByUserId = h.ChangedByUserId,
+            ChangedByUserName = h.ChangedByUserName,
+            ChangedByEmail = h.ChangedByEmail,
+            CreatedAtUtc = h.CreatedAtUtc,
+        }).ToList();
+
+        var departments = departmentsRaw.Select(h => new DepartmentHistoryItemResponseModel
+        {
+            Id = h.Id,
+            PreviousDepartmentId = h.PreviousDepartmentId,
+            PreviousDepartmentName = h.PreviousDepartmentId is int pd ? departmentNameMap.GetValueOrDefault(pd) : null,
+            NewDepartmentId = h.NewDepartmentId,
+            NewDepartmentName = h.NewDepartmentId is int nd ? departmentNameMap.GetValueOrDefault(nd) : null,
+            EffectiveFromUtc = h.EffectiveFromUtc,
+            EffectiveToUtc = h.EffectiveToUtc,
+            Reason = h.Reason,
+            ChangedByUserId = h.ChangedByUserId,
+            ChangedByUserName = h.ChangedByUserName,
+            ChangedByEmail = h.ChangedByEmail,
+            CreatedAtUtc = h.CreatedAtUtc,
+        }).ToList();
+
+        var managers = managersRaw.Select(h => new ManagerHistoryItemResponseModel
+        {
+            Id = h.Id,
+            PreviousManagerId = h.PreviousManagerId,
+            PreviousManagerName = h.PreviousManagerId is int pmId && managerLabelMap.TryGetValue(pmId, out var prev)
+                ? prev.Name
+                : null,
+            PreviousManagerEmployeeNumber = h.PreviousManagerId is int pmId2 && managerLabelMap.TryGetValue(pmId2, out var prev2)
+                ? prev2.EmployeeNumber
+                : null,
+            NewManagerId = h.NewManagerId,
+            NewManagerName = h.NewManagerId is int nmId && managerLabelMap.TryGetValue(nmId, out var nm)
+                ? nm.Name
+                : null,
+            NewManagerEmployeeNumber = h.NewManagerId is int nmId2 && managerLabelMap.TryGetValue(nmId2, out var nm2)
+                ? nm2.EmployeeNumber
+                : null,
+            EffectiveFromUtc = h.EffectiveFromUtc,
+            EffectiveToUtc = h.EffectiveToUtc,
+            Reason = h.Reason,
+            ChangedByUserId = h.ChangedByUserId,
+            ChangedByUserName = h.ChangedByUserName,
+            ChangedByEmail = h.ChangedByEmail,
+            CreatedAtUtc = h.CreatedAtUtc,
+        }).ToList();
+
+        var statusHistory = await _statusHistoryRepository.GetQueryable()
+            .Where(h => h.EmployeeId == employeeId)
+            .OrderBy(h => h.EffectiveDateUtc)
+            .ThenBy(h => h.Id)
+            .Select(h => new EmploymentStatusHistoryItemResponseModel
             {
                 Id = h.Id,
-                PreviousManagerId = h.PreviousManagerId,
-                NewManagerId = h.NewManagerId,
-                EffectiveFromUtc = h.EffectiveFromUtc,
-                EffectiveToUtc = h.EffectiveToUtc,
+                PreviousStatus = h.PreviousStatus,
+                NewStatus = h.NewStatus,
+                EffectiveDateUtc = h.EffectiveDateUtc,
                 Reason = h.Reason,
                 ChangedByUserId = h.ChangedByUserId,
                 ChangedByUserName = h.ChangedByUserName,
@@ -224,42 +452,102 @@ public sealed class EmployeeService : IEmployeeService
             PositionHistory = positions,
             DepartmentHistory = departments,
             ManagerHistory = managers,
+            EmploymentStatusHistory = statusHistory,
         };
     }
 
-    private async Task EnsureJobPositionMatchesOrganizationAsync(int organizationId, int? jobPositionId, CancellationToken cancellationToken)
+    private async Task<Dictionary<int, string>> LoadJobPositionTitlesAsync(HashSet<int> ids, CancellationToken cancellationToken)
     {
-        if (jobPositionId is null)
-            return;
+        if (ids.Count == 0)
+            return new Dictionary<int, string>();
 
-        var jobPosition = await _jobPositionRepository.GetQueryable()
-            .FirstOrDefaultAsync(j => j.Id == jobPositionId.Value, cancellationToken);
-
-        if (jobPosition is null)
-            throw new BusinessRuleException("Job position was not found.");
-
-        if (jobPosition.OrganizationId != organizationId)
-            throw new BusinessRuleException("Job position must belong to the same organization as the employee.");
+        return await _jobPositions.GetQueryable()
+            .AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Title, cancellationToken);
     }
 
-    private async Task AddHistoryEntriesAsync(
+    private async Task<Dictionary<int, string>> LoadDepartmentNamesAsync(HashSet<int> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+            return new Dictionary<int, string>();
+
+        return await _departments.GetQueryable()
+            .AsNoTracking()
+            .Where(d => ids.Contains(d.Id))
+            .ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
+    }
+
+    private async Task<Dictionary<int, (string Name, string EmployeeNumber)>> LoadManagerLabelsAsync(
+        HashSet<int> ids,
+        CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+            return new Dictionary<int, (string Name, string EmployeeNumber)>();
+
+        return await _repository.GetQueryable()
+            .AsNoTracking()
+            .Where(e => ids.Contains(e.Id))
+            .ToDictionaryAsync(
+                e => e.Id,
+                e => ($"{e.FirstName} {e.LastName}", e.EmployeeNumber),
+                cancellationToken);
+    }
+
+    private static PossibleDuplicateEmployeeModel ToDuplicate(Employee match, string reason)
+        => new()
+        {
+            Id = match.Id,
+            EmployeeNumber = match.EmployeeNumber,
+            FirstName = match.FirstName,
+            LastName = match.LastName,
+            Email = match.Email,
+            PhoneNumber = match.PhoneNumber,
+            DateOfBirth = match.DateOfBirth,
+            MatchReason = reason,
+        };
+
+    private async Task AddInitialStatusHistoryAsync(
+        Employee entity,
+        EmploymentStatus? previous,
+        EmploymentStatus next,
+        DateTime effectiveDate,
+        string? reason,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var actor = _identityContext.GetCurrent();
+        await _statusHistoryRepository.AddAsync(
+            new EmployeeEmploymentStatusHistory
+            {
+                Employee = entity,
+                PreviousStatus = previous,
+                NewStatus = next,
+                EffectiveDateUtc = effectiveDate.ToUniversalTime(),
+                Reason = reason,
+                ChangedByUserId = actor.UserId,
+                ChangedByUserName = actor.UserName,
+                ChangedByEmail = actor.Email,
+                CreatedAtUtc = now,
+            },
+            cancellationToken);
+    }
+
+    private async Task AddCreateHistoryEntriesAsync(
         Employee entity,
         CreateEmployeeRequestModel request,
-        int? previousDepartmentId,
-        int? previousJobPositionId,
-        int? previousManagerId,
         DateTime now,
         CancellationToken cancellationToken)
     {
         var actor = _identityContext.GetCurrent();
 
-        if (previousJobPositionId != entity.JobPositionId && entity.JobPositionId is not null)
+        if (entity.JobPositionId is not null)
         {
             await _positionHistoryRepository.AddAsync(
                 new EmployeePositionHistory
                 {
                     Employee = entity,
-                    PreviousJobPositionId = previousJobPositionId,
+                    PreviousJobPositionId = null,
                     NewJobPositionId = entity.JobPositionId,
                     EffectiveFromUtc = request.PositionEffectiveFromUtc ?? now,
                     Reason = StringHelper.NormalizeOptional(request.PositionChangeReason),
@@ -271,13 +559,13 @@ public sealed class EmployeeService : IEmployeeService
                 cancellationToken);
         }
 
-        if (previousDepartmentId != entity.DepartmentId && entity.DepartmentId is not null)
+        if (entity.DepartmentId is not null)
         {
             await _departmentHistoryRepository.AddAsync(
                 new EmployeeDepartmentHistory
                 {
                     Employee = entity,
-                    PreviousDepartmentId = previousDepartmentId,
+                    PreviousDepartmentId = null,
                     NewDepartmentId = entity.DepartmentId,
                     EffectiveFromUtc = request.DepartmentEffectiveFromUtc ?? now,
                     Reason = StringHelper.NormalizeOptional(request.DepartmentChangeReason),
@@ -289,79 +577,13 @@ public sealed class EmployeeService : IEmployeeService
                 cancellationToken);
         }
 
-        if (previousManagerId != entity.ManagerId && entity.ManagerId is not null)
+        if (entity.ManagerId is not null)
         {
             await _managerHistoryRepository.AddAsync(
                 new EmployeeManagerHistory
                 {
                     Employee = entity,
-                    PreviousManagerId = previousManagerId,
-                    NewManagerId = entity.ManagerId,
-                    EffectiveFromUtc = request.ManagerEffectiveFromUtc ?? now,
-                    Reason = StringHelper.NormalizeOptional(request.ManagerChangeReason),
-                    ChangedByUserId = actor.UserId,
-                    ChangedByUserName = actor.UserName,
-                    ChangedByEmail = actor.Email,
-                    CreatedAtUtc = now,
-                },
-                cancellationToken);
-        }
-    }
-
-    private async Task AddHistoryEntriesAsync(
-        Employee entity,
-        UpdateEmployeeRequestModel request,
-        int? previousDepartmentId,
-        int? previousJobPositionId,
-        int? previousManagerId,
-        DateTime now,
-        CancellationToken cancellationToken)
-    {
-        var actor = _identityContext.GetCurrent();
-
-        if (previousJobPositionId != entity.JobPositionId)
-        {
-            await _positionHistoryRepository.AddAsync(
-                new EmployeePositionHistory
-                {
-                    EmployeeId = entity.Id,
-                    PreviousJobPositionId = previousJobPositionId,
-                    NewJobPositionId = entity.JobPositionId,
-                    EffectiveFromUtc = request.PositionEffectiveFromUtc ?? now,
-                    Reason = StringHelper.NormalizeOptional(request.PositionChangeReason),
-                    ChangedByUserId = actor.UserId,
-                    ChangedByUserName = actor.UserName,
-                    ChangedByEmail = actor.Email,
-                    CreatedAtUtc = now,
-                },
-                cancellationToken);
-        }
-
-        if (previousDepartmentId != entity.DepartmentId)
-        {
-            await _departmentHistoryRepository.AddAsync(
-                new EmployeeDepartmentHistory
-                {
-                    EmployeeId = entity.Id,
-                    PreviousDepartmentId = previousDepartmentId,
-                    NewDepartmentId = entity.DepartmentId,
-                    EffectiveFromUtc = request.DepartmentEffectiveFromUtc ?? now,
-                    Reason = StringHelper.NormalizeOptional(request.DepartmentChangeReason),
-                    ChangedByUserId = actor.UserId,
-                    ChangedByUserName = actor.UserName,
-                    ChangedByEmail = actor.Email,
-                    CreatedAtUtc = now,
-                },
-                cancellationToken);
-        }
-
-        if (previousManagerId != entity.ManagerId)
-        {
-            await _managerHistoryRepository.AddAsync(
-                new EmployeeManagerHistory
-                {
-                    EmployeeId = entity.Id,
-                    PreviousManagerId = previousManagerId,
+                    PreviousManagerId = null,
                     NewManagerId = entity.ManagerId,
                     EffectiveFromUtc = request.ManagerEffectiveFromUtc ?? now,
                     Reason = StringHelper.NormalizeOptional(request.ManagerChangeReason),
@@ -387,27 +609,5 @@ public sealed class EmployeeService : IEmployeeService
             retentionDays = 3650;
 
         entity.RetentionUntilUtc = now.AddDays(retentionDays);
-    }
-
-    /// <summary>
-    /// Next available code in the form EMP001, EMP002, … per organization (based on existing EMP+digits numbers).
-    /// </summary>
-    private async Task<string> AllocateNextEmployeeNumberAsync(int organizationId, CancellationToken cancellationToken)
-    {
-        var rawNumbers = await _repository.GetQueryable()
-            .Where(e => e.OrganizationId == organizationId)
-            .Select(e => e.EmployeeNumber)
-            .ToListAsync(cancellationToken);
-
-        var max = 0;
-        foreach (var raw in rawNumbers)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) continue;
-            var m = EmployeeNumberSequence.Match(raw.Trim());
-            if (m.Success && int.TryParse(m.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n))
-                max = Math.Max(max, n);
-        }
-
-        return $"EMP{(max + 1).ToString("D3", CultureInfo.InvariantCulture)}";
     }
 }

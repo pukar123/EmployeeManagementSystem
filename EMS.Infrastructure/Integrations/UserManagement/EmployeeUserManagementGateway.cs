@@ -56,10 +56,34 @@ public sealed class EmployeeUserManagementGateway : IEmployeeUserManagementGatew
             new AssignUserRolesRequestModel { RoleIds = roleIds },
             cancellationToken);
 
+    public async Task DeactivateLinkedUserAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _users.GetByIdAsync(userId, cancellationToken);
+        if (user is null)
+            return;
+
+        await _users.UpdateAsync(
+            userId,
+            new UpdateUserRequestModel
+            {
+                Email = user.Email,
+                UserName = user.UserName,
+                IsActive = false,
+            },
+            cancellationToken);
+    }
+
+    public Task RevokeOperationalAccessAsync(int userId, CancellationToken cancellationToken = default)
+        => _userRoles.SetUserRolesAsync(
+            userId,
+            new AssignUserRolesRequestModel { RoleIds = Array.Empty<int>() },
+            cancellationToken);
+
     private static EmployeeLinkedUserSnapshot ToSnapshot(UserSummaryResponseModel user)
         => new()
         {
             Id = user.Id,
             Email = user.Email,
+            IsActive = user.IsActive,
         };
 }

@@ -22,7 +22,8 @@ export const employeeFormSchema = z.object({
     (v) =>
       v === EmploymentStatus.Active ||
       v === EmploymentStatus.Inactive ||
-      v === EmploymentStatus.Terminated,
+      v === EmploymentStatus.Terminated ||
+      v === EmploymentStatus.Preboarding,
     { message: "Invalid status" },
   ),
   departmentId: optionalIdField,

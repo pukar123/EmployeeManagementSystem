@@ -118,7 +118,13 @@ try
     });
     builder.Services.AddScoped<INavigationService, NavigationService>();
     builder.Services.AddScoped<IMenuService, MenuService>();
+    builder.Services.AddScoped<EmployeeRelationshipValidator>();
+    builder.Services.AddScoped<IEmployeeAccessService, EmployeeAccessService>();
     builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+    builder.Services.AddScoped<IEmployeeDirectoryService, EmployeeDirectoryService>();
+    builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
+    builder.Services.AddScoped<IEmployeeTransferService, EmployeeTransferService>();
+    builder.Services.AddScoped<IEmployeeNumberAllocator, EmployeeNumberAllocator>();
     builder.Services.AddScoped<IEmployeeRoleSyncService, EmployeeRoleSyncService>();
     builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
     builder.Services.AddScoped<IEmployeeUserManagementGateway, EmployeeUserManagementGateway>();

@@ -29,7 +29,7 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
     public async Task SyncEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
     {
         var employee = await _employeeRepository.GetByIdAsync(employeeId, cancellationToken);
-        if (employee is null)
+        if (employee is null || employee.IsArchived)
             return;
 
         var desiredInheritedRoleIds = await GetPositionRoleIdsAsync(employee.JobPositionId, cancellationToken);
@@ -133,50 +133,23 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
 
     private async Task SyncLinkedUserRolesAsync(Employee employee, IReadOnlyList<int> effectiveRoleIds, CancellationToken cancellationToken)
     {
-        var linkedUser = await ResolveLinkedUserAsync(employee, cancellationToken);
+        var linkedUser = await EmployeeLinkedIdentityHelper.TryResolveLinkedUserAsync(employee, _gateway, cancellationToken);
         if (linkedUser is null)
             return;
 
         var externalKey = linkedUser.Id.ToString(CultureInfo.InvariantCulture);
         if (!string.Equals(employee.ExternalIdentityKey, externalKey, StringComparison.Ordinal))
         {
-            await EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(employee.Id, externalKey, cancellationToken);
+            await EmployeeLinkedIdentityHelper.EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(
+                _employeeRepository,
+                employee.Id,
+                externalKey,
+                cancellationToken);
             employee.ExternalIdentityKey = externalKey;
             _employeeRepository.Update(employee);
             await _employeeRepository.SaveChangesAsync(cancellationToken);
         }
 
         await _gateway.SetRoleIdsForUserAsync(linkedUser.Id, effectiveRoleIds, cancellationToken);
-    }
-
-    private async Task<EmployeeLinkedUserSnapshot?> ResolveLinkedUserAsync(Employee employee, CancellationToken cancellationToken)
-    {
-        if (int.TryParse(employee.ExternalIdentityKey, NumberStyles.Integer, CultureInfo.InvariantCulture, out var linkedUserId))
-        {
-            var byId = await _gateway.GetUserByIdAsync(linkedUserId, cancellationToken);
-            if (byId is not null)
-                return byId;
-        }
-
-        return await _gateway.GetUserByEmailAsync(employee.Email, cancellationToken);
-    }
-
-    private async Task EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(
-        int employeeId,
-        string externalKey,
-        CancellationToken cancellationToken)
-    {
-        var conflict = await _employeeRepository.GetQueryable()
-            .AnyAsync(
-                e => !e.IsArchived
-                    && e.ExternalIdentityKey == externalKey
-                    && e.Id != employeeId,
-                cancellationToken);
-
-        if (conflict)
-        {
-            throw new BusinessRuleException(
-                "This user account is already linked to another active employee. Unlink or archive the other employee before linking here.");
-        }
     }
 }
