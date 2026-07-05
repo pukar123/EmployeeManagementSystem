@@ -28,7 +28,7 @@ The API uses **JWT Bearer** authentication ([Pukar.Usermanagement](Pukar.Userman
 
 In **Development**, [`appsettings.Development.json`](EMS.API/appsettings.Development.json) can **seed a default admin** when `SeedAdmin` is enabled (email `admin@localhost`, password `Admin123!` unless you change it). For other environments, set `SeedAdmin:Password` via user secrets or environment variables, or disable seeding (`SeedAdmin:Enabled` false).
 
-The **ems-web** client signs in at **`/login`** and stores tokens in the browser. Point `NEXT_PUBLIC_API_BASE_URL` at the API (see [ems-web/README.md](ems-web/README.md)).
+The **ems-web** client signs in at **`/login`** and stores tokens in the browser. Point `NEXT_PUBLIC_EMS_API_BASE_URL` and `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` at EMS.API and User Management Host (see [ems-web/README.md](ems-web/README.md)).
 
 ## Docker Compose (SQL Server, MongoDB, Redis, Mongo Express, Next.js)
 
@@ -110,12 +110,12 @@ cp .env.example .env.local   # Windows: copy .env.example .env.local
 npm run dev:all
 ```
 
-Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` to match the API profile you use (see the table below). On first launch with an empty `org.Organizations` table, the web app prompts for **organization setup** at `/setup` before the main navigation is available. The API enforces **at most one** organization per database on create.
+Set `NEXT_PUBLIC_EMS_API_BASE_URL` and `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` in `.env.local` to match the API profiles you use (see the table below). On first launch with an empty `org.Organizations` table, the web app prompts for **organization setup** at `/setup` before the main navigation is available. The API enforces **at most one** organization per database on create.
 
 | npm script (from **solution root** or **`ems-web`**) | What it runs |
 |------------------------------------------------------|----------------|
-| `npm run dev:all` | API with **`http`** launch profile **and** `next dev` (typical local setup). Point `NEXT_PUBLIC_API_BASE_URL` at `http://localhost:5246`. |
-| `npm run dev:https` | API with **`https`** profile **and** `next dev`. Use `NEXT_PUBLIC_API_BASE_URL=https://localhost:7056` if you call the API over HTTPS. |
+| `npm run dev:all` | User Management Host, EMS.API (`http` profiles), and `next dev`. Point `NEXT_PUBLIC_EMS_API_BASE_URL` at `http://localhost:5246` and `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` at `http://localhost:5137`. |
+| `npm run dev:https` | Same with **`https`** profiles. Use matching HTTPS origins in `.env.local` if you call the APIs over HTTPS. |
 | `npm run dev:api` | API only (`http` profile). |
 | `npm run dev` | Next.js only (expects the API to be running separately). |
 

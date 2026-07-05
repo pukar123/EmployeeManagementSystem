@@ -1,4 +1,4 @@
-import { httpClient } from "@/shared/api/http-client";
+import { emsHttpClient } from "@/shared/api/http-client";
 import type {
   CreateJobPositionRequest,
   JobPosition,
@@ -11,32 +11,32 @@ const PATH = "/api/JobPositions";
 
 export const jobPositionService = {
   getByOrganization: async (organizationId: number): Promise<JobPosition[]> => {
-    const { data } = await httpClient.get<JobPosition[]>(PATH, {
+    const { data } = await emsHttpClient.get<JobPosition[]>(PATH, {
       params: { organizationId },
     });
     return data;
   },
 
   createJobPosition: async (body: CreateJobPositionRequest): Promise<JobPosition> => {
-    const { data } = await httpClient.post<JobPosition>(PATH, body);
+    const { data } = await emsHttpClient.post<JobPosition>(PATH, body);
     return data;
   },
 
   updateJobPosition: async (id: number, body: UpdateJobPositionRequest): Promise<JobPosition> => {
-    const { data } = await httpClient.put<JobPosition>(`${PATH}/${id}`, body);
+    const { data } = await emsHttpClient.put<JobPosition>(`${PATH}/${id}`, body);
     return data;
   },
 
   deleteJobPosition: async (id: number): Promise<void> => {
-    await httpClient.delete(`${PATH}/${id}`);
+    await emsHttpClient.delete(`${PATH}/${id}`);
   },
 
   getPositionRoles: async (id: number): Promise<PositionRole[]> => {
-    const { data } = await httpClient.get<PositionRole[]>(`${PATH}/${id}/roles`);
+    const { data } = await emsHttpClient.get<PositionRole[]>(`${PATH}/${id}/roles`);
     return data;
   },
 
   setPositionRoles: async (id: number, body: SetPositionRolesRequest): Promise<void> => {
-    await httpClient.put(`${PATH}/${id}/roles`, body);
+    await emsHttpClient.put(`${PATH}/${id}/roles`, body);
   },
 };

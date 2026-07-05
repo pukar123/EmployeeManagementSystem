@@ -17,14 +17,14 @@ export type CreateJobPositionRequest = {
 };
 
 export type PositionRole = {
-  roleId: number;
+  roleKey: string;
   roleName: string;
   roleNormalizedName: string;
   isSystem: boolean;
 };
 
 export type SetPositionRolesRequest = {
-  roleIds: number[];
+  roleKeys: string[];
 };
 
 export type UpdateJobPositionRequest = {

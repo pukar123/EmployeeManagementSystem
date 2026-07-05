@@ -2,6 +2,7 @@ using System.Text.Json;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
+using Microsoft.EntityFrameworkCore;
 
 namespace EMS.Application.Services.Integrations;
 
@@ -22,20 +23,40 @@ public sealed class IntegrationOutboxWriter : IIntegrationOutboxWriter
     }
 
     public Task EnqueueRevokeLinkedIdentityAsync(int employeeId, CancellationToken cancellationToken = default)
-        => EnqueueAsync(IntegrationOutboxMessageType.RevokeEmployeeLinkedIdentity, new { employeeId }, cancellationToken);
+        => EnqueueAsync(
+            IntegrationOutboxMessageType.RevokeEmployeeLinkedIdentity,
+            $"revoke-identity:employee:{employeeId}",
+            new { employeeId },
+            cancellationToken);
 
     public Task EnqueueSyncEmployeeRolesAsync(int employeeId, CancellationToken cancellationToken = default)
-        => EnqueueAsync(IntegrationOutboxMessageType.SyncEmployeeRoles, new { employeeId }, cancellationToken);
+        => EnqueueAsync(
+            IntegrationOutboxMessageType.SyncEmployeeRoles,
+            $"sync-roles:employee:{employeeId}",
+            new { employeeId },
+            cancellationToken);
 
     private async Task EnqueueAsync(
         IntegrationOutboxMessageType type,
+        string idempotencyKey,
         object payload,
         CancellationToken cancellationToken)
     {
+        var hasPending = await _outbox.GetQueryable()
+            .AnyAsync(
+                m => m.MessageType == type
+                    && m.IdempotencyKey == idempotencyKey
+                    && (m.Status == IntegrationOutboxStatus.Pending || m.Status == IntegrationOutboxStatus.Processing),
+                cancellationToken);
+
+        if (hasPending)
+            return;
+
         await _outbox.AddAsync(
             new IntegrationOutboxMessage
             {
                 MessageType = type,
+                IdempotencyKey = idempotencyKey,
                 PayloadJson = JsonSerializer.Serialize(payload),
                 Status = IntegrationOutboxStatus.Pending,
                 CreatedAtUtc = DateTime.UtcNow,

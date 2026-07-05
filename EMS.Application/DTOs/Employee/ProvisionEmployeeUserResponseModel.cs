@@ -8,9 +8,7 @@ public sealed class ProvisionEmployeeUserResponseModel
 
     public string Email { get; set; } = string.Empty;
 
-    public string? TemporaryPassword { get; set; }
-
     public bool IsNewUser { get; set; }
 
-    public IReadOnlyList<int> AssignedRoleIds { get; set; } = Array.Empty<int>();
+    public IReadOnlyList<string> AssignedRoleKeys { get; set; } = Array.Empty<string>();
 }

@@ -1,0 +1,25 @@
+# Linux image for docker compose (EMS.API)
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY EmployeeManagementSystem.sln ./
+COPY EMS.API/EMS.API.csproj EMS.API/
+COPY EMS.Application/EMS.Application.csproj EMS.Application/
+COPY EMS.Domain/EMS.Domain.csproj EMS.Domain/
+COPY EMS.Infrastructure/EMS.Infrastructure.csproj EMS.Infrastructure/
+COPY Pukar.Usermanagement/Pukar.Shared/Pukar.Shared.csproj Pukar.Usermanagement/Pukar.Shared/
+COPY Pukar.Usermanagement/Pukar.Usermanagement.Contracts/Pukar.Usermanagement.Contracts.csproj Pukar.Usermanagement/Pukar.Usermanagement.Contracts/
+RUN dotnet restore EMS.API/EMS.API.csproj
+COPY EMS.API/ EMS.API/
+COPY EMS.Application/ EMS.Application/
+COPY EMS.Domain/ EMS.Domain/
+COPY EMS.Infrastructure/ EMS.Infrastructure/
+COPY Pukar.Usermanagement/Pukar.Shared/ Pukar.Usermanagement/Pukar.Shared/
+COPY Pukar.Usermanagement/Pukar.Usermanagement.Contracts/ Pukar.Usermanagement/Pukar.Usermanagement.Contracts/
+RUN dotnet publish EMS.API/EMS.API.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+WORKDIR /app
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "EMS.API.dll"]

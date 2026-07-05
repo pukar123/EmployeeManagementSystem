@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { getErrorMessage } from "@/shared/api/http-client";
+import { ApiAvailabilityAlert } from "@/shared/components/ApiAvailabilityAlert";
 import { Spinner } from "@/shared/components/Spinner";
 import { useOrganizationContext } from "./OrganizationProvider";
 
@@ -55,17 +55,11 @@ export function OrganizationGate({ children }: { children: React.ReactNode }) {
 
   if (isError) {
     return (
-      <div
-        className="mx-auto max-w-lg px-4 py-16"
-        role="alert"
-      >
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
-          <p className="font-medium">Could not load organization</p>
-          <p className="mt-2">{getErrorMessage(error)}</p>
-          <p className="mt-3 text-muted-foreground">
-            Please try again in a moment. If this keeps happening, contact your administrator.
-          </p>
-        </div>
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <ApiAvailabilityAlert error={error} />
+        <p className="mt-3 text-sm text-muted-foreground">
+          Please try again in a moment. If this keeps happening, contact your administrator.
+        </p>
       </div>
     );
   }

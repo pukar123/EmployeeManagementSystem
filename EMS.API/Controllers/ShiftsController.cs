@@ -3,7 +3,7 @@ using EMS.Application.Services.Shifts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
-using Pukar.Usermanagement.Application;
+using Pukar.Usermanagement.Contracts.Roles;
 
 namespace EMS.API.Controllers;
 

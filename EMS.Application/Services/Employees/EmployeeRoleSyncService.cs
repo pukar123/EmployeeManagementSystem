@@ -3,7 +3,6 @@ using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
-using Pukar.Shared;
 
 namespace EMS.Application.Services.Employees;
 
@@ -32,17 +31,17 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
         if (employee is null || employee.IsArchived)
             return;
 
-        var desiredInheritedRoleIds = await GetPositionRoleIdsAsync(employee.JobPositionId, cancellationToken);
+        var desiredInheritedRoleKeys = await GetPositionRoleKeysAsync(employee.JobPositionId, cancellationToken);
         var assignments = await _employeeRoleAssignmentRepository.GetQueryable()
             .Where(x => x.EmployeeId == employeeId)
             .ToListAsync(cancellationToken);
 
         var inheritedAssignments = assignments.Where(x => x.Source == EmployeeRoleSource.PositionInherited).ToList();
-        var directRoleIds = assignments
+        var directRoleKeys = assignments
             .Where(x => x.Source == EmployeeRoleSource.DirectOverride)
-            .Select(x => x.RoleId)
-            .Distinct()
-            .ToHashSet();
+            .Select(x => NormalizeKey(x.RoleKey))
+            .Distinct(StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
 
         var hasChanges = false;
         var expectedPositionId = employee.JobPositionId;
@@ -50,7 +49,7 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
         foreach (var assignment in inheritedAssignments)
         {
             var shouldKeep = assignment.JobPositionId == expectedPositionId
-                && desiredInheritedRoleIds.Contains(assignment.RoleId);
+                && desiredInheritedRoleKeys.Contains(NormalizeKey(assignment.RoleKey));
             if (shouldKeep)
                 continue;
 
@@ -58,23 +57,23 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
             hasChanges = true;
         }
 
-        var existingInheritedRoleIds = inheritedAssignments
+        var existingInheritedRoleKeys = inheritedAssignments
             .Where(x => x.JobPositionId == expectedPositionId)
-            .Select(x => x.RoleId)
-            .ToHashSet();
+            .Select(x => NormalizeKey(x.RoleKey))
+            .ToHashSet(StringComparer.Ordinal);
 
         if (expectedPositionId is int currentPositionId)
         {
-            foreach (var roleId in desiredInheritedRoleIds)
+            foreach (var roleKey in desiredInheritedRoleKeys)
             {
-                if (existingInheritedRoleIds.Contains(roleId))
+                if (existingInheritedRoleKeys.Contains(roleKey))
                     continue;
 
                 await _employeeRoleAssignmentRepository.AddAsync(
                     new EmployeeRoleAssignment
                     {
                         EmployeeId = employeeId,
-                        RoleId = roleId,
+                        RoleKey = roleKey,
                         Source = EmployeeRoleSource.PositionInherited,
                         JobPositionId = currentPositionId,
                         CreatedAtUtc = DateTime.UtcNow,
@@ -94,14 +93,15 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
                 .ToListAsync(cancellationToken);
         }
 
-        var effectiveRoleIds = assignments
-            .Select(x => x.RoleId)
-            .Concat(directRoleIds)
-            .Distinct()
+        var effectiveRoleKeys = assignments
+            .Select(x => NormalizeKey(x.RoleKey))
+            .Concat(directRoleKeys)
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Distinct(StringComparer.Ordinal)
             .OrderBy(x => x)
             .ToList();
 
-        await SyncLinkedUserRolesAsync(employee, effectiveRoleIds, cancellationToken);
+        await SyncLinkedUserRolesAsync(employee, effectiveRoleKeys, cancellationToken);
     }
 
     public async Task SyncEmployeesForPositionAsync(int jobPositionId, CancellationToken cancellationToken = default)
@@ -117,21 +117,27 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
         }
     }
 
-    private async Task<HashSet<int>> GetPositionRoleIdsAsync(int? jobPositionId, CancellationToken cancellationToken)
+    private async Task<HashSet<string>> GetPositionRoleKeysAsync(int? jobPositionId, CancellationToken cancellationToken)
     {
         if (jobPositionId is null)
-            return new HashSet<int>();
+            return new HashSet<string>(StringComparer.Ordinal);
 
-        var roleIds = await _positionRoleRepository.GetQueryable()
+        var roleKeys = await _positionRoleRepository.GetQueryable()
             .Where(x => x.JobPositionId == jobPositionId.Value)
-            .Select(x => x.RoleId)
+            .Select(x => x.RoleKey)
             .Distinct()
             .ToListAsync(cancellationToken);
 
-        return roleIds.ToHashSet();
+        return roleKeys
+            .Select(NormalizeKey)
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .ToHashSet(StringComparer.Ordinal);
     }
 
-    private async Task SyncLinkedUserRolesAsync(Employee employee, IReadOnlyList<int> effectiveRoleIds, CancellationToken cancellationToken)
+    private async Task SyncLinkedUserRolesAsync(
+        Employee employee,
+        IReadOnlyList<string> effectiveRoleKeys,
+        CancellationToken cancellationToken)
     {
         var linkedUser = await EmployeeLinkedIdentityHelper.TryResolveLinkedUserAsync(employee, _gateway, cancellationToken);
         if (linkedUser is null)
@@ -150,6 +156,10 @@ public sealed class EmployeeRoleSyncService : IEmployeeRoleSyncService
             await _employeeRepository.SaveChangesAsync(cancellationToken);
         }
 
-        await _gateway.SetRoleIdsForUserAsync(linkedUser.Id, effectiveRoleIds, cancellationToken);
+        var idempotencyKey = $"sync-roles:employee:{employee.Id}";
+        await _gateway.SetRoleKeysForUserAsync(linkedUser.Id, effectiveRoleKeys, idempotencyKey, cancellationToken);
     }
+
+    private static string NormalizeKey(string? roleKey)
+        => string.IsNullOrWhiteSpace(roleKey) ? string.Empty : roleKey.Trim().ToUpperInvariant();
 }

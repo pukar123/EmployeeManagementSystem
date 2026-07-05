@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
+import { ApiAvailabilityAlert } from "@/shared/components/ApiAvailabilityAlert";
 import { cn } from "@/shared/utils/cn";
 import type { UserSummaryDto } from "../types";
 import {
@@ -216,11 +217,7 @@ export function UsersSection() {
   }
 
   if (usersQuery.isError || rolesQuery.isError) {
-    return (
-      <p className="text-sm text-red-600 dark:text-red-400">
-        {getErrorMessage(usersQuery.error ?? rolesQuery.error)}
-      </p>
-    );
+    return <ApiAvailabilityAlert error={usersQuery.error ?? rolesQuery.error} />;
   }
 
   return (

@@ -1,5 +1,5 @@
-using Pukar.Usermanagement.Application.DTOs.Roles;
-using Pukar.Usermanagement.Application.DTOs.UserRoles;
+using Pukar.Usermanagement.Contracts.Roles;
+using Pukar.Usermanagement.Contracts.UserRoles;
 
 namespace Pukar.Usermanagement.Application.Services.UserRoles;
 

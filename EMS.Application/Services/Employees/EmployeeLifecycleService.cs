@@ -19,7 +19,6 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
     private readonly IEmployeeUserManagementGateway _gateway;
     private readonly EmployeeRelationshipValidator _validator;
     private readonly IEmployeeBusinessDateHelper _businessDates;
-    private readonly IBaseRepository<EmployeeInvitation> _invitations;
     private readonly IIntegrationOutboxWriter _outboxWriter;
 
     public EmployeeLifecycleService(
@@ -30,7 +29,6 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         IEmployeeUserManagementGateway gateway,
         EmployeeRelationshipValidator validator,
         IEmployeeBusinessDateHelper businessDates,
-        IBaseRepository<EmployeeInvitation> invitations,
         IIntegrationOutboxWriter outboxWriter)
     {
         _employees = employees;
@@ -40,7 +38,6 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         _gateway = gateway;
         _validator = validator;
         _businessDates = businessDates;
-        _invitations = invitations;
         _outboxWriter = outboxWriter;
     }
 
@@ -71,7 +68,6 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         entity.UpdatedAtUtc = DateTime.UtcNow;
 
         await ApplyRetentionFromPolicyAsync(entity, DateTime.UtcNow, cancellationToken);
-        await EmployeeInvitationService.RevokePendingForEmployeeAsync(_invitations, entity.Id, cancellationToken);
         await AddStatusHistoryAsync(entity, previous, EmploymentStatus.Terminated, effectiveDate, reason, cancellationToken);
         await _outboxWriter.EnqueueRevokeLinkedIdentityAsync(entity.Id, cancellationToken);
 
@@ -104,7 +100,6 @@ public sealed class EmployeeLifecycleService : IEmployeeLifecycleService
         entity.UpdatedAtUtc = now;
 
         await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
-        await EmployeeInvitationService.RevokePendingForEmployeeAsync(_invitations, entity.Id, cancellationToken);
         await _outboxWriter.EnqueueRevokeLinkedIdentityAsync(entity.Id, cancellationToken);
 
         _employees.Update(entity);

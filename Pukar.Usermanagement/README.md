@@ -1,76 +1,115 @@
 # Pukar.Usermanagement
 
-Layered JWT authentication with refresh-token rotation, BCrypt passwords, and SQL Server persistence (schema `um`). Intended as a reusable module for multiple applications.
-
-**Cursor / VS Code:** clone this repository, open the repo folder (or open `Pukar.Usermanagement.sln` directly). `.vscode/settings.json` sets `dotnet.defaultSolution` so the solution is picked up automatically.
+Standalone JWT authentication, user/role administration, invitations, and service-to-service APIs. **Run via `Pukar.Usermanagement.Host`** — EMS embedded mode is deprecated.
 
 ## Projects
 
 | Project | Role |
 |---------|------|
-| `Pukar.Shared` | Shared `StringHelper`, `BusinessRuleException`, `DuplicateEmailException`, `EmailNormalizer` (also referenced by EMS) |
-| `Pukar.Usermanagement.Domain` | Entities, `UserManagementDbContext`, migrations, repository interfaces |
-| `Pukar.Usermanagement.Application` | DTOs, `AuthService`, options |
-| `Pukar.Usermanagement.Infrastructure` | EF repositories, JWT signing, BCrypt, `AddPukarUserManagement` |
-| `Pukar.Usermanagement.API` | `AuthController`, `AddPukarUserManagementApi`, JWT bearer registration |
+| `Pukar.Shared` | Shared helpers/exceptions (also used by EMS) |
+| `Pukar.Usermanagement.Contracts` | Stable public API contracts, scopes, claim constants |
+| `Pukar.Usermanagement.Domain` | Entities, `UserManagementDbContext`, migrations |
+| `Pukar.Usermanagement.Application` | Services, options |
+| `Pukar.Usermanagement.Infrastructure` | EF repositories, JWT (RS256), SMTP, DI |
+| `Pukar.Usermanagement.API` | Controllers and auth extensions |
+| `Pukar.Usermanagement.Host` | **Executable host** (canonical deployment) |
 
-## Build
+## Standalone startup
 
 ```bash
-dotnet build Pukar.Usermanagement.sln
+dotnet run --project Pukar.Usermanagement.Host
 ```
 
-## Configuration (host app)
-
-Connection string: `UserManagement` or fallback `DefaultConnection`. JWT section name: `Jwt`.
-
-Claim and authorization contract for consumers (EMS): [docs/AUTH_CONTRACT.md](docs/AUTH_CONTRACT.md).
-
-```json
-"ConnectionStrings": {
-  "UserManagement": "Server=...;Database=...;Trusted_Connection=True;TrustServerCertificate=True"
-},
-"Jwt": {
-  "Issuer": "your-app",
-  "Audience": "your-app",
-  "SigningKey": "REPLACE_WITH_AT_LEAST_32_CHARACTERS!!",
-  "AccessTokenExpirationMinutes": 15,
-  "RefreshTokenExpirationDays": 7
-}
-```
+Default URLs: `https://localhost:7098` / `http://localhost:5137` (see `launchSettings.json`).
 
 ## Database
 
-```bash
-dotnet ef database update --project Pukar.Usermanagement.Domain --startup-project Pukar.Usermanagement.Infrastructure --context UserManagementDbContext
+Use a **dedicated** SQL Server database (`UserManagementDb`), separate from EMS `AppDbContext`:
+
+```json
+"ConnectionStrings": {
+  "UserManagementDb": "Server=...;Database=UserManagementDb;..."
+}
 ```
 
-If the design-time factory uses a different SQL instance than your host (see `UserManagementDbContextFactory`), pass the **same** connection string the app uses:
-
-```bash
-dotnet ef database update --project Pukar.Usermanagement.Domain --startup-project Pukar.Usermanagement.Infrastructure --context UserManagementDbContext --connection "Server=...;Database=...;"
-```
-
-## Hosting integration
-
-```csharp
-builder.Services.AddControllers().AddPukarUserManagementControllers();
-builder.Services.AddPukarUserManagementApi(builder.Configuration);
-
-app.UseAuthentication();
-app.UseAuthorization();
-```
-
-## Repository layout (monorepo consumers)
-
-If this code is consumed from another solution via **git submodule** or **ProjectReference**, see your host application’s documentation for publish/submodule steps.
-
-## NuGet (optional)
-
-Packaging metadata is in `Directory.Build.props`. To produce packages locally:
+Apply migrations (Host is the startup project):
 
 ```bash
-dotnet pack Pukar.Usermanagement.API/Pukar.Usermanagement.API.csproj -c Release -o ../../artifacts
+dotnet ef database update --project Pukar.Usermanagement.Domain --startup-project Pukar.Usermanagement.Host --context UserManagementDbContext
 ```
 
-Point consumers at a feed (GitHub Packages, Azure Artifacts, nuget.org) when you are ready to switch from `ProjectReference` to `PackageReference`.
+If you previously stored `um` schema inside `EMSDevDB`, use the idempotent split migrator before cutover:
+
+```bash
+dotnet run --project tools/UmDbSplitMigrator -- --mode dry-run --source "<EMS>" --target "<UserManagementDb>"
+dotnet run --project tools/UmDbSplitMigrator -- --mode apply --source "<EMS>" --target "<UserManagementDb>"
+dotnet run --project tools/UmDbSplitMigrator -- --mode validate --source "<EMS>" --target "<UserManagementDb>"
+```
+
+Full cutover sequence: [docs/ems-um-db-split-cutover.md](../docs/ems-um-db-split-cutover.md).
+
+## Configuration
+
+| Section | Purpose |
+|---------|---------|
+| `ConnectionStrings:UserManagementDb` | SQL Server database |
+| `Jwt` | Issuer (`Pukar.Usermanagement`), audience (`ems`), RSA key (`SigningKeyPem` or `SigningKeyPemFile`) |
+| `SeedAdmin` | Optional default admin user on startup |
+| `Smtp` | Invitation email delivery |
+| `ServiceClients:Ems` | EMS client-credentials (`client_id` + secret) |
+| `Cors:AllowedOrigins` | Browser clients |
+
+Generate a dev RSA key:
+
+```bash
+dotnet run --project tools/GenRsaKey -- Pukar.Usermanagement.Host/dev-rsa-key.pem
+```
+
+## Endpoints
+
+### Public
+
+| Route | Auth |
+|-------|------|
+| `POST /api/auth/login`, `register`, `refresh`, `revoke` | Anonymous |
+| `POST /api/auth/change-password` | User JWT |
+| `GET/POST/PUT /api/users`, `api/roles` | Admin user JWT |
+| `POST /api/invitations/accept` | Anonymous |
+| `GET /.well-known/jwks.json` | Anonymous |
+| `GET /health` | Anonymous |
+
+### Internal (service JWT required)
+
+| Route | Scope |
+|-------|-------|
+| `POST /api/internal/v1/service-token` | Client credentials (anonymous) |
+| `POST /api/internal/v1/users/lookup` | `users.read` |
+| `GET /api/internal/v1/users/by-email` | `users.read` |
+| `POST /api/internal/v1/users/{id}/activate` | `users.manage` |
+| `POST /api/internal/v1/users/{id}/deactivate` | `users.manage` |
+| `POST /api/internal/v1/users/{id}/revoke-sessions` | `users.manage` |
+| `PUT /api/internal/v1/users/{id}/roles` | `roles.manage` |
+| `GET /api/internal/v1/roles/metadata` | `roles.manage` |
+| `POST/GET/DELETE /api/internal/v1/invitations` | `invitations.manage` |
+
+Forward audit context from EMS using headers `X-Initiating-User-Id` and `X-Initiating-User-Email`.
+
+## Service scopes
+
+- `users.read` — batch lookup, lookup by email
+- `users.manage` — activate/deactivate, revoke sessions
+- `roles.manage` — metadata, replace roles by normalized keys
+- `invitations.manage` — create/list/resend/revoke invitations
+
+## EMS integration (next phase)
+
+EMS should validate user JWTs via `/.well-known/jwks.json` only (no private key). Call internal APIs with an EMS service token from `POST /api/internal/v1/service-token`.
+
+Claim contract: [docs/AUTH_CONTRACT.md](docs/AUTH_CONTRACT.md).
+
+## Build & test
+
+```bash
+dotnet build Pukar.Usermanagement.sln
+dotnet test Pukar.Usermanagement.sln
+```

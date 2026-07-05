@@ -7,6 +7,10 @@ export function setAuthChangeHandler(handler: (() => void) | undefined): void {
   onAuthChanged = handler;
 }
 
+export function notifyAuthStorageChanged(): void {
+  onAuthChanged?.();
+}
+
 const ACCESS = "ems_access_token";
 const REFRESH = "ems_refresh_token";
 const USER = "ems_user";

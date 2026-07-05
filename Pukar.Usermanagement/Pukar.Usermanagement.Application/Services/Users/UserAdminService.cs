@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Pukar.Usermanagement.Application.DTOs.Users;
+using Pukar.Usermanagement.Contracts.Users;
 using Pukar.Usermanagement.Application.Services.Password;
 using Pukar.Usermanagement.Domain.DbModels;
 using Pukar.Usermanagement.Domain.Repositories.Interface;

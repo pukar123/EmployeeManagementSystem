@@ -2,11 +2,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EMS.Application\EMS.Application.csproj" />
-    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Application\Pukar.Usermanagement.Application.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Contracts\Pukar.Usermanagement.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MailKit" Version="4.11.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.4" />
   </ItemGroup>
 
   <PropertyGroup>

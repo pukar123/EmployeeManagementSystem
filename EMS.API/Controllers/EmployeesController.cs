@@ -2,6 +2,7 @@ using EMS.Application.DTOs.Employee;
 using EMS.Application.DTOs.Site;
 using EMS.Application.Services.EmployeeSites;
 using EMS.Application.Services.Employees;
+using EMS.Application.Services.Integrations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
@@ -17,32 +18,32 @@ public class EmployeesController : ControllerBase
     private readonly IEmployeeDirectoryService _employeeDirectoryService;
     private readonly IEmployeeLifecycleService _employeeLifecycleService;
     private readonly IEmployeeIdentityProvisioningService _employeeIdentityProvisioningService;
+    private readonly IEmployeeInvitationService _employeeInvitationService;
     private readonly IEmployeeSiteService _employeeSiteService;
     private readonly IEmployeeAccessService _employeeAccessService;
     private readonly IEmployeeTransferService _employeeTransferService;
     private readonly IEmployeeScheduledChangeService _employeeScheduledChangeService;
-    private readonly IEmployeeInvitationService _employeeInvitationService;
 
     public EmployeesController(
         IEmployeeService employeeService,
         IEmployeeDirectoryService employeeDirectoryService,
         IEmployeeLifecycleService employeeLifecycleService,
         IEmployeeIdentityProvisioningService employeeIdentityProvisioningService,
+        IEmployeeInvitationService employeeInvitationService,
         IEmployeeSiteService employeeSiteService,
         IEmployeeAccessService employeeAccessService,
         IEmployeeTransferService employeeTransferService,
-        IEmployeeScheduledChangeService employeeScheduledChangeService,
-        IEmployeeInvitationService employeeInvitationService)
+        IEmployeeScheduledChangeService employeeScheduledChangeService)
     {
         _employeeService = employeeService;
         _employeeDirectoryService = employeeDirectoryService;
         _employeeLifecycleService = employeeLifecycleService;
         _employeeIdentityProvisioningService = employeeIdentityProvisioningService;
+        _employeeInvitationService = employeeInvitationService;
         _employeeSiteService = employeeSiteService;
         _employeeAccessService = employeeAccessService;
         _employeeTransferService = employeeTransferService;
         _employeeScheduledChangeService = employeeScheduledChangeService;
-        _employeeInvitationService = employeeInvitationService;
     }
 
     [HttpGet]
@@ -198,24 +199,6 @@ public class EmployeesController : ControllerBase
         }
     }
 
-    [HttpPost("{id:int}/provision-user")]
-    [Obsolete("Use POST /api/Employees/{id}/invitations instead.")]
-    public async Task<ActionResult<EmployeeInvitationResponseModel>> ProvisionUser(
-        int id,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
-            var response = await _employeeInvitationService.SendAsync(id, cancellationToken);
-            return Ok(response);
-        }
-        catch (BusinessRuleException ex)
-        {
-            return EmployeeControllerHelpers.HandleBusinessRule(ex);
-        }
-    }
-
     [HttpGet("{id:int}/invitations")]
     public async Task<ActionResult<IReadOnlyList<EmployeeInvitationResponseModel>>> ListInvitations(
         int id,
@@ -224,12 +207,16 @@ public class EmployeesController : ControllerBase
         try
         {
             await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
-            var items = await _employeeInvitationService.ListAsync(id, cancellationToken);
-            return Ok(items);
+            var invitations = await _employeeInvitationService.ListAsync(id, cancellationToken);
+            return Ok(invitations);
         }
         catch (BusinessRuleException ex)
         {
             return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
         }
     }
 
@@ -241,12 +228,16 @@ public class EmployeesController : ControllerBase
         try
         {
             await _employeeAccessService.EnsureCanAccessEmployeesAsync(cancellationToken);
-            var response = await _employeeInvitationService.SendAsync(id, cancellationToken);
-            return Ok(response);
+            var invitation = await _employeeInvitationService.SendAsync(id, cancellationToken);
+            return Ok(invitation);
         }
         catch (BusinessRuleException ex)
         {
             return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
         }
     }
 
@@ -266,6 +257,10 @@ public class EmployeesController : ControllerBase
         {
             return EmployeeControllerHelpers.HandleBusinessRule(ex);
         }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
+        }
     }
 
     [HttpPost("{id:int}/reactivate-login")]
@@ -280,6 +275,10 @@ public class EmployeesController : ControllerBase
         catch (BusinessRuleException ex)
         {
             return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
         }
     }
 
@@ -299,6 +298,10 @@ public class EmployeesController : ControllerBase
         {
             return EmployeeControllerHelpers.HandleBusinessRule(ex);
         }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
+        }
     }
 
     [HttpPut("{id:int}/linked-user/roles")]
@@ -316,6 +319,10 @@ public class EmployeesController : ControllerBase
         catch (BusinessRuleException ex)
         {
             return EmployeeControllerHelpers.HandleBusinessRule(ex);
+        }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
         }
     }
 

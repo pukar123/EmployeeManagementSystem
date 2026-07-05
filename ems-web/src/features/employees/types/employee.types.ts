@@ -54,13 +54,12 @@ export type ProvisionEmployeeUserResponse = {
   employeeName: string;
   employeeNumber: string;
   email: string;
-  temporaryPassword: string | null;
   isNewUser: boolean;
-  assignedRoleIds: number[];
+  assignedRoleKeys: string[];
 };
 
 export type AssignEmployeeUserRolesRequest = {
-  roleIds: number[];
+  roleKeys: string[];
 };
 
 export type EmployeeHistoryResponse = {
@@ -131,7 +130,7 @@ export type EmploymentStatusHistoryItem = {
 };
 
 export type EmployeeEffectiveRole = {
-  roleId: number;
+  roleKey: string;
   roleName: string;
   roleNormalizedName: string;
   source: "position_inherited" | "direct_override";
@@ -141,7 +140,7 @@ export type EmployeeEffectiveRole = {
 };
 
 export type SetEmployeeDirectRolesRequest = {
-  roleIds: number[];
+  roleKeys: string[];
 };
 
 export type LinkEmployeeUserRequest = {

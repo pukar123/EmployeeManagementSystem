@@ -35,6 +35,12 @@ export function EmployeeDirectoryFilters({
   totalCount,
 }: EmployeeDirectoryFiltersProps) {
   const [searchText, setSearchText] = useState(query.search ?? "");
+  const [prevQuerySearch, setPrevQuerySearch] = useState(query.search);
+  if (query.search !== prevQuerySearch) {
+    setPrevQuerySearch(query.search);
+    setSearchText(query.search ?? "");
+  }
+
   const debouncedSearch = useDebouncedValue(searchText, 300);
 
   useEffect(() => {
@@ -42,10 +48,6 @@ export function EmployeeDirectoryFilters({
       onChange({ search: debouncedSearch, page: 1 });
     }
   }, [debouncedSearch, onChange, query.search]);
-
-  useEffect(() => {
-    setSearchText(query.search ?? "");
-  }, [query.search]);
 
   const activeFilters = useMemo(() => {
     const chips: string[] = [];

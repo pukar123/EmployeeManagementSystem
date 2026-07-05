@@ -1,15 +1,16 @@
 import axios from "axios";
-import { apiBaseUrl, httpClient } from "@/shared/api/http-client";
+import { userManagementApiBaseUrl, userManagementHttpClient } from "@/shared/api/http-client";
 import type { AuthResponse } from "@/shared/auth/auth-types";
 import { clearAuth, getRefreshToken, saveAuthResponse } from "@/shared/auth/auth-storage";
 
 const LOGIN_PATH = "/api/auth/login";
 const REVOKE_PATH = "/api/auth/revoke";
 const CHANGE_PASSWORD_PATH = "/api/auth/change-password";
+const ACCEPT_INVITATION_PATH = "/api/invitations/accept";
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthResponse> {
-    const { data } = await httpClient.post<AuthResponse>(LOGIN_PATH, { email, password });
+    const { data } = await userManagementHttpClient.post<AuthResponse>(LOGIN_PATH, { email, password });
     saveAuthResponse(data);
     return data;
   },
@@ -18,18 +19,25 @@ export const authService = {
     const refreshToken = getRefreshToken();
     if (refreshToken) {
       try {
-        const base = apiBaseUrl.replace(/\/$/, "");
-        await axios.post(`${base}${REVOKE_PATH}`, { refreshToken }, {
-          headers: { "Content-Type": "application/json" },
-        });
+        const base = userManagementApiBaseUrl.replace(/\/$/, "");
+        await axios.post(
+          `${base}${REVOKE_PATH}`,
+          { refreshToken },
+          { headers: { "Content-Type": "application/json" } },
+        );
       } catch {
-        /* ignore */
+        /* ignore revoke failures — local session is cleared either way */
       }
     }
     clearAuth();
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await httpClient.post(CHANGE_PASSWORD_PATH, { currentPassword, newPassword });
+    await userManagementHttpClient.post(CHANGE_PASSWORD_PATH, { currentPassword, newPassword });
+  },
+
+  /** Invitation acceptance always targets User Management directly (never EMS.API). */
+  async acceptInvitation(token: string, newPassword: string): Promise<void> {
+    await userManagementHttpClient.post(ACCEPT_INVITATION_PATH, { token, newPassword });
   },
 };

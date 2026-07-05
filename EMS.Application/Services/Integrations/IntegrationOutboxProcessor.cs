@@ -53,10 +53,10 @@ public sealed class IntegrationOutboxProcessor : IIntegrationOutboxProcessor
             }
             catch (Exception ex)
             {
-                message.Status = IntegrationOutboxStatus.Failed;
+                // Keep pending and retry safely — never report identity changes as successful.
+                message.Status = IntegrationOutboxStatus.Pending;
                 message.LastError = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
                 message.NextAttemptAtUtc = DateTime.UtcNow.AddMinutes(Math.Min(message.AttemptCount * 5, 60));
-                message.Status = IntegrationOutboxStatus.Pending;
             }
 
             _outbox.Update(message);
@@ -76,7 +76,11 @@ public sealed class IntegrationOutboxProcessor : IIntegrationOutboxProcessor
         switch (message.MessageType)
         {
             case IntegrationOutboxMessageType.RevokeEmployeeLinkedIdentity:
-                await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(employee, _gateway, cancellationToken);
+                await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(
+                    employee,
+                    _gateway,
+                    message.IdempotencyKey,
+                    cancellationToken);
                 break;
             case IntegrationOutboxMessageType.SyncEmployeeRoles:
                 await _roleSyncService.SyncEmployeeAsync(employeeId, cancellationToken);

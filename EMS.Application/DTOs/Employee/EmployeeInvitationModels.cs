@@ -24,10 +24,3 @@ public sealed class EmployeeInvitationResponseModel
 
     public int ResendCooldownSecondsRemaining { get; set; }
 }
-
-public sealed class AcceptEmployeeInvitationRequestModel
-{
-    public string Token { get; set; } = string.Empty;
-
-    public string NewPassword { get; set; } = string.Empty;
-}

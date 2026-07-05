@@ -83,7 +83,7 @@ export function SearchableSelect<TValue extends string | number>({
   const id = idProp ?? reactId;
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
+    <div ref={rootRef} className={cn("relative", className)} aria-invalid={ariaInvalid}>
       <button
         type="button"
         id={id}
@@ -91,7 +91,6 @@ export function SearchableSelect<TValue extends string | number>({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={listboxId}
-        aria-invalid={ariaInvalid}
         className={cn(triggerClass, disabled && "cursor-not-allowed opacity-60")}
         onClick={() => !disabled && setOpen((o) => !o)}
       >

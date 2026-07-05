@@ -1,14 +1,14 @@
 # EMS Web (Next.js)
 
-Browser client for **EMS.API**: feature-based folders, **React Query**, **Zustand**, **Tailwind**, and Axios.
+Browser client for **EMS.API** and **Pukar.Usermanagement.Host**: feature-based folders, **React Query**, **Zustand**, **Tailwind**, and two Axios clients.
 
-**Full frontend documentation:** **[docs/FRONTEND.md](docs/FRONTEND.md)** (architecture, folders, env, Docker, API alignment, troubleshooting).
+**Full frontend documentation:** **[docs/FRONTEND.md](docs/FRONTEND.md)** (architecture, dual APIs, env, Docker, troubleshooting).
 
 ---
 
 ## Quick start
 
-**Prerequisites:** Node.js **20.9+**, [.NET 9 SDK](https://dotnet.microsoft.com/download) if you use the combined scripts below, and CORS on EMS.API for `http://localhost:3000`.
+**Prerequisites:** Node.js **20.9+**, [.NET 9 SDK](https://dotnet.microsoft.com/download) if you use the combined scripts below, and CORS on **both** APIs for `http://localhost:3000`.
 
 ```bash
 cd ems-web
@@ -20,29 +20,26 @@ Edit `.env.local`:
 
 | Variable | Purpose |
 |----------|---------|
-| `NEXT_PUBLIC_API_BASE_URL` | API origin, no trailing slash. Use `http://localhost:5246` when the API runs with the **`http`** launch profile; use `https://localhost:7056` when using **`https`**. |
+| `NEXT_PUBLIC_EMS_API_BASE_URL` | EMS.API origin (e.g. `http://localhost:5246` for the `http` launch profile). |
+| `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` | User Management Host origin (e.g. `http://localhost:5137`). |
 
-**First run:** if the database has no organization yet, the app opens **`/setup`** so you can create the single organization for this instance. After that, the app uses that organization for employees, departments, and positions (no manual organization id in forms).
+**First run:** if the EMS database has no organization yet, the app opens **`/setup`**. Sign-in and invitation acceptance go to User Management; HR data goes to EMS.
 
-**Employee portal:** the home page shows the “Employee portal” shortcut for signed-in users. Personal shifts and leave appear when the login is linked to an employee record in EMS; otherwise the portal opens with a neutral empty state.
-
-**Option A — API and web together (one terminal):**
+**Option A — UM, EMS, and web together (one terminal):**
 
 ```bash
 npm run dev:all
 ```
 
-This starts EMS.API (`http` profile, typically `http://localhost:5246`) and `next dev` (usually `http://localhost:3000`). Match `NEXT_PUBLIC_API_BASE_URL` to the API URL.
+Starts User Management Host (`http://localhost:5137`), EMS.API (`http://localhost:5246`), and `next dev` (`http://localhost:3000`).
 
-**Option B — Next.js only (API already running elsewhere):**
+**Option B — Next.js only (APIs already running):**
 
 ```bash
 npm run dev
 ```
 
-**HTTPS API profile:** use `npm run dev:https` and set `NEXT_PUBLIC_API_BASE_URL=https://localhost:7056` (see `EMS.API/Properties/launchSettings.json`).
-
-Open **http://localhost:3000** and use the nav (Employees, Departments, Positions, etc.).
+Open **http://localhost:3000**.
 
 ---
 
@@ -50,10 +47,12 @@ Open **http://localhost:3000** and use the nav (Employees, Departments, Position
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev:all` | Runs **EMS.API** (`dotnet run`, `http` launch profile) and **`next dev`** together via `concurrently` |
-| `npm run dev:https` | Same as `dev:all` but API uses the **`https`** launch profile |
-| `npm run dev:api` | **EMS.API** only (`http` profile) |
-| `npm run dev` | Next.js dev server only (Turbopack) |
+| `npm run dev:all` | **UM Host**, **EMS.API**, and **`next dev`** via `concurrently` |
+| `npm run dev:https` | Same with HTTPS launch profiles |
+| `npm run dev:api` | EMS.API only |
+| `npm run dev:um` | User Management Host only |
+| `npm run dev` | Next.js only |
+| `npm run test` | Vitest (API routing + availability classification) |
 | `npm run build` | Production build |
 | `npm run start` | Serve production build |
 | `npm run lint` | ESLint |
@@ -62,7 +61,7 @@ Open **http://localhost:3000** and use the nav (Employees, Departments, Position
 
 ## Docker
 
-From the **solution root** (parent folder): `docker compose up -d --build`, or **`start-ems-docker.bat`** / **`stop-ems-docker.bat`**. Details: [docs/FRONTEND.md §7](docs/FRONTEND.md#7-docker-production-style-image).
+From the **solution root**: `docker compose up -d --build` runs SQL Server (separate `EMSDevDB` and `UserManagementDb`), MongoDB, Redis, **usermanagement-api**, **ems-api**, and **ems-web**. Details: [docs/FRONTEND.md](docs/FRONTEND.md).
 
 ---
 
@@ -71,4 +70,5 @@ From the **solution root** (parent folder): `docker compose up -d --build`, or *
 | Doc | |
 |-----|---|
 | Frontend (detailed) | [docs/FRONTEND.md](docs/FRONTEND.md) |
+| EMS ↔ UM integration | [../docs/ems-um-http-integration.md](../docs/ems-um-http-integration.md) |
 | Backend & Compose | [../README.md](../README.md) |

@@ -95,7 +95,7 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
   const [linkUserId, setLinkUserId] = useState<number | null>(null);
   const [linkConfirmOpen, setLinkConfirmOpen] = useState(false);
   const [directRolesOpen, setDirectRolesOpen] = useState(false);
-  const [selectedDirectRoleIds, setSelectedDirectRoleIds] = useState<Set<number>>(new Set());
+  const [selectedDirectRoleKeys, setSelectedDirectRoleKeys] = useState<Set<string>>(new Set());
 
   const profileQuery = useEmployeeProfile(employeeId);
   const historyQuery = useEmployeeHistory(employeeId);
@@ -140,7 +140,7 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
   );
 
   const openDirectRolesEditor = () => {
-    setSelectedDirectRoleIds(new Set(directRoles.map((r) => r.roleId)));
+    setSelectedDirectRoleKeys(new Set(directRoles.map((r) => r.roleKey)));
     setDirectRolesOpen(true);
   };
 
@@ -184,7 +184,7 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
 
   const handleSaveDirectRoles = () => {
     setDirectRolesMutation.mutate(
-      { employeeId, roleIds: Array.from(selectedDirectRoleIds) },
+      { employeeId, roleKeys: Array.from(selectedDirectRoleKeys) },
       {
         onSuccess: () => {
           toast.success("Direct role overrides updated.");
@@ -685,16 +685,16 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
         ) : (
           <ul className="max-h-64 space-y-2 overflow-y-auto">
             {(allRolesQuery.data ?? []).map((role) => (
-              <li key={role.id}>
+              <li key={role.normalizedName}>
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    checked={selectedDirectRoleIds.has(role.id)}
+                    checked={selectedDirectRoleKeys.has(role.normalizedName)}
                     onChange={() => {
-                      setSelectedDirectRoleIds((prev) => {
+                      setSelectedDirectRoleKeys((prev) => {
                         const next = new Set(prev);
-                        if (next.has(role.id)) next.delete(role.id);
-                        else next.add(role.id);
+                        if (next.has(role.normalizedName)) next.delete(role.normalizedName);
+                        else next.add(role.normalizedName);
                         return next;
                       });
                     }}

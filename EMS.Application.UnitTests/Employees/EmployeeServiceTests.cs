@@ -225,7 +225,9 @@ public class EmployeeServiceTests
         var result = await sut.DeleteAsync(1, null, CancellationToken.None);
 
         Assert.That(result, Is.True);
-        gateway.Verify(x => x.DeactivateLinkedUserAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        gateway.Verify(
+            x => x.DeactivateLinkedUserAsync(It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Test]
@@ -255,8 +257,15 @@ public class EmployeeServiceTests
         var result = await sut.DeleteAsync(1, null, CancellationToken.None);
 
         Assert.That(result, Is.True);
-        gateway.Verify(x => x.RevokeOperationalAccessAsync(7, It.IsAny<CancellationToken>()), Times.Once);
-        gateway.Verify(x => x.DeactivateLinkedUserAsync(7, It.IsAny<CancellationToken>()), Times.Once);
+        gateway.Verify(
+            x => x.RevokeOperationalAccessAsync(7, It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        gateway.Verify(
+            x => x.DeactivateLinkedUserAsync(7, It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        gateway.Verify(
+            x => x.RevokeSessionsAsync(7, It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static CreateEmployeeRequestModel ValidCreateRequest() => new()

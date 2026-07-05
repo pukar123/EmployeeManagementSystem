@@ -1,30 +1,75 @@
-# Auth Contract v1
+# Auth Contract v2 (standalone host)
 
-This document defines the stable authentication/authorization contract emitted by `Pukar.Usermanagement` and consumed by EMS.
+Pukar.Usermanagement.Host is the **sole issuer** of user JWTs. EMS and other consumers **validate only** — never sign user tokens.
 
-## Access token claims (required)
+## User access token
 
-- `sub`: user id as string
-- `email`: user email
-- `jti`: token id
-- `authz_contract_version`: `v1`
-- role claims:
-  - `http://schemas.microsoft.com/ws/2008/06/identity/claims/role` (`ClaimTypes.Role`, canonical display role name)
-  - `roles` (normalized uppercase role key for cross-service compatibility)
+| Setting | Default |
+|---------|---------|
+| Issuer (`iss`) | `Pukar.Usermanagement` |
+| Audience (`aud`) | `ems` |
+| Algorithm | RS256 |
+| Public keys | `GET /.well-known/jwks.json` |
 
-Role values are trimmed and deduplicated; `roles` values are emitted uppercase.
+### Required claims
 
-## Role metadata endpoint
+- `sub` — user id (string)
+- `email`
+- `jti`
+- `authz_contract_version` — `v1`
+- `http://schemas.microsoft.com/ws/2008/06/identity/claims/role` — display role names
+- `roles` — normalized uppercase role keys
 
-- Route: `GET /api/roles/metadata/v1`
-- Authorization: `Admin` role required
-- Response shape:
-  - `id` (int)
-  - `name` (string)
-  - `normalizedName` (string, uppercase)
-  - `isSystem` (bool)
+## Service access token (EMS → UM internal APIs)
 
-## Compatibility notes
+| Setting | Value |
+|---------|-------|
+| Issuer | `Pukar.Usermanagement` |
+| Audience | `um-internal` |
+| Lifetime | 5 minutes (configurable `Jwt:ServiceTokenExpirationMinutes`) |
+| Obtain | `POST /api/internal/v1/service-token` with `client_id` + `client_secret` |
 
-- Contract version updates must be additive for non-breaking updates.
-- Breaking changes require a new contract version and coordinated EMS rollout.
+### Scopes (`scope` claim)
+
+- `users.read`
+- `users.manage`
+- `roles.manage`
+- `invitations.manage`
+
+### Audit headers (optional, recommended)
+
+- `X-Initiating-User-Id`
+- `X-Initiating-User-Email`
+
+Internal endpoints reject unauthenticated callers.
+
+## Role metadata
+
+- Public admin: `GET /api/roles/metadata/v1` (Admin user JWT)
+- Internal: `GET /api/internal/v1/roles/metadata` (`roles.manage` scope)
+
+Response shape: `id`, `name`, `normalizedName`, `isSystem`.
+
+## EMS consumer checklist
+
+1. Configure `UserManagementApi:BaseUrl` to the UM host.
+2. Validate user JWTs with JWKS (`/.well-known/jwks.json`); do **not** configure `Jwt:SigningKey` for UM tokens.
+3. Obtain service tokens for provisioning/sync; include initiating-user headers for audit.
+4. Point invitation acceptance UI to UM `POST /api/invitations/accept` (or proxy from EMS).
+
+## Migration from embedded mode (v1 → v2)
+
+| v1 (embedded) | v2 (standalone) |
+|---------------|-----------------|
+| HS256 shared `Jwt:SigningKey` in EMS | RS256 + JWKS; EMS has no private key |
+| Issuer `EMS.API` | Issuer `Pukar.Usermanagement` |
+| UM tables in shared DB | `UserManagementDb` database |
+| EMS-owned invitations | UM-owned invitations (`ExternalCorrelationId` e.g. `employee:42`) |
+| In-process gateway | HTTP internal APIs + service token |
+
+During transition EMS may still embed UM controllers with symmetric validation; production should run **Host only**.
+
+## Compatibility
+
+- Claim contract `v1` is unchanged for role/email/sub semantics.
+- Breaking signing/issuer changes require coordinated EMS JWT validation update.

@@ -1,4 +1,5 @@
 using EMS.Application.Services.Employees;
+using EMS.Application.Services.Integrations;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
@@ -23,4 +24,14 @@ internal static class EmployeeControllerHelpers
 
         return new BadRequestObjectResult(new { message = ex.Message });
     }
+
+    public static ActionResult HandleDependencyUnavailable(UserManagementDependencyUnavailableException ex)
+        => new ObjectResult(new
+        {
+            message = ex.Message,
+            code = "user_management_unavailable",
+        })
+        {
+            StatusCode = StatusCodes.Status503ServiceUnavailable,
+        };
 }

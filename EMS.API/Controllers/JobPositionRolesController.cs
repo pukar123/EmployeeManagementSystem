@@ -1,7 +1,8 @@
 using EMS.Application.DTOs.JobPosition;
+using EMS.Application.Services.Integrations;
 using EMS.Application.Services.JobPositions;
-using Pukar.Shared;
 using Microsoft.AspNetCore.Mvc;
+using Pukar.Shared;
 
 namespace EMS.API.Controllers;
 
@@ -39,6 +40,10 @@ public sealed class JobPositionRolesController : ControllerBase
         catch (BusinessRuleException ex)
         {
             return Conflict(ex.Message);
+        }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
         }
     }
 }

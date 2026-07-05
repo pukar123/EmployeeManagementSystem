@@ -9,6 +9,4 @@ public interface IEmployeeInvitationService
     Task<IReadOnlyList<EmployeeInvitationResponseModel>> ListAsync(int employeeId, CancellationToken cancellationToken = default);
 
     Task RevokeAsync(int employeeId, int invitationId, CancellationToken cancellationToken = default);
-
-    Task AcceptAsync(AcceptEmployeeInvitationRequestModel request, CancellationToken cancellationToken = default);
 }

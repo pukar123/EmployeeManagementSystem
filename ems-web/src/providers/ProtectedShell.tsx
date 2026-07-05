@@ -11,6 +11,15 @@ import { Spinner } from "@/shared/components/Spinner";
 
 const LOGIN_PATH = "/login";
 const CHANGE_PASSWORD_PATH = "/change-password";
+const ACCEPT_INVITATION_PATH = "/accept-invitation";
+
+function isPublicAuthPath(pathname: string): boolean {
+  return (
+    pathname === LOGIN_PATH ||
+    pathname === CHANGE_PASSWORD_PATH ||
+    pathname === ACCEPT_INVITATION_PATH
+  );
+}
 
 export function ProtectedShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -26,7 +35,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isReady) return;
-    if (pathname === LOGIN_PATH || pathname === CHANGE_PASSWORD_PATH) return;
+    if (isPublicAuthPath(pathname)) return;
     if (!isAuthenticated) {
       router.replace(LOGIN_PATH);
     }
@@ -50,6 +59,10 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
         <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
+  }
+
+  if (pathname === ACCEPT_INVITATION_PATH) {
+    return <>{children}</>;
   }
 
   if (pathname === LOGIN_PATH) {

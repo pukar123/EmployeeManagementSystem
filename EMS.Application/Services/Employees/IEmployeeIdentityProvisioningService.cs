@@ -4,8 +4,6 @@ namespace EMS.Application.Services.Employees;
 
 public interface IEmployeeIdentityProvisioningService
 {
-    Task<ProvisionEmployeeUserResponseModel> ProvisionAsync(int employeeId, CancellationToken cancellationToken = default);
-
     Task<ProvisionEmployeeUserResponseModel> LinkExistingUserAsync(
         int employeeId,
         LinkEmployeeUserRequestModel request,

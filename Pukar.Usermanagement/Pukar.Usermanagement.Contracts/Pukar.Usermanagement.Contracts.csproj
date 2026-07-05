@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Pukar.Usermanagement.Contracts</RootNamespace>
+    <AssemblyName>Pukar.Usermanagement.Contracts</AssemblyName>
+    <Description>Stable public API contracts for Pukar.Usermanagement consumers.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+</Project>

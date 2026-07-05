@@ -1,8 +1,9 @@
+using EMS.API.Auth;
 using EMS.API.Bootstrap;
 using EMS.API.Middleware;
 using EMS.API.Options;
 using EMS.API.Services;
-using System.Security.Claims;
+using EMS.Application.Options;
 using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Departments;
 using EMS.Application.Services.Documents;
@@ -21,16 +22,16 @@ using EMS.Application.Services.Shifts;
 using EMS.Application.Services.EmployeePortal;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
-using Pukar.Usermanagement.Domain.Database;
 using EMS.Infrastructure.Repositories.Implementations;
 using EMS.Infrastructure.Integrations.UserManagement;
 using EMS.Infrastructure.Persistence.Auditing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;
-using Pukar.Usermanagement.API.Extensions;
-using Pukar.Usermanagement.Application;
+using Polly;
+using Polly.Extensions.Http;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -48,7 +49,6 @@ try
         var mongoLogs = context.Configuration.GetConnectionString("MongoLogs");
         if (!string.IsNullOrWhiteSpace(mongoLogs))
         {
-            // v7 sink: database from URL path (ems-logs); default collection name is "log"
             configuration.WriteTo.MongoDBBson(mongoLogs);
         }
     });
@@ -57,24 +57,37 @@ try
     {
         options.AddPolicy("EmsWeb", policy =>
         {
-            policy
-                .WithOrigins(
+            var corsOrigins = builder.Configuration.GetSection(CorsOptions.SectionName).Get<string[]>()
+                ?? Array.Empty<string>();
+
+            if (corsOrigins.Length == 0 && builder.Environment.IsDevelopment())
+            {
+                corsOrigins =
+                [
                     "http://localhost:3000",
                     "https://localhost:3000",
                     "http://127.0.0.1:3000",
-                    "https://127.0.0.1:3000")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
+                    "https://127.0.0.1:3000",
+                ];
+            }
+
+            if (corsOrigins.Length == 0 && !builder.Environment.IsDevelopment())
+            {
+                throw new InvalidOperationException(
+                    "Cors:AllowedOrigins must contain at least one origin outside Development.");
+            }
+
+            policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod();
         });
     });
 
-    builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection(SeedAdminOptions.SectionName));
-    builder.Services.Configure<AuthorizationModeOptions>(builder.Configuration.GetSection(AuthorizationModeOptions.SectionName));
     builder.Services.Configure<UserManagementApiOptions>(builder.Configuration.GetSection(UserManagementApiOptions.SectionName));
-    builder.Services.Configure<EMS.Application.Options.EmployeeSchedulingOptions>(
-        builder.Configuration.GetSection(EMS.Application.Options.EmployeeSchedulingOptions.SectionName));
-    builder.Services.AddHostedService<AdminUserSeedHostedService>();
+    builder.Services.Configure<AuthorizationModeOptions>(builder.Configuration.GetSection(AuthorizationModeOptions.SectionName));
+    builder.Services.Configure<CorsOptions>(builder.Configuration.GetSection(CorsOptions.SectionName));
+    builder.Services.Configure<EmployeeSchedulingOptions>(
+        builder.Configuration.GetSection(EmployeeSchedulingOptions.SectionName));
     builder.Services.AddHostedService<EmsRbacSeedHostedService>();
+    builder.Services.AddHostedService<RoleKeyBackfillHostedService>();
     builder.Services.AddHostedService<EmployeeScheduledChangeWorker>();
     builder.Services.AddHostedService<IntegrationOutboxDispatcher>();
 
@@ -82,22 +95,10 @@ try
         {
             options.Filters.Add(
                 new AuthorizeFilter(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()));
-        })
-        .AddPukarUserManagementControllers();
+        });
     builder.Services.AddOpenApi();
 
-    builder.Services.AddPukarUserManagementApi(builder.Configuration);
-    builder.Services.AddAuthorization(options =>
-    {
-        options.AddPolicy("AdminAccess", policy =>
-            policy.RequireAssertion(context =>
-                context.User.Claims.Any(c =>
-                    c.Type == ClaimTypes.Role
-                    && string.Equals(c.Value, WellKnownRoles.Admin, StringComparison.OrdinalIgnoreCase))
-                || context.User.Claims.Any(c =>
-                    c.Type == "roles"
-                    && string.Equals(c.Value, WellKnownRoles.AdminNormalizedName, StringComparison.OrdinalIgnoreCase))));
-    });
+    builder.Services.AddUserManagementJwtAuthentication(builder.Configuration);
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
@@ -110,17 +111,10 @@ try
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
     builder.Services.AddScoped<IRoleKeyPermissionService, RoleKeyPermissionService>();
     builder.Services.AddScoped<IRoleKeyCapabilityService, RoleKeyCapabilityService>();
-    builder.Services.AddHttpClient<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>((sp, client) =>
-    {
-        var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<UserManagementApiOptions>>().Value;
-        if (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUrl))
-        {
-            client.BaseAddress = new Uri(baseUrl, options.RolesMetadataPath);
-        }
 
-        var timeout = options.TimeoutSeconds > 0 ? options.TimeoutSeconds : 5;
-        client.Timeout = TimeSpan.FromSeconds(timeout);
-    });
+    RegisterUserManagementHttp(builder.Services, builder.Configuration);
+
+    builder.Services.AddScoped<ILegacyRoleKeyGuard, LegacyRoleKeyGuard>();
     builder.Services.AddScoped<INavigationService, NavigationService>();
     builder.Services.AddScoped<IMenuService, MenuService>();
     builder.Services.AddScoped<EmployeeRelationshipValidator>();
@@ -129,17 +123,15 @@ try
     builder.Services.AddScoped<IEmployeeDirectoryService, EmployeeDirectoryService>();
     builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
     builder.Services.AddScoped<IEmployeeTransferService, EmployeeTransferService>();
-    builder.Services.AddScoped<IEmployeeNumberAllocator, EMS.Infrastructure.Repositories.Implementations.SqlEmployeeNumberAllocator>();
+    builder.Services.AddScoped<IEmployeeNumberAllocator, SqlEmployeeNumberAllocator>();
     builder.Services.AddScoped<IEmployeeRoleSyncService, EmployeeRoleSyncService>();
     builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
-    builder.Services.AddScoped<IEmployeeUserManagementGateway, EmployeeUserManagementGateway>();
+    builder.Services.AddScoped<IEmployeeUserManagementGateway, HttpEmployeeUserManagementGateway>();
     builder.Services.AddScoped<IEmployeeIdentityProvisioningService, EmployeeIdentityProvisioningService>();
     builder.Services.AddScoped<IEmployeeBusinessDateHelper, EmployeeBusinessDateHelper>();
     builder.Services.AddScoped<IEmployeeScheduledChangeService, EmployeeScheduledChangeService>();
     builder.Services.AddScoped<IEmployeeScheduledChangeApplier, EmployeeScheduledChangeApplier>();
-    builder.Services.AddScoped<IEmployeeInvitationService, EmployeeInvitationService>();
-    builder.Services.Configure<EMS.Application.Options.SmtpOptions>(builder.Configuration.GetSection(EMS.Application.Options.SmtpOptions.SectionName));
-    builder.Services.AddScoped<EMS.Application.Services.Email.IEmailSender, EMS.Infrastructure.Email.SmtpEmailSender>();
+    builder.Services.AddScoped<IEmployeeInvitationService, HttpEmployeeInvitationService>();
     builder.Services.AddScoped<EMS.Application.Services.Integrations.IIntegrationOutboxWriter, EMS.Application.Services.Integrations.IntegrationOutboxWriter>();
     builder.Services.AddScoped<EMS.Application.Services.Integrations.IIntegrationOutboxProcessor, EMS.Application.Services.Integrations.IntegrationOutboxProcessor>();
     builder.Services.AddScoped<IOrganizationService, OrganizationService>();
@@ -184,7 +176,9 @@ try
 
     var mongoLogsCs = builder.Configuration.GetConnectionString("MongoLogs");
     var healthChecks = builder.Services.AddHealthChecks()
-        .AddDbContextCheck<AppDbContext>(name: "database");
+        .AddDbContextCheck<AppDbContext>(name: "database")
+        .AddCheck<UserManagementHealthCheck>("user-management", failureStatus: HealthStatus.Unhealthy, tags: ["ready"])
+        .AddCheck<RoleKeyMigrationHealthCheck>("role-key-migration", failureStatus: HealthStatus.Unhealthy, tags: ["ready"]);
 
     if (!string.IsNullOrWhiteSpace(mongoLogsCs))
     {
@@ -203,12 +197,10 @@ try
         using (var scope = app.Services.CreateScope())
         {
             var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var userManagementDb = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
             appDb.Database.Migrate();
-            userManagementDb.Database.Migrate();
         }
 
-        Log.Information("Applied pending EF Core migrations for AppDbContext and UserManagementDbContext (Development).");
+        Log.Information("Applied pending EF Core migrations for AppDbContext (Development).");
 
         app.MapOpenApi().AllowAnonymous();
     }
@@ -241,6 +233,10 @@ try
     app.UseAuthorization();
 
     app.MapHealthChecks("/health").AllowAnonymous();
+    app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready") || check.Name is "database" or "user-management" or "role-key-migration",
+    }).AllowAnonymous();
     app.MapControllers();
 
     Log.Information("EMS.API starting ({Environment})", app.Environment.EnvironmentName);
@@ -250,4 +246,32 @@ try
 finally
 {
     Log.CloseAndFlush();
+}
+
+static void RegisterUserManagementHttp(IServiceCollection services, IConfiguration configuration)
+{
+    var options = configuration.GetSection(UserManagementApiOptions.SectionName).Get<UserManagementApiOptions>()
+        ?? new UserManagementApiOptions();
+    var timeout = TimeSpan.FromSeconds(options.TimeoutSeconds > 0 ? options.TimeoutSeconds : 10);
+    var retryCount = options.RetryCount > 0 ? options.RetryCount : 2;
+    var retryBaseDelayMs = options.RetryBaseDelayMs > 0 ? options.RetryBaseDelayMs : 200;
+
+    void ConfigureClient(HttpClient client)
+    {
+        if (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUrl))
+            client.BaseAddress = baseUrl;
+        client.Timeout = timeout;
+    }
+
+    services.AddHttpClient(UserManagementHttpClientNames.Default, ConfigureClient);
+    services.AddHttpClient(UserManagementHttpClientNames.SafeRetry, ConfigureClient)
+        .AddPolicyHandler(HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .WaitAndRetryAsync(
+                retryCount,
+                attempt => TimeSpan.FromMilliseconds(retryBaseDelayMs * Math.Pow(2, attempt - 1))));
+
+    services.AddSingleton<IUserManagementServiceTokenProvider, UserManagementServiceTokenProvider>();
+    services.AddScoped<IUserManagementHttpClient, UserManagementHttpClient>();
+    services.AddScoped<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>();
 }

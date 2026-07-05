@@ -1,4 +1,4 @@
-using Pukar.Usermanagement.Application.DTOs.Users;
+using Pukar.Usermanagement.Contracts.Users;
 
 namespace Pukar.Usermanagement.Application.Services.Users;
 

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Pukar.Usermanagement.Host</RootNamespace>
+    <AssemblyName>Pukar.Usermanagement.Host</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.4" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pukar.Usermanagement.Application\Pukar.Usermanagement.Application.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement.API\Pukar.Usermanagement.API.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement.Domain\Pukar.Usermanagement.Domain.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement.Infrastructure\Pukar.Usermanagement.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

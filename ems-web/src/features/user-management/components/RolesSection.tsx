@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
+import { ApiAvailabilityAlert } from "@/shared/components/ApiAvailabilityAlert";
 import { cn } from "@/shared/utils/cn";
 import type { RoleDto } from "../types";
 import { createRole, deleteRole, fetchRoles, updateRole } from "../services/userManagementApi";
@@ -119,11 +120,7 @@ export function RolesSection() {
   }
 
   if (isError) {
-    return (
-      <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-        {getErrorMessage(error)}
-      </p>
-    );
+    return <ApiAvailabilityAlert error={error} />;
   }
 
   const roles = data ?? [];

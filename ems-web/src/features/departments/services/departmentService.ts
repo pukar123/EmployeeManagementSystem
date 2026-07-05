@@ -1,4 +1,4 @@
-import { httpClient } from "@/shared/api/http-client";
+import { emsHttpClient } from "@/shared/api/http-client";
 import type {
   CreateDepartmentRequest,
   Department,
@@ -9,21 +9,21 @@ const PATH = "/api/Departments";
 
 export const departmentService = {
   getDepartments: async (): Promise<Department[]> => {
-    const { data } = await httpClient.get<Department[]>(PATH);
+    const { data } = await emsHttpClient.get<Department[]>(PATH);
     return data;
   },
 
   createDepartment: async (body: CreateDepartmentRequest): Promise<Department> => {
-    const { data } = await httpClient.post<Department>(PATH, body);
+    const { data } = await emsHttpClient.post<Department>(PATH, body);
     return data;
   },
 
   updateDepartment: async (id: number, body: UpdateDepartmentRequest): Promise<Department> => {
-    const { data } = await httpClient.put<Department>(`${PATH}/${id}`, body);
+    const { data } = await emsHttpClient.put<Department>(`${PATH}/${id}`, body);
     return data;
   },
 
   deleteDepartment: async (id: number): Promise<void> => {
-    await httpClient.delete(`${PATH}/${id}`);
+    await emsHttpClient.delete(`${PATH}/${id}`);
   },
 };

@@ -10,6 +10,8 @@ public class IntegrationOutboxMessage
 
     public string PayloadJson { get; set; } = string.Empty;
 
+    public string IdempotencyKey { get; set; } = string.Empty;
+
     public IntegrationOutboxStatus Status { get; set; } = IntegrationOutboxStatus.Pending;
 
     public int AttemptCount { get; set; }

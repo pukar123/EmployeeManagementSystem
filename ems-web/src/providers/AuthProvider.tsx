@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { authService } from "@/features/auth/services/authService";
 import type { AuthUser } from "@/shared/auth/auth-types";
 import {
   getAccessToken,
   getMustChangePassword,
   getStoredUser,
+  notifyAuthStorageChanged,
   setAuthChangeHandler,
   setMustChangePassword,
 } from "@/shared/auth/auth-storage";
@@ -25,7 +26,9 @@ export type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function readAuthFromStorage(): { user: AuthUser | null; mustChangePassword: boolean } {
+type AuthSnapshot = { user: AuthUser | null; mustChangePassword: boolean };
+
+function readAuthFromStorage(): AuthSnapshot {
   if (typeof window === "undefined") {
     return { user: null, mustChangePassword: false };
   }
@@ -36,44 +39,38 @@ function readAuthFromStorage(): { user: AuthUser | null; mustChangePassword: boo
   };
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  /** false until client reads localStorage — avoids SSR (no token) vs client (has token) hydration mismatch. */
-  const [isReady, setIsReady] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [mustChangePassword, setMustChangePasswordState] = useState(false);
+const serverSnapshot: AuthSnapshot = { user: null, mustChangePassword: false };
 
-  const syncFromStorage = useCallback(() => {
-    const snapshot = readAuthFromStorage();
-    setUser(snapshot.user);
-    setMustChangePasswordState(snapshot.mustChangePassword);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    setAuthChangeHandler(onStoreChange);
+    return () => setAuthChangeHandler(undefined);
   }, []);
 
-  useEffect(() => {
-    syncFromStorage();
-    setIsReady(true);
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    readAuthFromStorage,
+    () => serverSnapshot,
+  );
 
-    setAuthChangeHandler(() => {
-      syncFromStorage();
-    });
-    return () => setAuthChangeHandler(undefined);
-  }, [syncFromStorage]);
+  const isReady = typeof window !== "undefined";
+  const { user, mustChangePassword } = snapshot;
+
+  const syncFromStorage = useCallback(() => {
+    notifyAuthStorageChanged();
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await authService.login(email, password);
-    setUser(data.user);
-    setMustChangePasswordState(data.mustChangePassword);
+    await authService.login(email, password);
   }, []);
 
   const logout = useCallback(async () => {
     await authService.logout();
-    setUser(null);
-    setMustChangePasswordState(false);
   }, []);
 
   const completePasswordChange = useCallback(async (currentPassword: string, newPassword: string) => {
     await authService.changePassword(currentPassword, newPassword);
     setMustChangePassword(false);
-    setMustChangePasswordState(false);
   }, []);
 
   const isAuthenticated = user !== null && Boolean(getAccessToken());

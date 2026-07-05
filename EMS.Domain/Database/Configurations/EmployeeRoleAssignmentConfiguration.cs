@@ -1,5 +1,4 @@
 using EMS.Domain.DbModels;
-using EMS.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,6 +16,10 @@ public sealed class EmployeeRoleAssignmentConfiguration : IEntityTypeConfigurati
                 "([Source] = 1 AND [JobPositionId] IS NOT NULL) OR ([Source] = 2 AND [JobPositionId] IS NULL)"));
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.RoleKey)
+            .HasMaxLength(128)
+            .IsRequired();
 
         builder.Property(x => x.Source)
             .HasConversion<int>();
@@ -37,16 +40,16 @@ public sealed class EmployeeRoleAssignmentConfiguration : IEntityTypeConfigurati
             .HasForeignKey(x => x.JobPositionId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(x => new { x.EmployeeId, x.RoleId, x.Source, x.JobPositionId })
+        builder.HasIndex(x => new { x.EmployeeId, x.RoleKey, x.Source, x.JobPositionId })
             .IsUnique()
             .HasFilter("[Source] = 1 AND [JobPositionId] IS NOT NULL");
 
-        builder.HasIndex(x => new { x.EmployeeId, x.RoleId, x.Source })
+        builder.HasIndex(x => new { x.EmployeeId, x.RoleKey, x.Source })
             .IsUnique()
             .HasFilter("[Source] = 2 AND [JobPositionId] IS NULL");
 
         builder.HasIndex(x => new { x.EmployeeId, x.Source });
         builder.HasIndex(x => x.JobPositionId);
-
+        builder.HasIndex(x => x.RoleKey);
     }
 }

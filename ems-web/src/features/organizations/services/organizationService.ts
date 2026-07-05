@@ -1,4 +1,4 @@
-import { httpClient, postFormData } from "@/shared/api/http-client";
+import { emsHttpClient, postFormData } from "@/shared/api/http-client";
 import type {
   CreateOrganizationRequest,
   Organization,
@@ -9,17 +9,17 @@ const PATH = "/api/Organizations";
 
 export const organizationService = {
   getOrganizations: async (): Promise<Organization[]> => {
-    const { data } = await httpClient.get<Organization[]>(PATH);
+    const { data } = await emsHttpClient.get<Organization[]>(PATH);
     return data;
   },
 
   createOrganization: async (body: CreateOrganizationRequest): Promise<Organization> => {
-    const { data } = await httpClient.post<Organization>(PATH, body);
+    const { data } = await emsHttpClient.post<Organization>(PATH, body);
     return data;
   },
 
   updateOrganization: async (id: number, body: UpdateOrganizationRequest): Promise<Organization> => {
-    const { data } = await httpClient.put<Organization>(`${PATH}/${id}`, body);
+    const { data } = await emsHttpClient.put<Organization>(`${PATH}/${id}`, body);
     return data;
   },
 

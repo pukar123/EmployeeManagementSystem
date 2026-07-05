@@ -136,7 +136,11 @@ public sealed class EmployeeScheduledChangeApplier : IEmployeeScheduledChangeApp
         employee.UpdatedAtUtc = DateTime.UtcNow;
 
         await ApplyRetentionAsync(employee, DateTime.UtcNow, cancellationToken);
-        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(employee, _gateway, cancellationToken);
+        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(
+            employee,
+            _gateway,
+            $"revoke-identity:employee:{employee.Id}",
+            cancellationToken);
         await AddStatusHistoryAsync(employee, previous, EmploymentStatus.Terminated, change.EffectiveAtUtc, change.Reason, change, cancellationToken);
 
         _employees.Update(employee);
@@ -155,7 +159,11 @@ public sealed class EmployeeScheduledChangeApplier : IEmployeeScheduledChangeApp
         employee.UpdatedAtUtc = now;
 
         await ApplyRetentionAsync(employee, now, cancellationToken);
-        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(employee, _gateway, cancellationToken);
+        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(
+            employee,
+            _gateway,
+            $"revoke-identity:employee:{employee.Id}",
+            cancellationToken);
 
         _employees.Update(employee);
         await _employees.SaveChangesAsync(cancellationToken);

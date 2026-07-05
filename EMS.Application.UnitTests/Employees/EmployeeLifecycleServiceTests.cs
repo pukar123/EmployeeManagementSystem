@@ -107,7 +107,6 @@ public class EmployeeLifecycleServiceTests
             Mock.Of<IEmployeeUserManagementGateway>(),
             CreateValidator(employees),
             Mock.Of<IEmployeeBusinessDateHelper>(),
-            new InMemoryRepositoryMock<EmployeeInvitation>(e => e.Id, (e, id) => e.Id = id).CreateMock().Object,
             Mock.Of<IIntegrationOutboxWriter>());
     }
 

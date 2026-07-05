@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Employee;
 using EMS.Application.Services.Employees;
+using EMS.Application.Services.Integrations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
@@ -55,5 +56,10 @@ public sealed class EmployeeRolesController : ControllerBase
         {
             return EmployeeControllerHelpers.HandleBusinessRule(ex);
         }
+        catch (UserManagementDependencyUnavailableException ex)
+        {
+            return EmployeeControllerHelpers.HandleDependencyUnavailable(ex);
+        }
     }
 }
+

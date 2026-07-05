@@ -8,27 +8,50 @@ This document is the **EMS-focused** map: diagrams and how requests flow through
 flowchart TB
   subgraph api [EMS.API]
     Controllers[Controllers]
+    JwtValidate[JWT validation via UM JWKS]
   end
   subgraph app [EMS.Application]
     DTOs[DTOs per area Employee Org Dept Location]
     Services[Services per entity]
+    GatewayIf[IEmployeeUserManagementGateway]
     Mapping[Mapping helpers]
   end
   subgraph infra [EMS.Infrastructure]
     Repo[BaseRepository of T]
+    HttpGateway[HttpEmployeeUserManagementGateway]
   end
   subgraph domain [EMS.Domain]
     DbCtx[AppDbContext]
     Entities[DbModels]
     RepoIf[IBaseRepository of T]
   end
+  subgraph um [Pukar.Usermanagement.Host]
+    UmApi[Public and internal HTTP APIs]
+    UmDb[(UserManagement DB)]
+  end
   Controllers --> Services
+  Controllers --> JwtValidate
   Services --> Mapping
   Services --> RepoIf
+  Services --> GatewayIf
+  HttpGateway -.-> GatewayIf
+  HttpGateway -->|service token HTTP| UmApi
   Repo -.-> RepoIf
   Repo --> DbCtx
   DbCtx --> Entities
+  UmApi --> UmDb
 ```
+
+## EMS ↔ User Management service boundary
+
+| Owner | Data / concerns |
+|-------|-----------------|
+| **EMS** | Employees, org structure, `RoleKey` assignments, `RoleKeyPermission` / `RoleKeyCapability`, menus, integration outbox |
+| **User Management** | Users, roles, invitations, passwords, tokens, email delivery |
+
+EMS never reads or writes UM tables. Identity mutations go through HTTP; optional identity enrichment on employee reads degrades gracefully when UM is down; mutations return **503** (`user_management_unavailable`). Outbox messages stay pending and retry with idempotency keys.
+
+Details: [ems-um-http-integration.md](ems-um-http-integration.md).
 
 ## Responsibility split
 

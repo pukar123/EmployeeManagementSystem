@@ -6,7 +6,7 @@ using Pukar.Shared;
 
 namespace EMS.Application.Services.Employees;
 
-internal static class EmployeeLinkedIdentityHelper
+public static class EmployeeLinkedIdentityHelper
 {
     public static async Task<EmployeeLinkedUserSnapshot?> TryResolveLinkedUserAsync(
         Employee employee,
@@ -42,13 +42,16 @@ internal static class EmployeeLinkedIdentityHelper
     public static async Task RevokeLinkedIdentityAsync(
         Employee employee,
         IEmployeeUserManagementGateway gateway,
+        string? idempotencyKey,
         CancellationToken cancellationToken)
     {
         var linkedUser = await TryResolveLinkedUserAsync(employee, gateway, cancellationToken);
         if (linkedUser is null)
             return;
 
-        await gateway.RevokeOperationalAccessAsync(linkedUser.Id, cancellationToken);
-        await gateway.DeactivateLinkedUserAsync(linkedUser.Id, cancellationToken);
+        var keyPrefix = idempotencyKey ?? $"revoke-identity:employee:{employee.Id}";
+        await gateway.RevokeOperationalAccessAsync(linkedUser.Id, $"{keyPrefix}:roles", cancellationToken);
+        await gateway.DeactivateLinkedUserAsync(linkedUser.Id, $"{keyPrefix}:deactivate", cancellationToken);
+        await gateway.RevokeSessionsAsync(linkedUser.Id, $"{keyPrefix}:sessions", cancellationToken);
     }
 }

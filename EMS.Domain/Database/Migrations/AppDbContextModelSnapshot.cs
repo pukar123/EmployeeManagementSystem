@@ -603,65 +603,6 @@ namespace EMS.Domain.Database.Migrations
                     b.ToTable("EmployeeEmploymentStatusHistories", "org");
                 });
 
-            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeInvitation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeliveryFailureReason")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<int>("DeliveryStatus")
-                        .HasColumnType("int");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("LastSentAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime?>("UsedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmployeeId");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("EmployeeId", "RevokedAtUtc", "UsedAtUtc");
-
-                    b.ToTable("EmployeeInvitations", "emp");
-                });
-
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeManagerHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -833,8 +774,10 @@ namespace EMS.Domain.Database.Migrations
                     b.Property<int?>("JobPositionId")
                         .HasColumnType("int");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<int>("Source")
                         .HasColumnType("int");
@@ -848,13 +791,15 @@ namespace EMS.Domain.Database.Migrations
 
                     b.HasIndex("JobPositionId");
 
+                    b.HasIndex("RoleKey");
+
                     b.HasIndex("EmployeeId", "Source");
 
-                    b.HasIndex("EmployeeId", "RoleId", "Source")
+                    b.HasIndex("EmployeeId", "RoleKey", "Source")
                         .IsUnique()
                         .HasFilter("[Source] = 2 AND [JobPositionId] IS NULL");
 
-                    b.HasIndex("EmployeeId", "RoleId", "Source", "JobPositionId")
+                    b.HasIndex("EmployeeId", "RoleKey", "Source", "JobPositionId")
                         .IsUnique()
                         .HasFilter("[Source] = 1 AND [JobPositionId] IS NOT NULL");
 
@@ -974,6 +919,11 @@ namespace EMS.Domain.Database.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<string>("LastError")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -995,6 +945,9 @@ namespace EMS.Domain.Database.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MessageType", "IdempotencyKey")
+                        .IsUnique();
 
                     b.HasIndex("Status", "NextAttemptAtUtc");
 
@@ -1501,14 +1454,16 @@ namespace EMS.Domain.Database.Migrations
                     b.Property<int>("JobPositionId")
                         .HasColumnType("int");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex("RoleKey");
 
-                    b.HasIndex("JobPositionId", "RoleId")
+                    b.HasIndex("JobPositionId", "RoleKey")
                         .IsUnique();
 
                     b.ToTable("PositionRoles", "org");
@@ -1885,17 +1840,6 @@ namespace EMS.Domain.Database.Migrations
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeEmploymentStatusHistory", b =>
-                {
-                    b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Employee");
-                });
-
-            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeInvitation", b =>
                 {
                     b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
                         .WithMany()

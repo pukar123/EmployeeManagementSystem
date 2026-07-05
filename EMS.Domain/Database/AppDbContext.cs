@@ -44,7 +44,6 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.EmployeeRoleAssignment> EmployeeRoleAssignments { get; set; }
         public DbSet<DbModels.OrganizationEmployeeNumberSequence> OrganizationEmployeeNumberSequences { get; set; }
         public DbSet<DbModels.EmployeeScheduledChange> EmployeeScheduledChanges { get; set; }
-        public DbSet<DbModels.EmployeeInvitation> EmployeeInvitations { get; set; }
         public DbSet<DbModels.IntegrationOutboxMessage> IntegrationOutboxMessages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

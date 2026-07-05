@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
-import { getErrorMessage } from "@/shared/api/http-client";
+import { ApiAvailabilityAlert } from "@/shared/components/ApiAvailabilityAlert";
 import { Button } from "@/shared/components/Button";
 
 const inputClass =
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState("admin@localhost");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -26,7 +26,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       router.replace("/");
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(err);
     } finally {
       setSubmitting(false);
     }
@@ -84,14 +84,7 @@ export default function LoginPage() {
                 className={inputClass}
               />
             </label>
-            {error ? (
-              <div
-                className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-                role="alert"
-              >
-                {error}
-              </div>
-            ) : null}
+            {error != null ? <ApiAvailabilityAlert error={error} /> : null}
             <Button type="submit" className="w-full" loading={submitting} disabled={submitting}>
               {submitting ? "Signing in…" : "Sign in"}
             </Button>

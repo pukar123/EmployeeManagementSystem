@@ -2,6 +2,8 @@
 
 This runbook migrates legacy role-id permissions in `ems.RolePermissions` into the new role-key model `ems.RoleKeyPermissions`.
 
+For `org.PositionRoles` / `org.EmployeeRoleAssignments` numeric `RoleKey` values (former `RoleId`), use `tools/UmDbSplitMigrator` (`apply` mode) as part of the [database split cutover](ems-um-db-split-cutover.md). That path maps IDs to `um.Roles.NormalizedName` and keeps a rollback snapshot.
+
 ## Why this exists
 
 EMS is moving from direct coupling to `um.Roles.Id` toward role-key authorization using normalized role keys (`um.Roles.NormalizedName`). During migration, both models coexist.

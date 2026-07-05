@@ -1,4 +1,4 @@
-import { httpClient } from "@/shared/api/http-client";
+import { emsHttpClient } from "@/shared/api/http-client";
 
 export type RoleCapabilityAccessDto = {
   roleKey: string;
@@ -42,17 +42,17 @@ export function expandCapabilityKeys(keys: ReadonlySet<string>): string[] {
 }
 
 export async function fetchMyEmployeeCapabilities(): Promise<EmployeeAccessCapabilities> {
-  const { data } = await httpClient.get<EmployeeAccessCapabilities>("/api/employee-access/me");
+  const { data } = await emsHttpClient.get<EmployeeAccessCapabilities>("/api/employee-access/me");
   return data;
 }
 
 export async function fetchRoleCapabilities(roleKey: string): Promise<RoleCapabilityAccessDto> {
   const encoded = encodeURIComponent(roleKey);
-  const { data } = await httpClient.get<RoleCapabilityAccessDto>(`/api/RoleKeyCapabilities/${encoded}`);
+  const { data } = await emsHttpClient.get<RoleCapabilityAccessDto>(`/api/RoleKeyCapabilities/${encoded}`);
   return data;
 }
 
 export async function setRoleCapabilities(roleKey: string, capabilityKeys: string[]): Promise<void> {
   const encoded = encodeURIComponent(roleKey);
-  await httpClient.put(`/api/RoleKeyCapabilities/${encoded}`, { capabilityKeys });
+  await emsHttpClient.put(`/api/RoleKeyCapabilities/${encoded}`, { capabilityKeys });
 }

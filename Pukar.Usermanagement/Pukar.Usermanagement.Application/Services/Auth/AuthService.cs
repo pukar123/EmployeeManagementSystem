@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using Pukar.Usermanagement.Application.DTOs.Auth;
+using Pukar.Usermanagement.Contracts.Auth;
 using Pukar.Usermanagement.Application.Helpers;
 using Pukar.Usermanagement.Application.Options;
 using Pukar.Usermanagement.Application.Services.Jwt;

@@ -316,7 +316,11 @@ public sealed class EmployeeService : IEmployeeService
         entity.UpdatedAtUtc = now;
 
         await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
-        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(entity, _gateway, cancellationToken);
+        await EmployeeLinkedIdentityHelper.RevokeLinkedIdentityAsync(
+            entity,
+            _gateway,
+            $"revoke-identity:employee:{entity.Id}",
+            cancellationToken);
 
         _repository.Update(entity);
         await _repository.SaveChangesAsync(cancellationToken);

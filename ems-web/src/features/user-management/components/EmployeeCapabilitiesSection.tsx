@@ -1,20 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/shared/components/Button";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
 import {
-  EMPLOYEE_CAPABILITY_KEYS,
-  EMPLOYEE_CAPABILITY_LABELS,
-  expandCapabilityKeys,
   fetchRoleCapabilities,
   setRoleCapabilities,
-  type EmployeeCapabilityKey,
 } from "@/features/employees/services/employeeAccessApi";
 import { fetchRoles } from "../services/userManagementApi";
+import { CapabilityEditor } from "./CapabilityEditor";
+import { useState } from "react";
 
 export function EmployeeCapabilitiesSection() {
   const queryClient = useQueryClient();
@@ -24,7 +20,6 @@ export function EmployeeCapabilitiesSection() {
   });
 
   const [roleKey, setRoleKey] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const {
     data: access,
@@ -35,12 +30,6 @@ export function EmployeeCapabilitiesSection() {
     queryFn: () => fetchRoleCapabilities(roleKey!),
     enabled: Boolean(roleKey),
   });
-
-  useEffect(() => {
-    if (access?.capabilityKeys) {
-      setSelected(new Set(access.capabilityKeys));
-    }
-  }, [access?.capabilityKeys]);
 
   const saveMut = useMutation({
     mutationFn: async (capabilityKeys: string[]) => {
@@ -54,26 +43,6 @@ export function EmployeeCapabilitiesSection() {
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
-
-  const toggle = useCallback((key: EmployeeCapabilityKey) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-        if (key === "employees.view") {
-          next.delete("employees.manage");
-          next.delete("employees.access");
-          next.delete("employees.export");
-        }
-      } else {
-        next.add(key);
-        if (key === "employees.manage" || key === "employees.access" || key === "employees.export") {
-          next.add("employees.view");
-        }
-      }
-      return next;
-    });
-  }, []);
 
   if (rolesLoading) {
     return (
@@ -125,39 +94,13 @@ export function EmployeeCapabilitiesSection() {
       ) : accessLoading || accessFetching ? (
         <Spinner />
       ) : (
-        <div className="space-y-4 rounded-xl border border-border bg-card p-5">
-          <p className="text-sm font-medium text-foreground">Role: {roleKey}</p>
-          <ul className="space-y-3">
-            {EMPLOYEE_CAPABILITY_KEYS.map((key) => (
-              <li key={key}>
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(key)}
-                    onChange={() => toggle(key)}
-                    className="mt-1"
-                  />
-                  <span>
-                    <span className="block text-sm font-medium text-foreground">
-                      {EMPLOYEE_CAPABILITY_LABELS[key]}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">{key}</span>
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-muted-foreground">
-            Manage, account access, and export automatically include view.
-          </p>
-          <Button
-            type="button"
-            disabled={saveMut.isPending}
-            onClick={() => saveMut.mutate(expandCapabilityKeys(selected))}
-          >
-            Save capabilities
-          </Button>
-        </div>
+        <CapabilityEditor
+          key={`${roleKey}:${(access?.capabilityKeys ?? []).join(",")}`}
+          roleKey={roleKey}
+          initialKeys={access?.capabilityKeys ?? []}
+          isSaving={saveMut.isPending}
+          onSave={(keys) => saveMut.mutate(keys)}
+        />
       )}
     </div>
   );

@@ -37,7 +37,7 @@ export function JobPositionsSection() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<JobPosition | null>(null);
   const [rolesPosition, setRolesPosition] = useState<JobPosition | null>(null);
-  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
+  const [selectedRoleKeys, setSelectedRoleKeys] = useState<Set<string>>(new Set());
   const positionRolesQuery = usePositionRoles(rolesPosition?.id ?? null);
 
   const [title, setTitle] = useState("");
@@ -80,12 +80,12 @@ export function JobPositionsSection() {
 
   const openRoles = (position: JobPosition) => {
     setRolesPosition(position);
-    setSelectedRoleIds(new Set());
+    setSelectedRoleKeys(new Set());
   };
 
   const closeRoles = () => {
     setRolesPosition(null);
-    setSelectedRoleIds(new Set());
+    setSelectedRoleKeys(new Set());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,19 +138,19 @@ export function JobPositionsSection() {
   };
 
   const busy = createMut.isPending || updateMut.isPending;
-  const assignedRoleIds = useMemo(
-    () => new Set((positionRolesQuery.data ?? []).map((role) => role.roleId)),
+  const assignedRoleKeys = useMemo(
+    () => new Set((positionRolesQuery.data ?? []).map((role) => role.roleKey)),
     [positionRolesQuery.data],
   );
-  const displayRoleIds = selectedRoleIds.size > 0 ? selectedRoleIds : assignedRoleIds;
+  const displayRoleKeys = selectedRoleKeys.size > 0 ? selectedRoleKeys : assignedRoleKeys;
 
-  const toggleRoleSelection = (roleId: number, checked: boolean) => {
-    setSelectedRoleIds((prev) => {
-      const next = new Set(prev.size > 0 ? prev : assignedRoleIds);
+  const toggleRoleSelection = (roleKey: string, checked: boolean) => {
+    setSelectedRoleKeys((prev) => {
+      const next = new Set(prev.size > 0 ? prev : assignedRoleKeys);
       if (checked) {
-        next.add(roleId);
+        next.add(roleKey);
       } else {
-        next.delete(roleId);
+        next.delete(roleKey);
       }
       return next;
     });
@@ -158,14 +158,14 @@ export function JobPositionsSection() {
 
   const savePositionRoles = async () => {
     if (!rolesPosition) return;
-    const roleIds = Array.from(displayRoleIds);
-    const removed = Array.from(assignedRoleIds).filter((roleId) => !displayRoleIds.has(roleId));
+    const roleKeys = Array.from(displayRoleKeys);
+    const removed = Array.from(assignedRoleKeys).filter((roleKey) => !displayRoleKeys.has(roleKey));
     if (removed.length > 0 && !window.confirm("Remove selected role(s) from this position?")) {
       return;
     }
 
     try {
-      await setPositionRolesMut.mutateAsync({ id: rolesPosition.id, roleIds });
+      await setPositionRolesMut.mutateAsync({ id: rolesPosition.id, roleKeys });
       toast.success("Position roles updated.");
       closeRoles();
     } catch (err) {
@@ -368,12 +368,12 @@ export function JobPositionsSection() {
         ) : (
           <div className="space-y-3">
             {(rolesCatalogQuery.data ?? []).map((role) => (
-              <label key={role.id} className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 dark:border-border">
+              <label key={role.normalizedName} className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 dark:border-border">
                 <input
                   type="checkbox"
                   className="mt-0.5 size-4 rounded border-input"
-                  checked={displayRoleIds.has(role.id)}
-                  onChange={(e) => toggleRoleSelection(role.id, e.target.checked)}
+                  checked={displayRoleKeys.has(role.normalizedName)}
+                  onChange={(e) => toggleRoleSelection(role.normalizedName, e.target.checked)}
                 />
                 <span className="text-sm">
                   <span className="font-medium text-foreground">{role.name}</span>
