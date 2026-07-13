@@ -22,26 +22,38 @@ export function normalizeApiOrigin(raw: string): string {
   }
 }
 
-function readPublicOrigin(...keys: string[]): string {
+const defaultDevEmsApiBaseUrl = "http://127.0.0.1:5246";
+const defaultDevUserManagementApiBaseUrl = "http://127.0.0.1:5137";
+
+function readPublicOrigin(keys: string[], developmentFallback = ""): string {
   for (const key of keys) {
     const value = process.env[key];
     if (value && value.trim()) return normalizeApiOrigin(value);
+  }
+  if (process.env.NODE_ENV === "development" && developmentFallback) {
+    return normalizeApiOrigin(developmentFallback);
   }
   return "";
 }
 
 /** EMS.API origin (employees, org, attendance, menus, employee↔user orchestration). */
+// Legacy alias can be removed after all environments migrate from NEXT_PUBLIC_API_BASE_URL.
 export const emsApiBaseUrl = readPublicOrigin(
-  "NEXT_PUBLIC_EMS_API_BASE_URL",
-  // Legacy alias — remove after all environments migrate.
-  "NEXT_PUBLIC_API_BASE_URL",
+  [
+    "NEXT_PUBLIC_EMS_API_BASE_URL",
+    "NEXT_PUBLIC_API_BASE_URL",
+  ],
+  defaultDevEmsApiBaseUrl,
 );
 
 /** Pukar.Usermanagement.Host origin (auth, users, roles, invitation acceptance). */
+// Legacy alias can be removed after all environments migrate from NEXT_PUBLIC_UM_API_BASE_URL.
 export const userManagementApiBaseUrl = readPublicOrigin(
-  "NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL",
-  // Legacy alias — remove after all environments migrate.
-  "NEXT_PUBLIC_UM_API_BASE_URL",
+  [
+    "NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL",
+    "NEXT_PUBLIC_UM_API_BASE_URL",
+  ],
+  defaultDevUserManagementApiBaseUrl,
 );
 
 export const emsHttpClient: AxiosInstance = axios.create({
@@ -202,7 +214,13 @@ export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const ax = error as AxiosError<unknown>;
     const data = ax.response?.data;
-    if (typeof data === "string" && data.length > 0) return data;
+    if (typeof data === "string" && data.length > 0) {
+      const trimmed = data.trim().toLowerCase();
+      if (trimmed.startsWith("<!doctype html") || trimmed.startsWith("<html")) {
+        return "The API request returned an HTML page instead of JSON. Check that the frontend is pointing at EMS.API, not the Next.js web server.";
+      }
+      return data;
+    }
     if (data && typeof data === "object" && data !== null && "message" in data) {
       const m = (data as ApiErrorBody).message;
       if (typeof m === "string") return m;
