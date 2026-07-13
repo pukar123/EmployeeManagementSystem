@@ -20,11 +20,16 @@ using EMS.Application.Services.Sites;
 using EMS.Application.Services.Tasks;
 using EMS.Application.Services.Shifts;
 using EMS.Application.Services.EmployeePortal;
+using EMS.Application.Services.Manager;
+using EMS.Application.Services.Onboarding;
+using EMS.Application.Services.Notifications;
 using EMS.Domain.Database;
 using EMS.Domain.Repositories.Interface;
 using EMS.Infrastructure.Repositories.Implementations;
 using EMS.Infrastructure.Integrations.UserManagement;
 using EMS.Infrastructure.Persistence.Auditing;
+using Pukar.Notifications.Application.Services;
+using Pukar.Notifications.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -89,6 +94,8 @@ try
     builder.Services.AddHostedService<EmsRbacSeedHostedService>();
     builder.Services.AddHostedService<RoleKeyBackfillHostedService>();
     builder.Services.AddHostedService<EmployeeScheduledChangeWorker>();
+    builder.Services.AddHostedService<ScheduledChangeReminderWorker>();
+    builder.Services.AddHostedService<DocumentExpiryNotificationWorker>();
     builder.Services.AddHostedService<IntegrationOutboxDispatcher>();
 
     builder.Services.AddControllers(options =>
@@ -107,6 +114,11 @@ try
     builder.Services.AddSingleton<IAuthorizationTelemetryReporter>(sp => sp.GetRequiredService<AuthorizationTelemetry>());
     builder.Services.AddScoped<IAuthorizationCutoverReadinessReporter, AuthorizationCutoverReadinessReporter>();
     builder.Services.AddScoped<IIdentityContext, HttpContextIdentityContext>();
+    builder.Services.AddScoped<INotificationCurrentUserAccessor, HttpContextNotificationCurrentUserAccessor>();
+    builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+    builder.Services.AddScoped<EmployeeNotificationRecipientResolver>();
+    builder.Services.AddScoped<IEmsNotificationProducer, EmsNotificationProducer>();
     builder.Services.AddScoped<IAuditContextAccessor, HttpContextAuditContextAccessor>();
     builder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();
     builder.Services.AddScoped<IRoleKeyPermissionService, RoleKeyPermissionService>();
@@ -160,8 +172,12 @@ try
     builder.Services.AddScoped<ILeaveAccrualService, LeaveAccrualService>();
     builder.Services.AddScoped<ILeaveImportService, LeaveImportService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
+    builder.Services.AddScoped<IOnboardingChecklistTemplateService, OnboardingChecklistTemplateService>();
+    builder.Services.AddScoped<IOnboardingChecklistService, OnboardingChecklistService>();
     builder.Services.AddScoped<IShiftService, ShiftService>();
     builder.Services.AddScoped<IEmployeePortalService, EmployeePortalService>();
+    builder.Services.AddScoped<IManagerTeamAccessService, ManagerTeamAccessService>();
+    builder.Services.AddScoped<IManagerTeamService, ManagerTeamService>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
     builder.Services.AddScoped<LocalLeaveAttachmentStorage>();

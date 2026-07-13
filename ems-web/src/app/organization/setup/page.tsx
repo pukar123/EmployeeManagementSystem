@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -69,7 +70,11 @@ export default function OrganizationSetupEditPage() {
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm dark:bg-card">
         <h1 className="text-2xl font-semibold text-foreground">Organization settings</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Update your organization profile, logo, and active status.
+          Update your organization profile, logo, and active status. Configure{" "}
+          <Link href="/organization/onboarding" className="text-primary hover:underline">
+            onboarding checklists
+          </Link>{" "}
+          for preboarding employees.
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-8">

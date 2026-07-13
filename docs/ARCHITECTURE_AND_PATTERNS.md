@@ -122,6 +122,7 @@ Infrastructure  →  Domain (implements interfaces; uses DbContext)
 | `EMS.API` | Controllers, `Program.cs`, CORS, Serilog, health checks; **JWT validation only** (does not issue tokens) |
 | `EMS.ArchitectureTests` | NetArchTest rules: EMS must not reference UM implementation assemblies |
 | `ems-web` | Next.js App Router client; `NEXT_PUBLIC_EMS_API_BASE_URL` (EMS), `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` (User Management Host) |
+| `Pukar.Notifications.Domain` / `.Application` | Reusable notification center core (entity, repository contract, inbox service) — see [notifications.md](../docs/notifications.md) |
 
 **Migrations:** `EMS.Domain`; startup project for EF tools: **`EMS.API`**.
 

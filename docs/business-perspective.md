@@ -37,6 +37,7 @@ EMS centralizes core workforce operations so HR and operations teams can maintai
 ### Manager (current/near-term)
 
 - Consumes team-related employee and attendance data based on assigned role access
+- **My team** dashboard (`/manager/team`) shows direct reports with operational summary counts (attendance today, pending leave, overdue tasks, upcoming scheduled changes)
 
 ### Employee (future-facing)
 
@@ -65,6 +66,12 @@ EMS centralizes core workforce operations so HR and operations teams can maintai
 
 - Attendance endpoints and related workflow support for operational tracking
 
+### E. Manager team operations
+
+- Manager team dashboard for direct reports (`GET /api/Manager/team`, `/manager/team`)
+- Server-side scoping: managers see only their reporting tree unless they have admin permissions
+- Summary counts: active employees, pending leave, today attendance, overdue tasks, upcoming scheduled changes
+
 ## 4) Hiring scope: what exists today vs. what is not yet implemented
 
 ### Available now (hiring foundation)
@@ -74,13 +81,14 @@ EMS centralizes core workforce operations so HR and operations teams can maintai
   - date joined and employment status
 - Validation enforces organizational consistency for job position
 - New employee code is generated automatically (`EMP###`)
+- **Onboarding checklists:** organization-level templates at `/organization/onboarding`; optional task generation when creating a **Preboarding** employee
+- Employee profile shows onboarding progress on the Overview and Employment tabs
 
 ### Not yet in scope (full recruiting/hiring lifecycle)
 
 - Job requisition and approval workflow
 - Candidate pipeline and interview stages
 - Offer management and acceptance tracking
-- Preboarding/onboarding checklist workflow automation
 
 ## 5) Key business rules (plain language)
 
@@ -116,8 +124,8 @@ EMS centralizes core workforce operations so HR and operations teams can maintai
 
 1. Stabilize role-permission experience and admin operability
 2. Expand attendance reporting and exception handling
-3. Add manager-focused team views and actions
-4. Introduce structured onboarding task workflow
+3. ~~Add manager-focused team views and actions~~ — **My team** dashboard available; further manager actions (approvals, bulk operations) remain roadmap
+4. ~~Introduce structured onboarding task workflow~~ — **Onboarding checklists** available (org templates, preboarding task generation, profile progress)
 5. Evaluate employee self-service capability rollout
 
 ## 9) Document ownership and usage

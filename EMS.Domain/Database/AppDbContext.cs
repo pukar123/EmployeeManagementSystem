@@ -45,6 +45,10 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.OrganizationEmployeeNumberSequence> OrganizationEmployeeNumberSequences { get; set; }
         public DbSet<DbModels.EmployeeScheduledChange> EmployeeScheduledChanges { get; set; }
         public DbSet<DbModels.IntegrationOutboxMessage> IntegrationOutboxMessages { get; set; }
+        public DbSet<DbModels.OnboardingChecklistTemplate> OnboardingChecklistTemplates { get; set; }
+        public DbSet<DbModels.OnboardingChecklistTemplateItem> OnboardingChecklistTemplateItems { get; set; }
+        public DbSet<DbModels.EmployeeOnboardingChecklist> EmployeeOnboardingChecklists { get; set; }
+        public DbSet<Pukar.Notifications.Domain.DbModels.Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

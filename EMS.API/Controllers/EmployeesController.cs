@@ -138,7 +138,7 @@ public class EmployeesController : ControllerBase
     {
         try
         {
-            await _employeeAccessService.EnsureCanViewEmployeesAsync(cancellationToken);
+            await _employeeAccessService.EnsureCanViewEmployeeProfileAsync(id, cancellationToken);
             var profile = await _employeeService.GetProfileAsync(id, cancellationToken);
             return profile is null ? NotFound() : Ok(profile);
         }

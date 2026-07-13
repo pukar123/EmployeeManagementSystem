@@ -44,10 +44,22 @@ public sealed class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
             .HasForeignKey(x => x.OrganizationId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(x => x.OnboardingTemplateItem)
+            .WithMany(i => i.GeneratedTasks)
+            .HasForeignKey(x => x.OnboardingTemplateItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.EmployeeOnboardingChecklist)
+            .WithMany(c => c.Tasks)
+            .HasForeignKey(x => x.EmployeeOnboardingChecklistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => x.EmployeeId);
         builder.HasIndex(x => x.OrganizationId);
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.StartAtUtc);
         builder.HasIndex(x => x.DueAtUtc);
+        builder.HasIndex(x => x.OnboardingTemplateItemId);
+        builder.HasIndex(x => x.EmployeeOnboardingChecklistId);
     }
 }

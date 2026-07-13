@@ -28,18 +28,36 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthSnapshot = { user: AuthUser | null; mustChangePassword: boolean };
 
+const unauthenticatedSnapshot: AuthSnapshot = { user: null, mustChangePassword: false };
+let cachedSnapshotKey: string | undefined;
+let cachedSnapshot: AuthSnapshot = unauthenticatedSnapshot;
+
 function readAuthFromStorage(): AuthSnapshot {
   if (typeof window === "undefined") {
-    return { user: null, mustChangePassword: false };
+    return unauthenticatedSnapshot;
   }
+
   const token = getAccessToken();
-  return {
-    user: token ? getStoredUser() : null,
-    mustChangePassword: token ? getMustChangePassword() : false,
-  };
+  if (!token) {
+    cachedSnapshotKey = undefined;
+    cachedSnapshot = unauthenticatedSnapshot;
+    return cachedSnapshot;
+  }
+
+  const user = getStoredUser();
+  const mustChangePassword = getMustChangePassword();
+  const snapshotKey = JSON.stringify({ token, user, mustChangePassword });
+
+  if (snapshotKey === cachedSnapshotKey) {
+    return cachedSnapshot;
+  }
+
+  cachedSnapshotKey = snapshotKey;
+  cachedSnapshot = { user, mustChangePassword };
+  return cachedSnapshot;
 }
 
-const serverSnapshot: AuthSnapshot = { user: null, mustChangePassword: false };
+const serverSnapshot = unauthenticatedSnapshot;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const subscribe = useCallback((onStoreChange: () => void) => {

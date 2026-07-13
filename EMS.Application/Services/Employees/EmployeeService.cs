@@ -3,6 +3,7 @@ using Pukar.Shared;
 using EMS.Application.Mapping;
 using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Integrations;
+using EMS.Application.Services.Onboarding;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -26,6 +27,7 @@ public sealed class EmployeeService : IEmployeeService
     private readonly IEmployeeUserManagementGateway _gateway;
     private readonly IIntegrationOutboxWriter _outboxWriter;
     private readonly EmployeeRelationshipValidator _validator;
+    private readonly IOnboardingChecklistService _onboardingChecklistService;
 
     public EmployeeService(
         IBaseRepository<Employee> repository,
@@ -41,7 +43,8 @@ public sealed class EmployeeService : IEmployeeService
         IEmployeeNumberAllocator employeeNumberAllocator,
         IEmployeeUserManagementGateway gateway,
         IIntegrationOutboxWriter outboxWriter,
-        EmployeeRelationshipValidator validator)
+        EmployeeRelationshipValidator validator,
+        IOnboardingChecklistService onboardingChecklistService)
     {
         _repository = repository;
         _positionHistoryRepository = positionHistoryRepository;
@@ -57,6 +60,7 @@ public sealed class EmployeeService : IEmployeeService
         _gateway = gateway;
         _outboxWriter = outboxWriter;
         _validator = validator;
+        _onboardingChecklistService = onboardingChecklistService;
     }
 
     public async Task<EmployeeResponseModel> CreateAsync(CreateEmployeeRequestModel request, CancellationToken cancellationToken = default)
@@ -99,6 +103,19 @@ public sealed class EmployeeService : IEmployeeService
 
             if (entity.EmploymentStatus == EmploymentStatus.Terminated)
                 await ApplyRetentionFromPolicyAsync(entity, now, cancellationToken);
+
+            if (request.GenerateOnboardingTasks
+                && request.OnboardingTemplateId.HasValue
+                && entity.EmploymentStatus == EmploymentStatus.Preboarding)
+            {
+                var assignedByUserId = _identityContext.GetCurrent().UserId;
+                await _onboardingChecklistService.GenerateForEmployeeAsync(
+                    entity,
+                    request.OnboardingTemplateId.Value,
+                    assignedByUserId,
+                    entity.DateJoined,
+                    cancellationToken);
+            }
 
             await _outboxWriter.EnqueueSyncEmployeeRolesAsync(entity.Id, cancellationToken);
             await _repository.SaveChangesAsync(cancellationToken);

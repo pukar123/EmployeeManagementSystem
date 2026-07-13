@@ -39,6 +39,8 @@ export type CreateEmployeeRequest = {
   dateOfBirth: string;
   dateJoined: string;
   employmentStatus: EmploymentStatusValue;
+  onboardingTemplateId?: number | null;
+  generateOnboardingTasks?: boolean;
   positionEffectiveFromUtc?: string | null;
   positionChangeReason?: string | null;
   departmentEffectiveFromUtc?: string | null;

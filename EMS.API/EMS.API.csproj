@@ -31,6 +31,7 @@
     <ProjectReference Include="..\EMS.Application\EMS.Application.csproj" />
     <ProjectReference Include="..\EMS.Domain\EMS.Domain.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj" />
+    <ProjectReference Include="..\Pukar.Notifications\Pukar.Notifications.Application\Pukar.Notifications.Application.csproj" />
     <ProjectReference Include="..\EMS.Infrastructure\EMS.Infrastructure.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Contracts\Pukar.Usermanagement.Contracts.csproj" />
   </ItemGroup>

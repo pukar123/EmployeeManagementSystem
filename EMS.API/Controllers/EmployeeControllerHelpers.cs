@@ -1,5 +1,6 @@
 using EMS.Application.Services.Employees;
 using EMS.Application.Services.Integrations;
+using EMS.Application.Services.Manager;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
@@ -10,6 +11,9 @@ internal static class EmployeeControllerHelpers
     public static ActionResult HandleBusinessRule(BusinessRuleException ex)
     {
         if (string.Equals(ex.Message, EmployeeAccessMessages.Denied, StringComparison.Ordinal))
+            return new ForbidResult();
+
+        if (string.Equals(ex.Message, ManagerTeamAccessMessages.Denied, StringComparison.Ordinal))
             return new ForbidResult();
 
         if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))

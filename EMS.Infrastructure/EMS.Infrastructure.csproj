@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\EMS.Domain\EMS.Domain.csproj" />
     <ProjectReference Include="..\EMS.Application\EMS.Application.csproj" />
+    <ProjectReference Include="..\Pukar.Notifications\Pukar.Notifications.Domain\Pukar.Notifications.Domain.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Contracts\Pukar.Usermanagement.Contracts.csproj" />
   </ItemGroup>
 

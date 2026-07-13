@@ -38,6 +38,8 @@ import { EmploymentStatusPill } from "./EmploymentStatusPill";
 import { EmployeeTransferDialog } from "./EmployeeTransferDialog";
 import { EmployeeUpcomingChanges } from "./EmployeeUpcomingChanges";
 import { EmployeeInvitationPanel } from "./EmployeeInvitationPanel";
+import { EmployeeDocumentsSection } from "@/features/documents/components/EmployeeDocumentsSection";
+import { EmployeeOnboardingProgress } from "./EmployeeOnboardingProgress";
 
 type ProfileTab = "overview" | "employment" | "history" | "access" | "documents";
 
@@ -311,7 +313,8 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
       </div>
 
       {activeTab === "overview" ? (
-        <section className="space-y-4 rounded-xl border border-border p-6">
+        <>
+          <section className="space-y-4 rounded-xl border border-border p-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-foreground">Contact information</h2>
             {!profile.isArchived && capabilities.manage ? (
@@ -335,6 +338,12 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
             </div>
           </div>
         </section>
+        <EmployeeOnboardingProgress
+          employeeId={employeeId}
+          canManage={capabilities.manage}
+          isPreboarding={profile.employmentStatus === EmploymentStatus.Preboarding}
+        />
+        </>
       ) : null}
 
       {activeTab === "employment" ? (
@@ -383,6 +392,12 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
               <p className="mt-1 text-sm text-muted-foreground">No sites assigned.</p>
             )}
           </div>
+          <EmployeeOnboardingProgress
+            employeeId={employeeId}
+            canManage={capabilities.manage}
+            isPreboarding={profile.employmentStatus === EmploymentStatus.Preboarding}
+            variant="compact"
+          />
           {profile.isArchived ? (
             <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
               <p className="font-medium text-foreground">Archived</p>
@@ -509,12 +524,12 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
       ) : null}
 
       {activeTab === "documents" ? (
-        <section className="rounded-xl border border-dashed border-border p-10 text-center">
-          <p className="text-lg font-medium text-foreground">Documents</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Employee document management will be available in a future release.
-          </p>
-        </section>
+        <EmployeeDocumentsSection
+          employeeId={employeeId}
+          canView={capabilities.view}
+          canManage={capabilities.manage}
+          enabled={activeTab === "documents"}
+        />
       ) : null}
 
       <Modal open={editOpen} title="Edit employee profile" onClose={() => setEditOpen(false)} className="max-w-3xl">

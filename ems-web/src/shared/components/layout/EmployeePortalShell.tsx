@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { ThemeToggleButton } from "@/components/tailadmin/ThemeToggleButton";
 import { EmsUserDropdown } from "./EmsUserDropdown";
 
@@ -21,6 +22,7 @@ export function EmployeePortalShell({ children }: { children: React.ReactNode })
             </Link>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <NotificationBell />
             <ThemeToggleButton />
             <EmsUserDropdown />
           </div>

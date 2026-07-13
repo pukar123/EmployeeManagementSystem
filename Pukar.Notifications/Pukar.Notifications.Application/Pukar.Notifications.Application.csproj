@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EMS.Application.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pukar.Notifications.Domain\Pukar.Notifications.Domain.csproj" />
+    <ProjectReference Include="..\..\Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Pukar.Notifications.Application</RootNamespace>
+    <AssemblyName>Pukar.Notifications.Application</AssemblyName>
+    <Description>Reusable notification center application services and DTOs.</Description>
+  </PropertyGroup>
+
+</Project>

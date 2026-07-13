@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Pukar.Notifications\Pukar.Notifications.Domain\Pukar.Notifications.Domain.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj" />
   </ItemGroup>
 

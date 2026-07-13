@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
+using EMS.Application.Services.Notifications;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -11,6 +12,14 @@ namespace EMS.Application.UnitTests;
 
 public class LeaveRequestServiceTests
 {
+    private static IEmsNotificationProducer CreateNotificationProducer()
+    {
+        var mock = new Mock<IEmsNotificationProducer>();
+        mock.Setup(x => x.NotifyLeaveSubmittedAsync(It.IsAny<LeaveRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return mock.Object;
+    }
+
     [Test]
     public void CreateAsync_Throws_WhenDateRangeOverlaps()
     {
@@ -49,7 +58,8 @@ public class LeaveRequestServiceTests
             balanceRepo.Object,
             leaveTypeRepo.Object,
             employeeRepo.Object,
-            leaveEmployeeAccess.Object);
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var request = new CreateLeaveRequestRequestModel
         {
@@ -98,7 +108,8 @@ public class LeaveRequestServiceTests
             balanceRepo.Object,
             leaveTypeRepo.Object,
             employeeRepo.Object,
-            leaveEmployeeAccess.Object);
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var request = new CreateLeaveRequestRequestModel
         {
@@ -138,7 +149,8 @@ public class LeaveRequestServiceTests
             balanceRepo.Object,
             leaveTypeRepo.Object,
             employeeRepo.Object,
-            leaveEmployeeAccess.Object);
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var result = await sut.GetAdminSummaryAsync(9, new DateTime(2026, 5, 2), CancellationToken.None);
 
@@ -168,7 +180,8 @@ public class LeaveRequestServiceTests
             balanceRepo.Object,
             leaveTypeRepo.Object,
             employeeRepo.Object,
-            leaveEmployeeAccess.Object);
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var ex = Assert.ThrowsAsync<BusinessRuleException>(async () =>
             await sut.GetAdminSummaryAsync(0, DateTime.UtcNow, CancellationToken.None));

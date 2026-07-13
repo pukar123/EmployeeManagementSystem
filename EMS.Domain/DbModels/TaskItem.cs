@@ -19,5 +19,10 @@ public class TaskItem
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 
+    public int? OnboardingTemplateItemId { get; set; }
+    public int? EmployeeOnboardingChecklistId { get; set; }
+
     public Employee Employee { get; set; } = null!;
+    public OnboardingChecklistTemplateItem? OnboardingTemplateItem { get; set; }
+    public EmployeeOnboardingChecklist? EmployeeOnboardingChecklist { get; set; }
 }

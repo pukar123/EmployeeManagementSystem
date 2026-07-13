@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useCreateActionParam } from "@/features/command-palette/hooks/useCreateActionParam";
 import { useDepartments } from "@/features/departments/hooks";
 import { useJobPositions } from "@/features/job-positions/hooks";
 import { useSites } from "@/features/sites/hooks";
@@ -41,6 +42,8 @@ export function EmployeesSection() {
   }, [organizationId, filterState]);
   const [createOpen, setCreateOpen] = useState(false);
   const createCloseGuardRef = useRef<(() => boolean) | null>(null);
+
+  useCreateActionParam(() => setCreateOpen(true), capabilities.manage);
   const [exportBusy, setExportBusy] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
 

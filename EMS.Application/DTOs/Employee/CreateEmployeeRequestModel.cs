@@ -18,6 +18,9 @@ public class CreateEmployeeRequestModel
     public DateTime DateJoined { get; set; }
     public EmploymentStatus EmploymentStatus { get; set; } = EmploymentStatus.Active;
 
+    public int? OnboardingTemplateId { get; set; }
+    public bool GenerateOnboardingTasks { get; set; }
+
     public DateTime? PositionEffectiveFromUtc { get; set; }
     public string? PositionChangeReason { get; set; }
 

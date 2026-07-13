@@ -84,6 +84,18 @@ Registrations live in `EMS.API/Program.cs`: open-generic `IBaseRepository<>` →
 - **Automatic audit trail:** persistence-level save interception records who changed what and when for tracked entity changes.
 - **Retention-safe employee deletion:** employee delete API behavior archives records (`IsArchived`) and computes `RetentionUntilUtc` from policy instead of hard delete.
 - **Attendance reporting and analytics:** attendance now includes daily summaries, weekly/monthly aggregation, punctuality analytics (late/early), absenteeism analytics, and report export endpoints (CSV/XLSX/PDF).
+- **Notification Center:** reusable `Pukar.Notifications` core with EMS producers, API inbox endpoints, and header bell UI — see [notifications.md](notifications.md).
+
+## Notification Center flow
+
+```mermaid
+flowchart LR
+  producers[EmsNotificationProducer] --> notifService[INotificationService]
+  notifService --> notifRepo[INotificationRepository]
+  notifRepo --> ntfTable[ntf.Notifications]
+  bell[NotificationBell] --> notifApi[NotificationsController]
+  notifApi --> notifService
+```
 
 ## Attendance reporting flow
 

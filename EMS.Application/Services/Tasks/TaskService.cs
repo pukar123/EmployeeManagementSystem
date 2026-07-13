@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Task;
 using EMS.Application.Mapping;
+using EMS.Application.Services.Notifications;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -12,13 +13,16 @@ public sealed class TaskService : ITaskService
 {
     private readonly IBaseRepository<TaskItem> _taskRepository;
     private readonly IBaseRepository<Employee> _employeeRepository;
+    private readonly IEmsNotificationProducer _notificationProducer;
 
     public TaskService(
         IBaseRepository<TaskItem> taskRepository,
-        IBaseRepository<Employee> employeeRepository)
+        IBaseRepository<Employee> employeeRepository,
+        IEmsNotificationProducer notificationProducer)
     {
         _taskRepository = taskRepository;
         _employeeRepository = employeeRepository;
+        _notificationProducer = notificationProducer;
     }
 
     public async Task<TaskResponseModel> CreateAsync(
@@ -27,7 +31,7 @@ public sealed class TaskService : ITaskService
         CancellationToken cancellationToken = default)
     {
         request.Title = StringHelper.NormalizeRequired(request.Title);
-        ValidateTimeframe(request.StartAtUtc, request.DueAtUtc);
+        TaskCreationRules.ValidateTimeframe(request.StartAtUtc, request.DueAtUtc);
 
         var employee = await _employeeRepository.GetByIdAsync(request.EmployeeId, cancellationToken);
         if (employee is null)
@@ -47,6 +51,8 @@ public sealed class TaskService : ITaskService
 
         await _taskRepository.AddAsync(entity, cancellationToken);
         await _taskRepository.SaveChangesAsync(cancellationToken);
+
+        await _notificationProducer.NotifyTaskAssignedAsync(entity, cancellationToken);
 
         return TaskMapper.ToResponse(entity);
     }
@@ -99,7 +105,7 @@ public sealed class TaskService : ITaskService
             return null;
 
         request.Title = StringHelper.NormalizeRequired(request.Title);
-        ValidateTimeframe(request.StartAtUtc, request.DueAtUtc);
+        TaskCreationRules.ValidateTimeframe(request.StartAtUtc, request.DueAtUtc);
 
         TaskMapper.ApplyUpdate(entity, request);
         entity.UpdatedAtUtc = DateTime.UtcNow;
@@ -137,28 +143,9 @@ public sealed class TaskService : ITaskService
         return true;
     }
 
-    private static void ValidateTimeframe(DateTime? startAtUtc, DateTime? dueAtUtc)
-    {
-        ValidateUtcDate(startAtUtc, "Start date must include a valid UTC-aware timestamp.");
-        ValidateUtcDate(dueAtUtc, "Due date must include a valid UTC-aware timestamp.");
-
-        if (startAtUtc.HasValue && dueAtUtc.HasValue && startAtUtc.Value > dueAtUtc.Value)
-            throw new BusinessRuleException("Start date must be before or equal to due date.");
-    }
-
     private static void ValidateDateRange(DateTime? rangeStartUtc, DateTime? rangeEndUtc)
     {
-        ValidateUtcDate(rangeStartUtc, "Range start must include a valid UTC-aware timestamp.");
-        ValidateUtcDate(rangeEndUtc, "Range end must include a valid UTC-aware timestamp.");
-
-        if (rangeStartUtc.HasValue && rangeEndUtc.HasValue && rangeStartUtc.Value > rangeEndUtc.Value)
-            throw new BusinessRuleException("Range start must be before or equal to range end.");
-    }
-
-    private static void ValidateUtcDate(DateTime? value, string message)
-    {
-        if (value.HasValue && value.Value.Kind == DateTimeKind.Unspecified)
-            throw new BusinessRuleException(message);
+        TaskCreationRules.ValidateTimeframe(rangeStartUtc, rangeEndUtc);
     }
 
     private static void EnsureValidTransition(TaskWorkflowStatus current, TaskWorkflowStatus next)

@@ -15,6 +15,7 @@ import type { CreateEmployeeRequest, Employee, PossibleDuplicateEmployee } from 
 import { EmploymentStatus, employmentStatusLabels } from "../types/employment-status";
 import { dateInputToApiIso } from "../utils/date-format";
 import { useUnsavedChangesWarning, confirmDiscardChanges } from "@/shared/hooks/useUnsavedChangesWarning";
+import { useOnboardingTemplates } from "@/features/onboarding/hooks";
 
 type WizardStep = "personal" | "employment" | "organization" | "review";
 
@@ -30,6 +31,8 @@ type FormState = {
   locationId: string;
   managerId: string;
   jobPositionId: string;
+  onboardingTemplateId: string;
+  generateOnboardingTasks: boolean;
 };
 
 const inputClass =
@@ -48,6 +51,12 @@ export function CreateEmployeeWizard({ onClose, onCreated, onRegisterCloseGuard 
   const { data: locations = [] } = useLocations();
   const { data: jobPositions = [] } = useJobPositions(organizationId);
   const { data: employees = [] } = useEmployees();
+  const { data: onboardingTemplates = [] } = useOnboardingTemplates(organizationId);
+
+  const activeOnboardingTemplates = useMemo(
+    () => onboardingTemplates.filter((template) => template.isActive),
+    [onboardingTemplates],
+  );
 
   const [step, setStep] = useState<WizardStep>("personal");
   const [dirty, setDirty] = useState(false);
@@ -66,6 +75,8 @@ export function CreateEmployeeWizard({ onClose, onCreated, onRegisterCloseGuard 
     locationId: "",
     managerId: "",
     jobPositionId: "",
+    onboardingTemplateId: "",
+    generateOnboardingTasks: false,
   });
 
   useUnsavedChangesWarning(dirty && !createdEmployee);
@@ -102,6 +113,12 @@ export function CreateEmployeeWizard({ onClose, onCreated, onRegisterCloseGuard 
     locationId: form.locationId ? Number(form.locationId) : null,
     managerId: form.managerId ? Number(form.managerId) : null,
     jobPositionId: form.jobPositionId ? Number(form.jobPositionId) : null,
+    ...(form.employmentStatus === EmploymentStatus.Preboarding && form.generateOnboardingTasks && form.onboardingTemplateId
+      ? {
+          onboardingTemplateId: Number(form.onboardingTemplateId),
+          generateOnboardingTasks: true,
+        }
+      : {}),
   });
 
   const validateStep = (): string | null => {
@@ -197,6 +214,8 @@ export function CreateEmployeeWizard({ onClose, onCreated, onRegisterCloseGuard 
                 locationId: "",
                 managerId: "",
                 jobPositionId: "",
+                onboardingTemplateId: "",
+                generateOnboardingTasks: false,
               });
               setDuplicates([]);
               setDuplicateAcknowledged(false);
@@ -240,6 +259,42 @@ export function CreateEmployeeWizard({ onClose, onCreated, onRegisterCloseGuard 
               <option value={EmploymentStatus.Inactive}>Inactive</option>
             </select>
           </div>
+          {form.employmentStatus === EmploymentStatus.Preboarding ? (
+            <>
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Onboarding template
+                </label>
+                <select
+                  className={inputClass}
+                  value={form.onboardingTemplateId}
+                  onChange={(e) =>
+                    patch({
+                      onboardingTemplateId: e.target.value,
+                      generateOnboardingTasks: Boolean(e.target.value),
+                    })
+                  }
+                >
+                  <option value="">No onboarding tasks</option>
+                  {activeOnboardingTemplates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                      {template.isDefault ? " (default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 self-end text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.generateOnboardingTasks}
+                  disabled={!form.onboardingTemplateId}
+                  onChange={(e) => patch({ generateOnboardingTasks: e.target.checked })}
+                />
+                Generate onboarding tasks
+              </label>
+            </>
+          ) : null}
         </div>
       ) : null}
       {step === "organization" ? (
@@ -284,6 +339,17 @@ export function CreateEmployeeWizard({ onClose, onCreated, onRegisterCloseGuard 
             value={employmentStatusLabels[form.employmentStatus as keyof typeof employmentStatusLabels] ?? String(form.employmentStatus)}
           />
           <ReviewRow label="Date joined" value={form.dateJoined} />
+          {form.employmentStatus === EmploymentStatus.Preboarding ? (
+            <ReviewRow
+              label="Onboarding"
+              value={
+                form.generateOnboardingTasks && form.onboardingTemplateId
+                  ? activeOnboardingTemplates.find((t) => String(t.id) === form.onboardingTemplateId)?.name ??
+                    "Selected template"
+                  : "No onboarding tasks"
+              }
+            />
+          ) : null}
           {duplicates.length > 0 ? (
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
               <p className="font-medium text-amber-900 dark:text-amber-200">Possible duplicates found</p>

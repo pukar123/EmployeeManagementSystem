@@ -138,11 +138,13 @@ REST-style CRUD under `api/{resource}`:
 | Resource | Base route |
 |----------|------------|
 | Employees | `GET/POST /api/Employees`, `GET/PUT/DELETE /api/Employees/{id}` |
+| Manager team | `GET /api/Manager/team?organizationId={id}&managerId={id}` — direct reports, summary counts, and operational indicators for the scoped manager |
 | Organizations | `GET/POST /api/Organizations`, `GET/PUT/DELETE /api/Organizations/{id}` |
 | Departments | `GET/POST /api/Departments`, `GET/PUT/DELETE /api/Departments/{id}` |
 | Locations | `GET/POST /api/Locations`, `GET/PUT/DELETE /api/Locations/{id}` |
 | Job positions | `GET /api/JobPositions?organizationId={id}`, `GET/POST/PUT/DELETE /api/JobPositions/{id}` |
 | Documents | `GET /api/Documents/types`, `GET /api/Documents?employeeId={id}`, `GET/PUT/DELETE /api/Documents/{id}`, `POST /api/Documents` (multipart: file + metadata), `GET /api/Documents/{id}/file` (download). PDF, Word, or images; files under `wwwroot/uploads/documents/`. `EmployeeId` on a document is nullable for future associations. |
+| Notifications | `GET /api/Notifications`, `GET /api/Notifications/unread-count`, `POST /api/Notifications/{id}/read`, `POST /api/Notifications/read-all` — see [docs/notifications.md](docs/notifications.md) |
 
 **Employees** may reference an optional **`jobPositionId`** (nullable) pointing at a row in **`org.JobPositions`**. Job positions are scoped per organization (`organizationId` on create; title and optional code are unique within the org). This replaces an older two-level Role/Job model so the name **JobPosition** stays distinct from application **user roles** (e.g. identity/authorization).
 

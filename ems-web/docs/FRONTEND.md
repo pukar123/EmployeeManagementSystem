@@ -205,6 +205,14 @@ The client targets the same contracts as the backend:
 | PUT | `/api/Employees/{id}` | Update |
 | DELETE | `/api/Employees/{id}` | 204 on success |
 
+**Documents** (employee profile tab): `GET /api/Documents/types`, `GET /api/Documents?employeeId={id}`, `POST /api/Documents` (multipart), `PUT/DELETE /api/Documents/{id}`, `GET /api/Documents/{id}/file` (authenticated download). Types and hooks live under `src/features/documents/`.
+
+**Shifts** (admin scheduling): `GET/POST /api/Shifts`, `GET/PUT/DELETE /api/Shifts/{id}` with optional `organizationId` and `employeeId` query filters. UI lives under `src/features/shifts/` with table and calendar views.
+
+**Manager team** (`/manager/team`): `GET /api/Manager/team?organizationId={id}&managerId={id}` returns summary counts and a paginated list of direct reports for the scoped manager. Feature code lives under `src/features/manager/`.
+
+**Notifications** (header bell): `GET /api/Notifications`, `GET /api/Notifications/unread-count`, `POST /api/Notifications/{id}/read`, `POST /api/Notifications/read-all`. Reusable feature folder: `src/features/notifications/` (`NotificationBell` mounted in admin and employee portal headers). Backend design: [notifications.md](../../docs/notifications.md).
+
 Types live under `src/features/employees/types/`. Field names follow **camelCase** JSON (ASP.NET Core default). There is no `salary` field; job linkage is `jobPositionId` where applicable.
 
 ---
@@ -285,3 +293,10 @@ npm run build
   - tri-state checkbox status for partial selections
   - branch-level `Select all` / `Clear all`
 - Save flow remains compatible with existing backend API and still includes parent expansion logic before submit.
+
+### Global command palette
+
+- Header search opens a keyboard-accessible command palette (`Ctrl/Cmd+K`).
+- Feature code lives under `src/features/command-palette/`.
+- Search orchestration reuses existing EMS list APIs and permission-filtered navigation menus from `GET /api/Navigation/menus`.
+- Quick actions navigate to target pages with `?action=create`, which feature sections handle via `useCreateActionParam`.

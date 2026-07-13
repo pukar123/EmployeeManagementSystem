@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useCreateActionParam } from "@/features/command-palette/hooks/useCreateActionParam";
 import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -80,6 +81,8 @@ export function DepartmentsSection() {
     setIsActive(true);
     setFormOpen(true);
   };
+
+  useCreateActionParam(openCreate);
 
   const openEdit = (d: Department) => {
     setEditing(d);

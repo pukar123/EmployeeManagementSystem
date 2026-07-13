@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Mapping;
+using EMS.Application.Services.Notifications;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -15,19 +16,22 @@ public sealed class LeaveRequestService : ILeaveRequestService
     private readonly ILeaveTypeRepository _leaveTypeRepository;
     private readonly IBaseRepository<Employee> _employeeRepository;
     private readonly ILeaveEmployeeAccessService _leaveEmployeeAccess;
+    private readonly IEmsNotificationProducer _notificationProducer;
 
     public LeaveRequestService(
         ILeaveRequestRepository leaveRequestRepository,
         ILeaveBalanceRepository leaveBalanceRepository,
         ILeaveTypeRepository leaveTypeRepository,
         IBaseRepository<Employee> employeeRepository,
-        ILeaveEmployeeAccessService leaveEmployeeAccess)
+        ILeaveEmployeeAccessService leaveEmployeeAccess,
+        IEmsNotificationProducer notificationProducer)
     {
         _leaveRequestRepository = leaveRequestRepository;
         _leaveBalanceRepository = leaveBalanceRepository;
         _leaveTypeRepository = leaveTypeRepository;
         _employeeRepository = employeeRepository;
         _leaveEmployeeAccess = leaveEmployeeAccess;
+        _notificationProducer = notificationProducer;
     }
 
     public async Task<IReadOnlyList<LeaveRequestResponseModel>> GetByEmployeeAsync(
@@ -114,6 +118,9 @@ public sealed class LeaveRequestService : ILeaveRequestService
 
         await _leaveRequestRepository.AddAsync(entity, cancellationToken);
         await _leaveRequestRepository.SaveChangesAsync(cancellationToken);
+
+        await _notificationProducer.NotifyLeaveSubmittedAsync(entity, cancellationToken);
+
         return LeaveMapper.ToResponse(entity);
     }
 

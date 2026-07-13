@@ -15,19 +15,21 @@ This guide explains how to use the **Employee Management System (EMS)** web appl
 5. [Home dashboard](#5-home-dashboard)
 6. [Organization profile](#6-organization-profile)
 7. [Employees](#7-employees)
-8. [Employee transfers](#8-employee-transfers)
+8. [Manager team dashboard](#manager-team-dashboard)
+9. [Employee transfers](#8-employee-transfers)
 9. [Departments](#9-departments)
 10. [Job positions](#10-job-positions)
 11. [Sites](#11-sites)
 12. [Attendance](#12-attendance)
 13. [Leave](#13-leave)
 14. [Tasks](#14-tasks)
-15. [User management](#15-user-management)
+15. [Shifts](#15-shifts)
+16. [User management](#16-user-management)
     - Employee capabilities editor at `/user-management/employee-capabilities`
-16. [Employee portal (self-service)](#16-employee-portal-self-service)
-17. [Recommended setup order](#17-recommended-setup-order)
-18. [Common workflows](#18-common-workflows)
-19. [Known limitations](#19-known-limitations)
+17. [Employee portal (self-service)](#17-employee-portal-self-service)
+18. [Recommended setup order](#18-recommended-setup-order)
+19. [Common workflows](#19-common-workflows)
+20. [Known limitations](#20-known-limitations)
 
 ---
 
@@ -89,6 +91,7 @@ After organization setup, the left sidebar shows the modules your role is allowe
 |------|-------|---------|
 | Home | `/` | Dashboard and quick links |
 | Employees | `/employees` | Employee records |
+| My team | `/manager/team` | Manager operational dashboard (direct reports) |
 | Departments | `/departments` | Department hierarchy |
 | Attendance | `/attendance` | Check-in/out and history |
 | ↳ Reports | `/attendance/reports` | Attendance summaries and export |
@@ -98,10 +101,23 @@ After organization setup, the left sidebar shows the modules your role is allowe
 | ↳ Leave Setting | `/leave/admin/settings` | Configure leave types |
 | Tasks | `/tasks` | Assign and track work |
 | Task Calendar | `/tasks/calendar` | Calendar view of tasks |
+| Shifts | `/shifts` | Schedule employee shifts |
+| ↳ Shift Calendar | `/shifts/calendar` | Calendar view of shifts |
 | Positions | `/positions` | Job titles and role inheritance |
 | Sites | `/sites` | Physical work locations |
 | Organization | `/organization/setup` | Company profile and logo |
+| ↳ Onboarding | `/organization/onboarding` | Preboarding checklist templates |
 | User management | `/user-management` | Users, roles, menu access |
+
+### Global search (⌘K / Ctrl+K)
+
+Use the search field in the top header or press **⌘K** (Mac) / **Ctrl+K** (Windows) to open the command palette. From there you can:
+
+- Jump to any page your role is allowed to see
+- Search employees, departments, positions, sites, and tasks
+- Run quick actions such as **Add employee**, **Create department**, **Assign task**, or **Schedule shift** when your permissions allow them
+
+Results are grouped by type. If you do not see a module or action, your administrator may need to grant the related menu or capability.
 
 **Employee Transfers** (`/employee-transfers`) is reached from the Employees area; it is not a separate top-level menu item.
 
@@ -144,6 +160,15 @@ The home page gives a quick overview:
 2. Edit name, code, description, motto, and active flag.
 3. **Upload or replace the logo** — the logo appears in the sidebar and header when configured.
 4. Save changes.
+
+### Onboarding checklists
+
+**Route:** `/organization/onboarding` (under **Organization** in the sidebar)
+
+1. Open **Organization → Onboarding** (or follow the link from organization settings).
+2. Create one or more **templates** with checklist items (documents, equipment, account setup, induction, manager intro).
+3. Set **due days from start** and optional priority per item; mark a template as **default** if desired.
+4. When creating a **Preboarding** employee, optionally select a template and enable **Generate onboarding tasks**.
 
 ---
 
@@ -191,11 +216,11 @@ Open any employee directly by URL. The profile has tabs:
 
 | Tab | Contents |
 |-----|----------|
-| **Overview** | Contact details and key employment summary; **Edit profile** for personal/contact fields only |
-| **Employment** | Organization assignment, dates, linked **sites**; **Transfer** for department, position, or manager changes |
+| **Overview** | Contact details, **onboarding progress** (when applicable), and key employment summary; **Edit profile** for personal/contact fields only |
+| **Employment** | Organization assignment, dates, linked **sites**, onboarding summary; **Transfer** for department, position, or manager changes |
 | **History** | Readable timeline (names, effective dates, reasons, who made the change) |
 | **Access** | Linked sign-in account status, inherited and direct roles; send login invitation or link an account |
-| **Documents** | Placeholder for a future documents experience |
+| **Documents** | Upload, download, edit metadata, and delete employee documents (PDF, Word, or images) |
 
 **Lifecycle actions** (on the profile, not in ordinary edit):
 
@@ -209,11 +234,14 @@ Open any employee directly by URL. The profile has tabs:
 
 Use **Change status**, **Terminate**, **Archive**, and **Restore**—never **Delete**. Archiving does not automatically terminate employment.
 
+**Onboarding progress:** when a preboarding employee was created with an onboarding template, the **Overview** tab shows checklist progress. HR can mark items complete and adjust due dates; completed items use the same task workflow as **Tasks**.
+
 ### Add an employee (wizard)
 
 1. Click **Add employee** on the directory.
 2. Complete sections: **Personal** → **Employment** → **Organization** → **Review**.
 3. Required fields are marked; optional fields include address **location** (geographical record) and work **sites** (assigned separately).
+4. For **Preboarding** status, optionally choose an **onboarding template** and enable **Generate onboarding tasks** on the Employment step.
 4. If a possible duplicate is found (same email, phone, or name + date of birth), review warnings such as “This email is already used by employee EMP014” before confirming.
 5. After creation, choose **View profile**, **Send login invitation**, or **Add another employee**. Temporary passwords are not shown in the UI.
 
@@ -238,6 +266,46 @@ From the profile **Access** tab:
 1. **Send login invitation** provisions a new account (no predictable password shown).
 2. If an account already exists, use **Link existing account** with the user ID from User management.
 3. Confirm **role** changes; inherited roles come from the job position.
+
+### Employee documents
+
+From the profile **Documents** tab (requires **View employees**; upload/edit/delete requires **Manage employees**):
+
+1. Click **Upload document**.
+2. Enter **name**, choose **document type** (Contract, Identification, Certificate, Other, or other types configured in the system), optional **issue** and **expiry** dates, and select a **file** (PDF, Word, or image; up to 16 MB).
+3. Save. The document appears in the table with file kind, original filename, and dates.
+4. Use **Download** to save a copy of the file.
+5. Use **Edit** to change name, type, or dates (the file itself cannot be replaced—upload a new document instead).
+6. Use **Delete** to remove the document and its stored file.
+
+Expired documents show the expiry date in red when the date is in the past.
+
+---
+
+## Manager team dashboard
+
+**Route:** `/manager/team`
+
+Managers with the **My team** menu permission and a **linked employee profile** can open an operational dashboard for their **direct reports** (employees whose manager is the signed-in user).
+
+### What you see
+
+- **Summary cards** — active team members, pending leave requests, today’s attendance (present, absent, on leave, checked in), overdue tasks, and upcoming scheduled changes.
+- **Team table** — searchable, filterable list of direct reports with per-person indicators and links to employee profiles.
+- **Quick links** — shortcuts to Attendance, Leave, and Tasks.
+
+### Administrators
+
+Users with the **ADMIN** role can select any manager from a dropdown and view that manager’s team. Non-admin managers always see only their own direct reports; the API enforces this even if a different manager id is supplied.
+
+### Access setup
+
+1. Create or use a **Manager** role under **User management → Roles**.
+2. Under **Menu access**, grant **My team** (`/manager/team`) plus any operational menus the manager needs (for example Attendance and Leave).
+3. Assign the role to the manager’s user (directly or via their job position).
+4. Ensure the manager’s user account is **linked** to their employee record (profile **Access** tab or invitation flow).
+
+Managers without **View employees** capability can still open profiles for **direct reports only** from this dashboard.
 
 ---
 
@@ -408,7 +476,31 @@ Employees see and update their own tasks in the **Employee Portal** as well.
 
 ---
 
-## 15. User management
+## 15. Shifts
+
+**Routes:** `/shifts` · `/shifts/calendar`
+
+Schedule work blocks for employees. Scheduled shifts appear in the **Employee Portal** schedule and can be started when their status is **Scheduled**.
+
+### Schedule a shift
+
+1. Open **Shifts**.
+2. Click **Schedule shift**.
+3. Select **employee**, enter **title**, optional **description** and **site**, and set **start** and **end** times.
+4. Save. The shift is created with status **Scheduled**.
+
+### Manage shifts
+
+- **Table view** (`/shifts`) — list with filters for search text, employee, status, and date range.
+- **Calendar view** (`/shifts/calendar`) — see shifts on a calendar; use employee and status filters above the calendar.
+- **Edit** — update title, description, site, times, or status (for example mark **Completed** or **Cancelled**).
+- **Delete** — remove shifts that are no longer needed.
+
+If a shift overlaps another non-cancelled shift for the same employee, the app shows a conflict message from the server and does not save the change.
+
+---
+
+## 16. User management
 
 **Routes:** `/user-management/users` · `/user-management/roles` · `/user-management/menu-access`
 
@@ -438,7 +530,7 @@ Administrator-only area for accounts and access control.
 
 ---
 
-## 16. Employee portal (self-service)
+## 17. Employee portal (self-service)
 
 **Routes:** `/employee-portal` · `/employee-portal/leave`
 
@@ -465,7 +557,7 @@ If you see a message that your account is not linked to an employee, ask HR to u
 
 ---
 
-## 17. Recommended setup order
+## 18. Recommended setup order
 
 For a new EMS installation, follow this order:
 
@@ -477,11 +569,11 @@ For a new EMS installation, follow this order:
 6. **Positions → assign roles** — so job titles carry the right access.
 7. **Leave → Leave Setting** — add at least one leave type.
 8. **Employees** — add staff and **link login** accounts where self-service is needed.
-9. **Attendance**, **Tasks**, and **Leave** — begin daily operations.
+9. **Attendance**, **Tasks**, **Shifts**, and **Leave** — begin daily operations.
 
 ---
 
-## 18. Common workflows
+## 19. Common workflows
 
 ### Onboard a new hire
 
@@ -508,7 +600,7 @@ For a new EMS installation, follow this order:
 ### Grant a manager access to leave and attendance only
 
 1. Create a **Manager** role under **Roles**.
-2. Under **Menu access**, grant Home, Attendance (and sub-menus if needed), and Leave.
+2. Under **Menu access**, grant Home, **My team**, Attendance (and sub-menus if needed), and Leave.
 3. Assign the role to the manager’s user (directly or via their job position).
 
 ### Import historical leave
@@ -520,16 +612,14 @@ For a new EMS installation, follow this order:
 
 ---
 
-## 19. Known limitations
+## 20. Known limitations
 
 These items are **not** available in the current web UI or are intentionally deferred:
 
 | Area | Current behavior |
 |------|------------------|
 | Leave approval workflow | No dedicated approve/reject UI; requests stay in pending-style states until changed by admin processes or import. |
-| Shift scheduling | Shifts can appear in the Employee Portal when created via the API, but there is **no admin screen** to schedule shifts in the web app yet. |
 | Recruiting / hiring pipeline | No job requisitions, candidates, or offer management. |
-| Employee documents | Document upload API exists; no documents screen in the web app yet. |
 | Multi-organization | One organization per installation. |
 
 For technical setup (API URL, Docker, development login), see the [repository README](../README.md) and [ems-web frontend guide](../ems-web/docs/FRONTEND.md).

@@ -2,6 +2,7 @@ using EMS.Application.DTOs.Employee;
 using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Integrations;
 using EMS.Application.Services.Employees;
+using EMS.Application.Services.Onboarding;
 using EMS.Application.UnitTests.Infrastructure;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
@@ -323,6 +324,7 @@ public class EmployeeServiceTests
             allocator.Object,
             gateway,
             Mock.Of<IIntegrationOutboxWriter>(),
-            validator);
+            validator,
+            Mock.Of<IOnboardingChecklistService>());
     }
 }

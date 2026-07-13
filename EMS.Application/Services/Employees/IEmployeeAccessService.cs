@@ -16,6 +16,8 @@ public interface IEmployeeAccessService
     Task EnsureCanExportEmployeesAsync(CancellationToken cancellationToken = default);
 
     Task<EmployeeAccessCapabilitiesResponseModel> GetMyCapabilitiesAsync(CancellationToken cancellationToken = default);
+
+    Task EnsureCanViewEmployeeProfileAsync(int employeeId, CancellationToken cancellationToken = default);
 }
 
 public static class EmployeeAccessMessages

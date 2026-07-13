@@ -1,5 +1,6 @@
 "use client";
 
+import { GlobalCommandPalette } from "@/features/command-palette/components/GlobalCommandPalette";
 import { useSidebar } from "@/context/SidebarContext";
 import Backdrop from "@/layout/Backdrop";
 import { EmsTailAdminHeader } from "./EmsTailAdminHeader";
@@ -12,6 +13,7 @@ export function EmsTailAdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background xl:flex">
+      <GlobalCommandPalette />
       <EmsTailAdminSidebar />
       <Backdrop />
       <div className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useCreateActionParam } from "@/features/command-palette/hooks/useCreateActionParam";
 import { getErrorMessage } from "@/shared/api/http-client";
 import { Spinner } from "@/shared/components/Spinner";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
@@ -43,6 +44,8 @@ export function TasksSection({ initialViewMode = "table" }: TasksSectionProps) {
   const taskForm = useTaskForm({ organizationId });
   const taskActions = useTaskActions({ onCreateSuccess: taskForm.closeForm });
   const calendarEvents = useTaskCalendarEvents({ tasks, employeeLabelById });
+
+  useCreateActionParam(() => taskForm.setFormOpen(true));
 
   const handleCreate = useCallback(async () => {
     const payload = taskForm.buildCreatePayload();

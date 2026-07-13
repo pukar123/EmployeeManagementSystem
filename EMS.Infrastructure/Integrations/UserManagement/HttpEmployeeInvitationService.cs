@@ -1,7 +1,9 @@
 using System.Globalization;
 using EMS.Application.DTOs.Employee;
+using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Employees;
 using EMS.Application.Services.Integrations;
+using EMS.Application.Services.Notifications;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -16,15 +18,21 @@ public sealed class HttpEmployeeInvitationService : IEmployeeInvitationService
     private readonly IBaseRepository<Employee> _employees;
     private readonly IUserManagementHttpClient _http;
     private readonly EmployeeRelationshipValidator _validator;
+    private readonly IIdentityContext _identityContext;
+    private readonly IEmsNotificationProducer _notificationProducer;
 
     public HttpEmployeeInvitationService(
         IBaseRepository<Employee> employees,
         IUserManagementHttpClient http,
-        EmployeeRelationshipValidator validator)
+        EmployeeRelationshipValidator validator,
+        IIdentityContext identityContext,
+        IEmsNotificationProducer notificationProducer)
     {
         _employees = employees;
         _http = http;
         _validator = validator;
+        _identityContext = identityContext;
+        _notificationProducer = notificationProducer;
     }
 
     public async Task<EmployeeInvitationResponseModel> SendAsync(int employeeId, CancellationToken cancellationToken = default)
@@ -62,7 +70,36 @@ public sealed class HttpEmployeeInvitationService : IEmployeeInvitationService
             await _employees.SaveChangesAsync(cancellationToken);
         }
 
-        return Map(invitation, employeeId);
+        return await MapAndNotifyAsync(invitation, employeeId, cancellationToken);
+    }
+
+    private async Task<EmployeeInvitationResponseModel> MapAndNotifyAsync(
+        InvitationResponseModel invitation,
+        int employeeId,
+        CancellationToken cancellationToken)
+    {
+        var mapped = Map(invitation, employeeId);
+        await NotifyIfDeliveryFailedAsync(mapped, employeeId, cancellationToken);
+        return mapped;
+    }
+
+    private async Task NotifyIfDeliveryFailedAsync(
+        EmployeeInvitationResponseModel invitation,
+        int employeeId,
+        CancellationToken cancellationToken)
+    {
+        if (invitation.DeliveryStatus != EmployeeInvitationDeliveryStatus.Failed)
+            return;
+
+        var actorUserId = _identityContext.GetCurrent().UserId;
+        if (actorUserId is null)
+            return;
+
+        await _notificationProducer.NotifyInvitationDeliveryFailedAsync(
+            employeeId,
+            actorUserId.Value,
+            invitation.DeliveryFailureReason,
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<EmployeeInvitationResponseModel>> ListAsync(

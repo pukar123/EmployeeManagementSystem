@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import React, { useState } from "react";
+import { CommandPaletteTrigger } from "@/features/command-palette/components/CommandPaletteTrigger";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { ThemeToggleButton } from "@/components/tailadmin/ThemeToggleButton";
 import { useSidebar } from "@/context/SidebarContext";
 import { cn } from "@/lib/utils";
@@ -24,23 +25,6 @@ export function EmsTailAdminHeader() {
   const toggleApplicationMenu = () => {
     setApplicationMenuOpen(!isApplicationMenuOpen);
   };
-
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
-        event.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   return (
     <header className="sticky top-0 z-99999 border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
@@ -95,24 +79,10 @@ export function EmsTailAdminHeader() {
           </button>
 
           <div className="hidden lg:block">
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <input
-                ref={inputRef}
-                type="search"
-                placeholder="Search or type command..."
-                className="h-11 w-full rounded-xl border border-input bg-card/80 py-2.5 pr-14 pl-11 text-sm text-foreground shadow-soft placeholder:text-muted-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:outline-none xl:w-[400px]"
-              />
-
-              <span className="absolute top-1/2 right-2.5 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-border bg-muted/60 px-2 py-1 text-[10px] font-medium tracking-wide text-muted-foreground">
-                <span>⌘</span>
-                <span>K</span>
-              </span>
-            </div>
+            <CommandPaletteTrigger />
           </div>
+
+          <CommandPaletteTrigger compact />
         </div>
         <div
           className={cn(
@@ -121,6 +91,7 @@ export function EmsTailAdminHeader() {
           )}
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
+            <NotificationBell />
             <ThemeToggleButton />
           </div>
           <EmsUserDropdown />

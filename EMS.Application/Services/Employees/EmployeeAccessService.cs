@@ -1,5 +1,7 @@
 using EMS.Application.DTOs.Employee;
 using EMS.Application.Services.Authorization;
+using EMS.Application.Services.EmployeePortal;
+using EMS.Application.Services.Manager;
 using Pukar.Shared;
 
 namespace EMS.Application.Services.Employees;
@@ -14,13 +16,19 @@ public sealed class EmployeeAccessService : IEmployeeAccessService
 
     private readonly IIdentityContext _identityContext;
     private readonly IPermissionEvaluator _permissionEvaluator;
+    private readonly IManagerTeamAccessService _managerTeamAccess;
+    private readonly ILinkedEmployeeService _linkedEmployeeService;
 
     public EmployeeAccessService(
         IIdentityContext identityContext,
-        IPermissionEvaluator permissionEvaluator)
+        IPermissionEvaluator permissionEvaluator,
+        IManagerTeamAccessService managerTeamAccess,
+        ILinkedEmployeeService linkedEmployeeService)
     {
         _identityContext = identityContext;
         _permissionEvaluator = permissionEvaluator;
+        _managerTeamAccess = managerTeamAccess;
+        _linkedEmployeeService = linkedEmployeeService;
     }
 
     public async Task EnsureCanViewEmployeesAsync(CancellationToken cancellationToken = default)
@@ -64,6 +72,32 @@ public sealed class EmployeeAccessService : IEmployeeAccessService
             Access = await CanAccessEmployeesAsync(cancellationToken),
             Export = await CanExportEmployeesAsync(cancellationToken),
         };
+    }
+
+    public async Task EnsureCanViewEmployeeProfileAsync(int employeeId, CancellationToken cancellationToken = default)
+    {
+        if (await CanViewEmployeeProfileAsync(employeeId, cancellationToken))
+            return;
+
+        throw new BusinessRuleException(EmployeeAccessMessages.Denied);
+    }
+
+    private async Task<bool> CanViewEmployeeProfileAsync(int employeeId, CancellationToken cancellationToken)
+    {
+        if (IsAdmin())
+            return true;
+
+        if (await HasCapabilityAsync(EmployeeCapabilities.View, cancellationToken))
+            return true;
+
+        if (!await _managerTeamAccess.CanViewTeamDashboardAsync(cancellationToken))
+            return false;
+
+        var linked = await _linkedEmployeeService.TryGetLinkedEmployeeAsync(cancellationToken);
+        if (linked is null)
+            return false;
+
+        return await _managerTeamAccess.IsDirectReportAsync(linked.Id, employeeId, cancellationToken);
     }
 
     private async Task<bool> CanViewEmployeesAsync(CancellationToken cancellationToken)
