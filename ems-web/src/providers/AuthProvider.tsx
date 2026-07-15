@@ -58,6 +58,9 @@ function readAuthFromStorage(): AuthSnapshot {
 }
 
 const serverSnapshot = unauthenticatedSnapshot;
+const subscribeToHydration = () => () => {};
+const clientReadySnapshot = () => true;
+const serverReadySnapshot = () => false;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const subscribe = useCallback((onStoreChange: () => void) => {
@@ -71,7 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => serverSnapshot,
   );
 
-  const isReady = typeof window !== "undefined";
+  const isReady = useSyncExternalStore(
+    subscribeToHydration,
+    clientReadySnapshot,
+    serverReadySnapshot,
+  );
   const { user, mustChangePassword } = snapshot;
 
   const syncFromStorage = useCallback(() => {
@@ -91,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMustChangePassword(false);
   }, []);
 
-  const isAuthenticated = user !== null && Boolean(getAccessToken());
+  const isAuthenticated = user !== null;
 
   const value = useMemo<AuthContextValue>(
     () => ({
