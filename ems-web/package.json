@@ -7,7 +7,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "dev:all": "concurrently -n um,api,web -c yellow,cyan,magenta \"dotnet run --project ../Pukar.Usermanagement/Pukar.Usermanagement.Host/Pukar.Usermanagement.Host.csproj --launch-profile http\" \"dotnet run --project ../EMS.API/EMS.API.csproj --launch-profile http\" \"next dev\"",
+    "build:um": "dotnet build ../Pukar.Usermanagement/Pukar.Usermanagement.Host/Pukar.Usermanagement.Host.csproj --no-restore --disable-build-servers -m:1",
+    "build:api": "dotnet build ../EMS.API/EMS.API.csproj --no-restore --disable-build-servers -m:1",
+    "build:dotnet": "npm run build:um && npm run build:api",
+    "dev:all": "npm run build:dotnet && concurrently -n um,api,web -c yellow,cyan,magenta \"dotnet run --no-build --project ../Pukar.Usermanagement/Pukar.Usermanagement.Host/Pukar.Usermanagement.Host.csproj --launch-profile http\" \"dotnet run --no-build --project ../EMS.API/EMS.API.csproj --launch-profile http\" \"next dev\"",
     "dev:api": "dotnet run --project ../EMS.API/EMS.API.csproj --launch-profile http",
     "dev:um": "dotnet run --project ../Pukar.Usermanagement/Pukar.Usermanagement.Host/Pukar.Usermanagement.Host.csproj --launch-profile http",
     "dev:https": "concurrently -n um,api,web -c yellow,cyan,magenta \"dotnet run --project ../Pukar.Usermanagement/Pukar.Usermanagement.Host/Pukar.Usermanagement.Host.csproj --launch-profile https\" \"dotnet run --project ../EMS.API/EMS.API.csproj --launch-profile https\" \"next dev\"",

@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Pukar.Usermanagement.Host</RootNamespace>
     <AssemblyName>Pukar.Usermanagement.Host</AssemblyName>
+    <UserSecretsId>5d2f4db2-2c5b-4ce5-8c5c-0f9fb6af7d9b</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
