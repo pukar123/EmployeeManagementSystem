@@ -2,7 +2,9 @@ namespace EMS.Application.Services.Employees;
 
 /// <summary>
 /// EMS-owned anti-corruption interface for User Management identity operations.
-/// Implementations must use HTTP contracts only — never direct database or in-process UM services.
+/// In the single-host deployment this is implemented by an in-process adapter that calls
+/// User Management application services directly. Implementations must never access
+/// UserManagementDbContext or UM controllers directly.
 /// </summary>
 public interface IEmployeeUserManagementGateway
 {

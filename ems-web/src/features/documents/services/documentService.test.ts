@@ -5,7 +5,9 @@ vi.mock("@/shared/auth/auth-storage", () => ({
   getAccessToken: vi.fn(() => "access-token"),
 }));
 
-const postFormDataMock = vi.fn(async () => ({
+type PostFormDataMock = (path: string, formData: FormData) => Promise<unknown>;
+
+const postFormDataMock = vi.fn<PostFormDataMock>(async () => ({
   id: 1,
   employeeId: 5,
   documentTypeId: 2,
@@ -25,7 +27,7 @@ vi.mock("@/shared/api/http-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/api/http-client")>();
   return {
     ...actual,
-    postFormData: (...args: unknown[]) => postFormDataMock(...args),
+    postFormData: (path: string, formData: FormData) => postFormDataMock(path, formData),
   };
 });
 
@@ -105,7 +107,7 @@ describe("documentService", () => {
     });
 
     expect(postFormDataMock).toHaveBeenCalledOnce();
-    const [path, formData] = postFormDataMock.mock.calls[0] as [string, FormData];
+    const [path, formData] = postFormDataMock.mock.calls[0];
     expect(path).toBe("/api/Documents");
     expect(formData.get("employeeId")).toBe("5");
     expect(formData.get("documentTypeId")).toBe("2");

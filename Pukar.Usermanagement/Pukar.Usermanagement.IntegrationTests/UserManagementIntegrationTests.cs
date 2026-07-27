@@ -178,6 +178,21 @@ public sealed class UserManagementIntegrationTests
     }
 
     [Test]
+    public async Task BatchUserLookup_DoesNotRequireIdempotencyKey()
+    {
+        var serviceToken = (await GetServiceTokenAsync()).AccessToken;
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/internal/v1/users/lookup")
+        {
+            Content = JsonContent.Create(new BatchUserLookupRequestModel { UserIds = [] }),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", serviceToken);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
     public async Task InternalMutation_IdempotencyKey_ReplayReturnsSameResult()
     {
         var serviceToken = (await GetServiceTokenAsync()).AccessToken;

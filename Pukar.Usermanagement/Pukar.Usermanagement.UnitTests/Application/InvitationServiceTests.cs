@@ -161,7 +161,59 @@ public class InvitationServiceTests
         Assert.That(ex!.Message, Does.Contain("administrator"));
     }
 
+    [Test]
+    public async Task CreateOrSendAsync_WhenSmtpFails_PersistsUserAndReturnsFailedStatus()
+    {
+        var failingEmail = new Mock<IEmailSender>();
+        failingEmail
+            .Setup(x => x.SendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("SMTP down"));
+        var service = CreateService(out var db, failingEmail.Object);
+
+        var result = await service.CreateOrSendAsync(new CreateInvitationRequestModel
+        {
+            ExternalCorrelationId = "employee:6",
+            RecipientEmail = "smtp-fail@example.com",
+            RecipientDisplayName = "SMTP Fail",
+        });
+
+        // Persistence succeeded, so the caller must still receive the user/invitation ids.
+        Assert.That(result.UserId, Is.GreaterThan(0));
+        Assert.That(result.Id, Is.GreaterThan(0));
+        Assert.That(result.DeliveryStatus, Is.EqualTo(InvitationDeliveryStatus.Failed));
+        Assert.That(db.Users.Any(u => u.Id == result.UserId), Is.True);
+        Assert.That(db.AccountInvitations.Count(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task ResendAsync_AfterSmtpFailure_RemainsRecoverableAndDoesNotThrow()
+    {
+        var failingEmail = new Mock<IEmailSender>();
+        failingEmail
+            .Setup(x => x.SendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("SMTP down"));
+        var service = CreateService(out var db, failingEmail.Object);
+
+        var created = await service.CreateOrSendAsync(new CreateInvitationRequestModel
+        {
+            ExternalCorrelationId = "employee:7",
+            RecipientEmail = "resend@example.com",
+        });
+
+        // Resend must not throw after a delivery failure; it stays retryable.
+        var resent = await service.ResendAsync(created.Id);
+        Assert.That(resent.DeliveryStatus, Is.EqualTo(InvitationDeliveryStatus.Failed));
+        Assert.That(db.AccountInvitations.Single().Id, Is.EqualTo(created.Id));
+    }
+
     private static InvitationService CreateService(out UserManagementDbContext db)
+    {
+        var email = new Mock<IEmailSender>();
+        email.Setup(x => x.SendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        return CreateService(out db, email.Object);
+    }
+
+    private static InvitationService CreateService(out UserManagementDbContext db, IEmailSender emailSender)
     {
         var options = new DbContextOptionsBuilder<UserManagementDbContext>()
             .UseInMemoryDatabase($"invitation-tests-{Guid.NewGuid()}")
@@ -169,14 +221,12 @@ public class InvitationServiceTests
         db = new UserManagementDbContext(options);
 
         var users = new UserAdminService(new UserRepository(db), new BcryptPasswordHasher());
-        var email = new Mock<IEmailSender>();
-        email.Setup(x => x.SendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         return new InvitationService(
             new AccountInvitationRepository(db),
             users,
             new UserRoleRepository(db),
-            email.Object,
+            emailSender,
             new PasswordPolicyValidator(Options.Create(new PasswordPolicyOptions())),
             Options.Create(new SmtpOptions { WebAppBaseUrl = "http://localhost:3000" }));
     }

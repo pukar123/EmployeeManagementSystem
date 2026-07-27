@@ -11,7 +11,6 @@ namespace Pukar.Usermanagement.API.Controllers.Internal;
 [ApiController]
 [Route("api/internal/v1/users")]
 [ServiceAudit]
-[InternalIdempotency]
 public sealed class InternalUsersController : ControllerBase
 {
     private readonly IInternalUserService _users;
@@ -45,6 +44,7 @@ public sealed class InternalUsersController : ControllerBase
     }
 
     [HttpPost("{id:int}/activate")]
+    [InternalIdempotency]
     [Authorize(Policy = ServiceScopes.UsersManage, AuthenticationSchemes = ServiceAuthConstants.ServiceTokenScheme)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -54,6 +54,7 @@ public sealed class InternalUsersController : ControllerBase
     }
 
     [HttpPost("{id:int}/deactivate")]
+    [InternalIdempotency]
     [Authorize(Policy = ServiceScopes.UsersManage, AuthenticationSchemes = ServiceAuthConstants.ServiceTokenScheme)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -63,6 +64,7 @@ public sealed class InternalUsersController : ControllerBase
     }
 
     [HttpPost("{id:int}/revoke-sessions")]
+    [InternalIdempotency]
     [Authorize(Policy = ServiceScopes.UsersManage, AuthenticationSchemes = ServiceAuthConstants.ServiceTokenScheme)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RevokeSessions(int id, CancellationToken cancellationToken)

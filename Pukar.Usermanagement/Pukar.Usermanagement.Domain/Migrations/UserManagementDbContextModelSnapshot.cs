@@ -147,6 +147,41 @@ namespace Pukar.Usermanagement.Domain.Migrations
                     b.ToTable("IdempotencyRecords", "um");
                 });
 
+            modelBuilder.Entity("Pukar.Usermanagement.Domain.DbModels.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "CreatedAtUtc");
+
+                    b.ToTable("PasswordResetTokens", "um");
+                });
+
             modelBuilder.Entity("Pukar.Usermanagement.Domain.DbModels.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -323,6 +358,17 @@ namespace Pukar.Usermanagement.Domain.Migrations
                 });
 
             modelBuilder.Entity("Pukar.Usermanagement.Domain.DbModels.AccountInvitation", b =>
+                {
+                    b.HasOne("Pukar.Usermanagement.Domain.DbModels.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Pukar.Usermanagement.Domain.DbModels.PasswordResetToken", b =>
                 {
                     b.HasOne("Pukar.Usermanagement.Domain.DbModels.User", "User")
                         .WithMany()

@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Notifications.Domain"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pukar.Notifications.Application", "Pukar.Notifications\Pukar.Notifications.Application\Pukar.Notifications.Application.csproj", "{D16B3385-D9E5-4C26-807A-DBDC8DD64B5C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EMS.API.IntegrationTests", "EMS.API.IntegrationTests\EMS.API.IntegrationTests.csproj", "{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -271,6 +273,18 @@ Global
 		{D16B3385-D9E5-4C26-807A-DBDC8DD64B5C}.Release|x64.Build.0 = Release|Any CPU
 		{D16B3385-D9E5-4C26-807A-DBDC8DD64B5C}.Release|x86.ActiveCfg = Release|Any CPU
 		{D16B3385-D9E5-4C26-807A-DBDC8DD64B5C}.Release|x86.Build.0 = Release|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Debug|x64.Build.0 = Debug|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Debug|x86.Build.0 = Debug|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Release|x64.ActiveCfg = Release|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Release|x64.Build.0 = Release|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Release|x86.ActiveCfg = Release|Any CPU
+		{0C2FB54A-CFFA-40CE-878E-DB8E60CFA6E2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

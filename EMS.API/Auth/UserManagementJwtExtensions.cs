@@ -1,59 +1,70 @@
 using System.Security.Claims;
-using EMS.Application.Options;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using Pukar.Usermanagement.Application.Options;
 using Pukar.Usermanagement.Contracts.Roles;
+using Pukar.Usermanagement.Contracts.ServiceAuth;
 
 namespace EMS.API.Auth;
 
+/// <summary>
+/// Single-host authentication for the consolidated EMS.API deployment.
+/// User Management now runs in-process, so EMS validates the JWTs it issues locally
+/// using the same signing configuration as <c>IJwtTokenService</c> — there is no longer
+/// any remote JWKS fetch. This is the only <c>AddAuthentication</c> registration and it
+/// owns the default schemes.
+/// </summary>
 public static class UserManagementJwtExtensions
 {
     public static IServiceCollection AddUserManagementJwtAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var options = configuration.GetSection(UserManagementApiOptions.SectionName).Get<UserManagementApiOptions>()
-            ?? new UserManagementApiOptions();
+        var jwt = configuration.GetSection(JwtTokenOptions.SectionName);
+        var issuer = jwt["Issuer"];
+        var audience = jwt["Audience"];
 
-        if (string.IsNullOrWhiteSpace(options.BaseUrl))
-            throw new InvalidOperationException("UserManagementApi:BaseUrl is required for JWT validation.");
+        if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
+            throw new InvalidOperationException(
+                "Jwt:Issuer and Jwt:Audience are required for the consolidated host to validate User Management tokens.");
 
-        var jwksUri = new Uri(new Uri(options.BaseUrl.TrimEnd('/') + "/"), options.JwksPath.TrimStart('/'));
-        var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
-            jwksUri.ToString(),
-            new JwksConfigurationRetriever(),
-            new HttpDocumentRetriever { RequireHttps = jwksUri.Scheme == Uri.UriSchemeHttps })
-        {
-            AutomaticRefreshInterval = TimeSpan.FromMinutes(30),
-            RefreshInterval = TimeSpan.FromMinutes(5),
-        };
-
-        services.AddSingleton(configurationManager);
+        var signingKey = ResolveSigningKey(configuration);
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, jwt =>
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                jwt.MapInboundClaims = false;
-                jwt.TokenValidationParameters = new TokenValidationParameters
+                options.MapInboundClaims = false;
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = options.JwtIssuer,
+                    ValidIssuer = issuer,
                     ValidateAudience = true,
-                    ValidAudience = options.JwtAudience,
+                    ValidAudience = audience,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = signingKey,
                     ClockSkew = TimeSpan.FromMinutes(1),
                     RoleClaimType = ClaimTypes.Role,
                     NameClaimType = ClaimTypes.NameIdentifier,
-                    IssuerSigningKeyResolver = (_, _, _, _) =>
-                    {
-                        var config = configurationManager.GetConfigurationAsync(CancellationToken.None)
-                            .GetAwaiter()
-                            .GetResult();
-                        return config.SigningKeys;
-                    },
+                };
+            })
+            // Service-token scheme retained as a temporary compatibility surface for the
+            // internal UM endpoints. EMS itself no longer acquires or presents service tokens.
+            .AddJwtBearer(ServiceAuthConstants.ServiceTokenScheme, options =>
+            {
+                options.MapInboundClaims = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = issuer,
+                    ValidateAudience = true,
+                    ValidAudience = ServiceAuthConstants.ServiceAudience,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = signingKey,
+                    ClockSkew = TimeSpan.FromMinutes(1),
                 };
             });
 
@@ -67,24 +78,48 @@ public static class UserManagementJwtExtensions
                     || context.User.Claims.Any(c =>
                         c.Type == "roles"
                         && string.Equals(c.Value, WellKnownRoles.AdminNormalizedName, StringComparison.OrdinalIgnoreCase))));
+
+            auth.AddPolicy(ServiceScopes.UsersRead, p => RequireScope(p, ServiceScopes.UsersRead));
+            auth.AddPolicy(ServiceScopes.UsersManage, p => RequireScope(p, ServiceScopes.UsersManage));
+            auth.AddPolicy(ServiceScopes.RolesRead, p => RequireScope(p, ServiceScopes.RolesRead));
+            auth.AddPolicy(ServiceScopes.RolesManage, p => RequireScope(p, ServiceScopes.RolesManage));
+            auth.AddPolicy(ServiceScopes.InvitationsManage, p => RequireScope(p, ServiceScopes.InvitationsManage));
         });
 
         return services;
     }
 
-    private sealed class JwksConfigurationRetriever : IConfigurationRetriever<OpenIdConnectConfiguration>
+    private static void RequireScope(AuthorizationPolicyBuilder policy, string scope)
     {
-        public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(
-            string address,
-            IDocumentRetriever retriever,
-            CancellationToken cancel)
+        policy.AddAuthenticationSchemes(ServiceAuthConstants.ServiceTokenScheme);
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim(ServiceAuthConstants.ScopeClaimType, scope);
+    }
+
+    private static SecurityKey ResolveSigningKey(IConfiguration configuration)
+    {
+        // Prefer an RSA PEM if one is configured (also allows JWKS publishing for external
+        // consumers); otherwise fall back to the shared symmetric signing key.
+        var pem = configuration[$"{JwtTokenOptions.SectionName}:SigningKeyPem"];
+        var pemFile = configuration[$"{JwtTokenOptions.SectionName}:SigningKeyPemFile"];
+        if (string.IsNullOrWhiteSpace(pem) && !string.IsNullOrWhiteSpace(pemFile))
         {
-            var document = await retriever.GetDocumentAsync(address, cancel);
-            var keys = new JsonWebKeySet(document);
-            var config = new OpenIdConnectConfiguration();
-            foreach (var key in keys.GetSigningKeys())
-                config.SigningKeys.Add(key);
-            return config;
+            var path = Path.IsPathRooted(pemFile) ? pemFile : Path.Combine(Directory.GetCurrentDirectory(), pemFile);
+            pem = File.ReadAllText(path);
         }
+
+        if (!string.IsNullOrWhiteSpace(pem))
+        {
+            var rsa = System.Security.Cryptography.RSA.Create();
+            rsa.ImportFromPem(pem);
+            return new RsaSecurityKey(rsa);
+        }
+
+        var signingKey = configuration[$"{JwtTokenOptions.SectionName}:SigningKey"];
+        if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
+            throw new InvalidOperationException(
+                "Jwt:SigningKeyPem (RSA) or Jwt:SigningKey (32+ chars) is required to validate User Management tokens.");
+
+        return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
     }
 }

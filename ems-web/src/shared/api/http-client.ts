@@ -23,7 +23,6 @@ export function normalizeApiOrigin(raw: string): string {
 }
 
 const defaultDevEmsApiBaseUrl = "http://127.0.0.1:5246";
-const defaultDevUserManagementApiBaseUrl = "http://127.0.0.1:5137";
 
 function readPublicOrigin(keys: string[], developmentFallback = ""): string {
   for (const key of keys) {
@@ -46,15 +45,18 @@ export const emsApiBaseUrl = readPublicOrigin(
   defaultDevEmsApiBaseUrl,
 );
 
-/** Pukar.Usermanagement.Host origin (auth, users, roles, invitation acceptance). */
-// Legacy alias can be removed after all environments migrate from NEXT_PUBLIC_UM_API_BASE_URL.
-export const userManagementApiBaseUrl = readPublicOrigin(
-  [
+/**
+ * Auth, users, roles, and invitation acceptance now live in the single EMS.API host.
+ * This export is retained so existing imports keep working; it resolves to the EMS origin
+ * unless a legacy NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL is explicitly provided as a
+ * temporary backward-compatible fallback.
+ * @deprecated Point everything at NEXT_PUBLIC_EMS_API_BASE_URL; this alias will be removed.
+ */
+export const userManagementApiBaseUrl =
+  readPublicOrigin([
     "NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL",
     "NEXT_PUBLIC_UM_API_BASE_URL",
-  ],
-  defaultDevUserManagementApiBaseUrl,
-);
+  ]) || emsApiBaseUrl;
 
 export const emsHttpClient: AxiosInstance = axios.create({
   baseURL: emsApiBaseUrl,
@@ -78,19 +80,21 @@ function isAuthRequestUrl(url: string | undefined): boolean {
     u.includes("/api/auth/register") ||
     u.includes("/api/auth/refresh") ||
     u.includes("/api/auth/revoke") ||
+    u.includes("/api/auth/forgot-password") ||
+    u.includes("/api/auth/reset-password") ||
     u.includes("/api/invitations/accept")
   );
 }
 
 /**
- * Renews the access token via User Management only (never EMS.API).
+ * Renews the access token against the single EMS.API host.
  * Uses bare axios so refresh is not intercepted by either client.
  */
 export async function refreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   const rt = getRefreshToken();
   if (!rt) return null;
-  const base = userManagementApiBaseUrl.replace(/\/$/, "");
+  const base = emsApiBaseUrl.replace(/\/$/, "");
   if (!base) return null;
 
   refreshInFlight = (async () => {

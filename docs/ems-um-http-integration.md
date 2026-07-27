@@ -1,8 +1,10 @@
 # EMS ↔ User Management HTTP integration
 
-## Overview
+> **⚠️ Superseded (historical).** EMS and User Management now run in **one host (`EMS.API`)** with User Management composed **in-process**. EMS no longer fetches remote JWKS, no longer acquires service tokens, and no longer calls a remote UM host over HTTP. Cross-context calls go through in-process anti-corruption adapters (`InProcessEmployeeUserManagementGateway`, `InProcessEmployeeInvitationService`) that call UM application services directly. See the root [README](../README.md) and [docs/architecture.md](architecture.md) for the current single-host model. The content below is retained only to describe the previous two-host topology during the transition.
 
-EMS and Pukar.Usermanagement run as **separate hosts**. EMS validates JWTs issued by User Management and calls UM internal APIs with a service token. EMS never embeds UM controllers, never opens `UserManagementDbContext`, and never references UM implementation assemblies.
+## Overview (historical two-host model)
+
+EMS and Pukar.Usermanagement previously ran as **separate hosts**. EMS validated JWTs issued by User Management and called UM internal APIs with a service token.
 
 ```mermaid
 sequenceDiagram

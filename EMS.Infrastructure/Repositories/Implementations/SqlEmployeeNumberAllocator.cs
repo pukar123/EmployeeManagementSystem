@@ -3,6 +3,7 @@ using EMS.Domain.Database;
 using EMS.Application.Services.Employees;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Pukar.Shared;
 
 namespace EMS.Infrastructure.Repositories.Implementations;
@@ -35,6 +36,10 @@ public sealed class SqlEmployeeNumberAllocator : IEmployeeNumberAllocator
 
         if (command.Connection?.State != System.Data.ConnectionState.Open)
             await _context.Database.OpenConnectionAsync(cancellationToken);
+
+        var transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
+        if (transaction is not null)
+            command.Transaction = transaction;
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
         if (result is null or DBNull)

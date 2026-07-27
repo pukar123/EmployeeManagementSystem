@@ -6,6 +6,8 @@ import { clearAuth, getRefreshToken, saveAuthResponse } from "@/shared/auth/auth
 const LOGIN_PATH = "/api/auth/login";
 const REVOKE_PATH = "/api/auth/revoke";
 const CHANGE_PASSWORD_PATH = "/api/auth/change-password";
+const FORGOT_PASSWORD_PATH = "/api/auth/forgot-password";
+const RESET_PASSWORD_PATH = "/api/auth/reset-password";
 const ACCEPT_INVITATION_PATH = "/api/invitations/accept";
 
 export const authService = {
@@ -34,6 +36,14 @@ export const authService = {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await userManagementHttpClient.post(CHANGE_PASSWORD_PATH, { currentPassword, newPassword });
+  },
+
+  async forgotPassword(email: string): Promise<void> {
+    await userManagementHttpClient.post(FORGOT_PASSWORD_PATH, { email });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await userManagementHttpClient.post(RESET_PASSWORD_PATH, { token, newPassword });
   },
 
   /** Invitation acceptance always targets User Management directly (never EMS.API). */

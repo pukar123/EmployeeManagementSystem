@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
@@ -84,6 +85,11 @@ export default function LoginPage() {
                 className={inputClass}
               />
             </label>
+            <div className="-mt-2 text-right text-sm">
+              <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             {error != null ? <ApiAvailabilityAlert error={error} /> : null}
             <Button type="submit" className="w-full" loading={submitting} disabled={submitting}>
               {submitting ? "Signing in…" : "Sign in"}

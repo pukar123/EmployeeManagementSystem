@@ -20,10 +20,10 @@ Edit `.env.local`:
 
 | Variable | Purpose |
 |----------|---------|
-| `NEXT_PUBLIC_EMS_API_BASE_URL` | EMS.API origin (e.g. `http://localhost:5246` for the `http` launch profile). |
-| `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` | User Management Host origin (e.g. `http://localhost:5137`). |
+| `NEXT_PUBLIC_EMS_API_BASE_URL` | Single EMS.API origin for **all** calls — HR data plus auth, users, roles, and invitations (e.g. `http://localhost:5246` for the `http` launch profile). |
+| `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` | **Deprecated.** Optional temporary fallback only; when unset, User Management calls also target `NEXT_PUBLIC_EMS_API_BASE_URL`. |
 
-**First run:** if the EMS database has no organization yet, the app opens **`/setup`**. Sign-in and invitation acceptance go to User Management; HR data goes to EMS.
+**First run:** if the EMS database has no organization yet, the app opens **`/setup`**. Sign-in, invitation acceptance, and HR data all go to the single EMS.API host.
 
 **Option A — UM, EMS, and web together (one terminal):**
 
@@ -31,7 +31,7 @@ Edit `.env.local`:
 npm run dev:all
 ```
 
-Starts User Management Host (`http://localhost:5137`), EMS.API (`http://localhost:5246`), and `next dev` (`http://localhost:3000`).
+Starts the single EMS.API host (`http://localhost:5246`) and `next dev` (`http://localhost:3000`).
 
 **Option B — Next.js only (APIs already running):**
 
@@ -47,10 +47,9 @@ Open **http://localhost:3000**.
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev:all` | **UM Host**, **EMS.API**, and **`next dev`** via `concurrently` |
-| `npm run dev:https` | Same with HTTPS launch profiles |
+| `npm run dev:all` | **EMS.API** and **`next dev`** via `concurrently` (single host) |
+| `npm run dev:https` | Same with the HTTPS launch profile |
 | `npm run dev:api` | EMS.API only |
-| `npm run dev:um` | User Management Host only |
 | `npm run dev` | Next.js only |
 | `npm run test` | Vitest (API routing + availability classification) |
 | `npm run build` | Production build |

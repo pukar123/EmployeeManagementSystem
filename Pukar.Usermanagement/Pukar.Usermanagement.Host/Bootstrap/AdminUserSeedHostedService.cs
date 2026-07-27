@@ -76,6 +76,15 @@ public sealed class AdminUserSeedHostedService : IHostedService
                 await users.SaveChangesAsync(cancellationToken);
                 _logger.LogInformation("Seeded default admin user for email {Email}.", email);
             }
+            else if (options.ResetExistingPassword)
+            {
+                user.PasswordHash = passwordHasher.HashPassword(options.Password);
+                user.IsActive = true;
+                user.MustChangePassword = false;
+                users.Update(user);
+                await users.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Reset seeded admin user password for email {Email}.", email);
+            }
 
             var roleIds = await userRoles.GetRoleIdsForUserAsync(user.Id, cancellationToken);
             if (!roleIds.Contains(adminRole.Id))

@@ -1,5 +1,18 @@
 # EMS architecture (overview)
 
+> **Single-host topology:** EMS runs as **one deployable process (`EMS.API`)** that composes User Management **in-process** as a separate bounded context. Two SQL databases remain (`EMSDevDB` via `AppDbContext`, `UserManagementDb` via `UserManagementDbContext`). EMS issues and validates JWTs locally (no remote JWKS) and calls UM through in-process anti-corruption adapters instead of HTTP.
+>
+> ```mermaid
+> flowchart LR
+>   Web[ems-web] --> Api[EMS.API single host]
+>   Api --> EmsApp[EMS Application/Infrastructure]
+>   EmsApp --> AppDb[AppDbContext]
+>   AppDb --> EmsDb[(EMSDevDB)]
+>   Api --> UmApp[UM Application/Infrastructure in-process]
+>   UmApp --> UmCtx[UserManagementDbContext]
+>   UmCtx --> UmDb[(UserManagementDb)]
+> ```
+
 This document is the **EMS-focused** map: diagrams and how requests flow through this solution today. The **canonical guide** for layering, naming, `Pukar.Shared`, `Pukar.Usermanagement`, frontend, Git, and checklists—reusable across **all** projects—is [ARCHITECTURE_AND_PATTERNS.md](ARCHITECTURE_AND_PATTERNS.md). For business goals, personas, capability scope, and roadmap context, see [business-perspective.md](business-perspective.md). Expand this file when you add authentication, validation pipelines, or deployment-specific concerns that are specific to EMS.
 
 ## Layering
@@ -7,8 +20,8 @@ This document is the **EMS-focused** map: diagrams and how requests flow through
 ```mermaid
 flowchart TB
   subgraph api [EMS.API]
-    Controllers[Controllers]
-    JwtValidate[JWT validation via UM JWKS]
+    Controllers[Controllers incl. in-process UM controllers]
+    JwtValidate[JWT issue + validate in-process]
   end
   subgraph app [EMS.Application]
     DTOs[DTOs per area Employee Org Dept Location]

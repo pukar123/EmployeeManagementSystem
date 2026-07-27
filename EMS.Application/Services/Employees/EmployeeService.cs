@@ -117,8 +117,18 @@ public sealed class EmployeeService : IEmployeeService
                     cancellationToken);
             }
 
+            // Persist the employee (and related history) first so the database-generated
+            // Employee.Id is available. The previous ordering enqueued the outbox with a
+            // still-zero Id.
+            await _repository.SaveChangesAsync(cancellationToken);
+
+            // Enqueue identity provisioning first, then the initial role sync, using the
+            // real Employee.Id. Both rows are committed atomically with the employee in the
+            // same EMSDevDB transaction; the in-process background dispatcher applies them.
+            await _outboxWriter.EnqueueProvisionEmployeeIdentityAsync(entity.Id, cancellationToken);
             await _outboxWriter.EnqueueSyncEmployeeRolesAsync(entity.Id, cancellationToken);
             await _repository.SaveChangesAsync(cancellationToken);
+
             await transaction.CommitAsync(cancellationToken);
 
             return EmployeeMapper.ToResponse(entity);

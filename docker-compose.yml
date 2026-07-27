@@ -1,161 +1,138 @@
-# Full local stack: SQL Server (two databases), MongoDB, Redis, User Management API, EMS.API, ems-web.
-#
-#   cp docker-compose.env.example .env   # edit secrets — rotate any previously committed values
-#   docker compose up -d --build
-#
-# Browser:
-#   ems-web  → http://localhost:3000
-#   EMS.API  → http://localhost:5246
-#   UM Host  → http://localhost:5137
-
-services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: ems-sqlserver-dev
-    environment:
-      ACCEPT_EULA: "Y"
-      SA_PASSWORD: "${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}"
-      MSSQL_PID: Express
-    ports:
-      - "1433:1433"
-    volumes:
-      - ems-sql-data:/var/opt/mssql
-    restart: unless-stopped
-    networks:
-      - ems-network
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-  mongodb:
-    image: mongo:7.0
-    container_name: ems-mongodb-dev
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}"
-    ports:
-      - "27017:27017"
-    volumes:
-      - ems-mongo-data:/data/db
-    restart: unless-stopped
-    networks:
-      - ems-network
-
-  redis:
-    image: redis:7.2-alpine
-    container_name: ems-redis-dev
-    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"
-    ports:
-      - "6379:6379"
-    volumes:
-      - ems-redis-data:/data
-    restart: unless-stopped
-    networks:
-      - ems-network
-
-  mongo-express:
-    image: mongo-express:1.0.2
-    container_name: ems-mongo-express
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGO_ROOT_PASSWORD}"
-      ME_CONFIG_MONGODB_URL: "mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/"
-      ME_CONFIG_BASICAUTH: "false"
-    depends_on:
-      - mongodb
-    networks:
-      - ems-network
-
-  usermanagement-api:
-    build:
-      context: ./Pukar.Usermanagement
-      dockerfile: Pukar.Usermanagement.Host/Dockerfile
-    container_name: usermanagement-api-dev
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__UserManagementDb: "Server=sqlserver,1433;Database=UserManagementDb;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
-      Cors__AllowedOrigins__0: "${UM_CORS_ORIGIN_0:-http://localhost:3000}"
-      Cors__AllowedOrigins__1: "${UM_CORS_ORIGIN_1:-http://127.0.0.1:3000}"
-      Jwt__SigningKeyPemFile: "${JWT_SIGNING_KEY_PEM_FILE:-dev-rsa-key.pem}"
-      ServiceClients__Ems__ClientId: ems
-      ServiceClients__Ems__Secret: "${EMS_UM_SERVICE_CLIENT_SECRET:?Set EMS_UM_SERVICE_CLIENT_SECRET in .env}"
-    volumes:
-      - ./secrets:/app/secrets:ro
-    ports:
-      - "5137:8080"
-    depends_on:
-      sqlserver:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - ems-network
-
-  ems-api:
-    build:
-      context: .
-      dockerfile: EMS.API/Dockerfile.compose
-    container_name: ems-api-dev
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=EMSDevDB;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
-      ConnectionStrings__MongoDb: "mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/?authSource=admin"
-      ConnectionStrings__MongoLogs: "mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/ems-logs?authSource=admin"
-      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
-      Cors__AllowedOrigins__0: "${EMS_CORS_ORIGIN_0:-http://localhost:3000}"
-      Cors__AllowedOrigins__1: "${EMS_CORS_ORIGIN_1:-http://127.0.0.1:3000}"
-      UserManagementApi__BaseUrl: "http://usermanagement-api:8080"
-      UserManagementApi__ServiceClientId: ems
-      UserManagementApi__ServiceClientSecret: "${EMS_UM_SERVICE_CLIENT_SECRET}"
-      UserManagementApi__JwtIssuer: Pukar.Usermanagement
-      UserManagementApi__JwtAudience: ems
-    ports:
-      - "5246:8080"
-    depends_on:
-      - sqlserver
-      - mongodb
-      - redis
-      - usermanagement-api
-    restart: unless-stopped
-    networks:
-      - ems-network
-
-  ems-web:
-    build:
-      context: ./ems-web
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_EMS_API_BASE_URL: ${NEXT_PUBLIC_EMS_API_BASE_URL:-http://localhost:5246}
-        NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL: ${NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL:-http://localhost:5137}
-    container_name: ems-web-dev
-    ports:
-      - "3000:3000"
-    depends_on:
-      - ems-api
-      - usermanagement-api
-    restart: unless-stopped
-    networks:
-      - ems-network
-
-volumes:
-  ems-sql-data:
-    driver: local
-  ems-mongo-data:
-    driver: local
-  ems-redis-data:
-    driver: local
-
-networks:
-  ems-network:
-    driver: bridge
+# Full local stack: SQL Server (two databases: EMSDevDB + UserManagementDb), MongoDB, Redis,
+# the single consolidated EMS.API host (User Management runs in-process), and ems-web.
+#
+#   cp docker-compose.env.example .env   # edit secrets — rotate any previously committed values
+#   docker compose up -d --build
+#
+# Browser:
+#   ems-web  → http://localhost:3000
+#   EMS.API  → http://localhost:5246  (also serves /api/auth, /api/users, /api/roles, /api/invitations)
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ems-sqlserver-dev
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}"
+      MSSQL_PID: Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - ems-sql-data:/var/opt/mssql
+    restart: unless-stopped
+    networks:
+      - ems-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mongodb:
+    image: mongo:7.0
+    container_name: ems-mongodb-dev
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}"
+    ports:
+      - "27017:27017"
+    volumes:
+      - ems-mongo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - ems-network
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: ems-redis-dev
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"
+    ports:
+      - "6379:6379"
+    volumes:
+      - ems-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - ems-network
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: ems-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGO_ROOT_PASSWORD}"
+      ME_CONFIG_MONGODB_URL: "mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/"
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongodb
+    networks:
+      - ems-network
+
+  ems-api:
+    build:
+      context: .
+      dockerfile: EMS.API/Dockerfile.compose
+    container_name: ems-api-dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=EMSDevDB;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      # Separate database for the in-process User Management bounded context.
+      ConnectionStrings__UserManagementDb: "Server=sqlserver,1433;Database=UserManagementDb;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__MongoDb: "mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/?authSource=admin"
+      ConnectionStrings__MongoLogs: "mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/ems-logs?authSource=admin"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+      Cors__AllowedOrigins__0: "${EMS_CORS_ORIGIN_0:-http://localhost:3000}"
+      Cors__AllowedOrigins__1: "${EMS_CORS_ORIGIN_1:-http://127.0.0.1:3000}"
+      # User Management token signing/validation now happens in-process in this host.
+      Jwt__Issuer: Pukar.Usermanagement
+      Jwt__Audience: ems
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY (32+ chars) in .env}"
+      # Only needed for the retained internal service-token compatibility endpoints.
+      ServiceClients__Ems__ClientId: ems
+      ServiceClients__Ems__Secret: "${EMS_UM_SERVICE_CLIENT_SECRET:-}"
+    ports:
+      - "5246:8080"
+    depends_on:
+      - sqlserver
+      - mongodb
+      - redis
+    restart: unless-stopped
+    networks:
+      - ems-network
+
+  ems-web:
+    build:
+      context: ./ems-web
+      dockerfile: Dockerfile
+      args:
+        # Single browser API origin — all EMS and User Management calls target EMS.API.
+        NEXT_PUBLIC_EMS_API_BASE_URL: ${NEXT_PUBLIC_EMS_API_BASE_URL:-http://localhost:5246}
+    container_name: ems-web-dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - ems-api
+    restart: unless-stopped
+    networks:
+      - ems-network
+
+volumes:
+  ems-sql-data:
+    driver: local
+  ems-mongo-data:
+    driver: local
+  ems-redis-data:
+    driver: local
+
+networks:
+  ems-network:
+    driver: bridge

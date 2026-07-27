@@ -5,6 +5,10 @@
     <ProjectReference Include="..\EMS.Application\EMS.Application.csproj" />
     <ProjectReference Include="..\Pukar.Notifications\Pukar.Notifications.Domain\Pukar.Notifications.Domain.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Contracts\Pukar.Usermanagement.Contracts.csproj" />
+    <!-- In-process anti-corruption adapters call User Management application services directly
+         (no HTTP). Referencing UM Application/Domain here is part of the single-host composition. -->
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Application\Pukar.Usermanagement.Application.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Domain\Pukar.Usermanagement.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

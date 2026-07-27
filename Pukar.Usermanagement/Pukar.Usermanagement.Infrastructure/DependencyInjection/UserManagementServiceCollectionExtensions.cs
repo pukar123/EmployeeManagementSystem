@@ -33,16 +33,21 @@ public static class UserManagementServiceCollectionExtensions
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.Configure<ServiceClientsOptions>(configuration.GetSection(ServiceClientsOptions.SectionName));
         services.Configure<PasswordPolicyOptions>(configuration.GetSection(PasswordPolicyOptions.SectionName));
+        services.Configure<PasswordResetOptions>(configuration.GetSection(PasswordResetOptions.SectionName));
 
         if (registerDbContext)
         {
+            // The User Management bounded context owns its own database. It must never
+            // silently fall back to the EMS DefaultConnection, which would merge the two
+            // databases. Fail fast with a clear message when the connection string is missing.
             var connectionString = configuration.GetConnectionString(connectionStringName)
-                                   ?? configuration.GetConnectionString("UserManagement")
-                                   ?? configuration.GetConnectionString("DefaultConnection");
+                                   ?? configuration.GetConnectionString("UserManagement");
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new InvalidOperationException(
-                    $"Connection string '{connectionStringName}', 'UserManagement', or 'DefaultConnection' is required.");
+                    $"Connection string 'ConnectionStrings:{connectionStringName}' is required for the User Management " +
+                    "bounded context. Set it in configuration, User Secrets, or environment variables. " +
+                    "It must point at UserManagementDb and must not be shared with the EMS DefaultConnection.");
 
             services.AddDbContext<UserManagementDbContext>(options =>
                 options.UseSqlServer(
@@ -56,6 +61,7 @@ public static class UserManagementServiceCollectionExtensions
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAccountInvitationRepository, AccountInvitationRepository>();
         services.AddScoped<IIdempotencyRecordRepository, IdempotencyRecordRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IServiceClientRepository, ServiceClientRepository>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<IPasswordPolicyValidator, PasswordPolicyValidator>();

@@ -1,6 +1,8 @@
 # Pukar.Usermanagement
 
-Standalone JWT authentication, user/role administration, invitations, and service-to-service APIs. **Run via `Pukar.Usermanagement.Host`** — EMS embedded mode is deprecated.
+JWT authentication, user/role administration, invitations, password reset, and service APIs.
+
+> **Deployment note:** these projects (`Contracts`, `Domain`, `Application`, `Infrastructure`, `API`) are now **composed in-process by `EMS.API`**, which is the single deployable host and composition root. User Management keeps its own `UserManagementDbContext`, `UserManagementDb`, and EF migrations. `Pukar.Usermanagement.Host` is retained for reference/tests but is **no longer required at runtime** — do not deploy it as a separate service. EMS registers everything through `AddPukarUserManagement(configuration, "UserManagementDb", useRsaSigning: false)` and serves the UM controllers via an MVC application part.
 
 ## Projects
 
@@ -55,7 +57,8 @@ Full cutover sequence: [docs/ems-um-db-split-cutover.md](../docs/ems-um-db-split
 | `ConnectionStrings:UserManagementDb` | SQL Server database |
 | `Jwt` | Issuer (`Pukar.Usermanagement`), audience (`ems`), RSA key (`SigningKeyPem` or `SigningKeyPemFile`) |
 | `SeedAdmin` | Optional default admin user on startup |
-| `Smtp` | Invitation email delivery |
+| `Smtp` | Invitation and password-reset email delivery; use Gmail SMTP with an app password for local development |
+| `PasswordReset` | Password-reset token lifetime and request cooldown |
 | `ServiceClients:Ems` | EMS client-credentials (`client_id` + secret) |
 | `Cors:AllowedOrigins` | Browser clients |
 
@@ -72,6 +75,7 @@ dotnet run --project tools/GenRsaKey -- Pukar.Usermanagement.Host/dev-rsa-key.pe
 | Route | Auth |
 |-------|------|
 | `POST /api/auth/login`, `register`, `refresh`, `revoke` | Anonymous |
+| `POST /api/auth/forgot-password`, `reset-password` | Anonymous |
 | `POST /api/auth/change-password` | User JWT |
 | `GET/POST/PUT /api/users`, `api/roles` | Admin user JWT |
 | `POST /api/invitations/accept` | Anonymous |

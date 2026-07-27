@@ -30,13 +30,12 @@ using EMS.Infrastructure.Integrations.UserManagement;
 using EMS.Infrastructure.Persistence.Auditing;
 using Pukar.Notifications.Application.Services;
 using Pukar.Notifications.Domain.Repositories;
+using Pukar.Usermanagement.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;
-using Polly;
-using Polly.Extensions.Http;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -86,24 +85,36 @@ try
         });
     });
 
-    builder.Services.Configure<UserManagementApiOptions>(builder.Configuration.GetSection(UserManagementApiOptions.SectionName));
     builder.Services.Configure<AuthorizationModeOptions>(builder.Configuration.GetSection(AuthorizationModeOptions.SectionName));
     builder.Services.Configure<CorsOptions>(builder.Configuration.GetSection(CorsOptions.SectionName));
     builder.Services.Configure<EmployeeSchedulingOptions>(
         builder.Configuration.GetSection(EmployeeSchedulingOptions.SectionName));
+    builder.Services.Configure<EMS.API.Options.SeedAdminOptions>(
+        builder.Configuration.GetSection(EMS.API.Options.SeedAdminOptions.SectionName));
     builder.Services.AddHostedService<EmsRbacSeedHostedService>();
     builder.Services.AddHostedService<RoleKeyBackfillHostedService>();
     builder.Services.AddHostedService<EmployeeScheduledChangeWorker>();
     builder.Services.AddHostedService<ScheduledChangeReminderWorker>();
     builder.Services.AddHostedService<DocumentExpiryNotificationWorker>();
     builder.Services.AddHostedService<IntegrationOutboxDispatcher>();
+    // User Management seeding is triggered from the composition root but executes through
+    // UM repositories/services. Idempotency cleanup supports the internal compatibility endpoints.
+    builder.Services.AddHostedService<UserManagementSeedHostedService>();
+    builder.Services.AddHostedService<UserManagementIdempotencyCleanupHostedService>();
 
     builder.Services.AddControllers(options =>
         {
             options.Filters.Add(
                 new AuthorizeFilter(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()));
-        });
+        })
+        // Serve the User Management controllers in-process from this single host.
+        .AddApplicationPart(typeof(Pukar.Usermanagement.API.Controllers.AuthController).Assembly);
     builder.Services.AddOpenApi();
+
+    // Compose the User Management bounded context in-process (own DbContext, repositories,
+    // application services, hashing, JWT, SMTP, invitations, password reset). Symmetric
+    // signing keeps token issuance and local validation aligned in one host.
+    builder.Services.AddPukarUserManagement(builder.Configuration, connectionStringName: "UserManagementDb", useRsaSigning: false);
 
     builder.Services.AddUserManagementJwtAuthentication(builder.Configuration);
 
@@ -124,7 +135,9 @@ try
     builder.Services.AddScoped<IRoleKeyPermissionService, RoleKeyPermissionService>();
     builder.Services.AddScoped<IRoleKeyCapabilityService, RoleKeyCapabilityService>();
 
-    RegisterUserManagementHttp(builder.Services, builder.Configuration);
+    // In-process anti-corruption adapters replace the former EMS-to-UM HTTP + service-token
+    // integration. They call User Management application services directly within this host.
+    builder.Services.AddScoped<IUserManagementRoleMetadataClient, InProcessUserManagementRoleMetadataClient>();
 
     builder.Services.AddScoped<ILegacyRoleKeyGuard, LegacyRoleKeyGuard>();
     builder.Services.AddScoped<INavigationService, NavigationService>();
@@ -138,12 +151,12 @@ try
     builder.Services.AddScoped<IEmployeeNumberAllocator, SqlEmployeeNumberAllocator>();
     builder.Services.AddScoped<IEmployeeRoleSyncService, EmployeeRoleSyncService>();
     builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
-    builder.Services.AddScoped<IEmployeeUserManagementGateway, HttpEmployeeUserManagementGateway>();
+    builder.Services.AddScoped<IEmployeeUserManagementGateway, InProcessEmployeeUserManagementGateway>();
     builder.Services.AddScoped<IEmployeeIdentityProvisioningService, EmployeeIdentityProvisioningService>();
     builder.Services.AddScoped<IEmployeeBusinessDateHelper, EmployeeBusinessDateHelper>();
     builder.Services.AddScoped<IEmployeeScheduledChangeService, EmployeeScheduledChangeService>();
     builder.Services.AddScoped<IEmployeeScheduledChangeApplier, EmployeeScheduledChangeApplier>();
-    builder.Services.AddScoped<IEmployeeInvitationService, HttpEmployeeInvitationService>();
+    builder.Services.AddScoped<IEmployeeInvitationService, InProcessEmployeeInvitationService>();
     builder.Services.AddScoped<EMS.Application.Services.Integrations.IIntegrationOutboxWriter, EMS.Application.Services.Integrations.IntegrationOutboxWriter>();
     builder.Services.AddScoped<EMS.Application.Services.Integrations.IIntegrationOutboxProcessor, EMS.Application.Services.Integrations.IntegrationOutboxProcessor>();
     builder.Services.AddScoped<IOrganizationService, OrganizationService>();
@@ -193,7 +206,8 @@ try
     var mongoLogsCs = builder.Configuration.GetConnectionString("MongoLogs");
     var healthChecks = builder.Services.AddHealthChecks()
         .AddDbContextCheck<AppDbContext>(name: "database")
-        .AddCheck<UserManagementHealthCheck>("user-management", failureStatus: HealthStatus.Unhealthy, tags: ["ready"])
+        // User Management now runs in-process; readiness is its own database rather than a remote host.
+        .AddDbContextCheck<Pukar.Usermanagement.Domain.Database.UserManagementDbContext>(name: "user-management", tags: ["ready"])
         .AddCheck<RoleKeyMigrationHealthCheck>("role-key-migration", failureStatus: HealthStatus.Unhealthy, tags: ["ready"]);
 
     if (!string.IsNullOrWhiteSpace(mongoLogsCs))
@@ -210,13 +224,21 @@ try
 
     if (app.Environment.IsDevelopment())
     {
+        // Development convenience only: apply UM migrations first, then EMS migrations, each
+        // against its own database. The destructive legacy [um] drop migration is
+        // operator-gated inside the migration itself and will NOT run without an explicit
+        // approval marker. Production applies migrations explicitly via the documented
+        // `dotnet ef database update` commands.
         using (var scope = app.Services.CreateScope())
         {
+            var umDb = scope.ServiceProvider.GetRequiredService<Pukar.Usermanagement.Domain.Database.UserManagementDbContext>();
+            umDb.Database.Migrate();
+            Log.Information("Applied pending EF Core migrations for UserManagementDbContext -> UserManagementDb (Development).");
+
             var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             appDb.Database.Migrate();
+            Log.Information("Applied pending EF Core migrations for AppDbContext -> EMSDevDB (Development).");
         }
-
-        Log.Information("Applied pending EF Core migrations for AppDbContext (Development).");
 
         app.MapOpenApi().AllowAnonymous();
     }
@@ -262,32 +284,4 @@ try
 finally
 {
     Log.CloseAndFlush();
-}
-
-static void RegisterUserManagementHttp(IServiceCollection services, IConfiguration configuration)
-{
-    var options = configuration.GetSection(UserManagementApiOptions.SectionName).Get<UserManagementApiOptions>()
-        ?? new UserManagementApiOptions();
-    var timeout = TimeSpan.FromSeconds(options.TimeoutSeconds > 0 ? options.TimeoutSeconds : 10);
-    var retryCount = options.RetryCount > 0 ? options.RetryCount : 2;
-    var retryBaseDelayMs = options.RetryBaseDelayMs > 0 ? options.RetryBaseDelayMs : 200;
-
-    void ConfigureClient(HttpClient client)
-    {
-        if (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUrl))
-            client.BaseAddress = baseUrl;
-        client.Timeout = timeout;
-    }
-
-    services.AddHttpClient(UserManagementHttpClientNames.Default, ConfigureClient);
-    services.AddHttpClient(UserManagementHttpClientNames.SafeRetry, ConfigureClient)
-        .AddPolicyHandler(HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .WaitAndRetryAsync(
-                retryCount,
-                attempt => TimeSpan.FromMilliseconds(retryBaseDelayMs * Math.Pow(2, attempt - 1))));
-
-    services.AddSingleton<IUserManagementServiceTokenProvider, UserManagementServiceTokenProvider>();
-    services.AddScoped<IUserManagementHttpClient, UserManagementHttpClient>();
-    services.AddScoped<IUserManagementRoleMetadataClient, UserManagementRoleMetadataClient>();
 }

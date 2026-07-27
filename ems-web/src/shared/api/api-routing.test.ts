@@ -126,7 +126,7 @@ describe("dual API routing", () => {
     }
   });
 
-  it("refreshes via User Management then retries the failed request on the original EMS client", async () => {
+  it("refreshes via the single EMS.API host then retries the failed request on the original EMS client", async () => {
     let emsAttempts = 0;
     const refreshCalls: string[] = [];
 
@@ -171,6 +171,7 @@ describe("dual API routing", () => {
     const { data } = await emsHttpClient.get("/api/Employees");
     expect(data).toEqual({ ok: true });
     expect(emsAttempts).toBe(2);
-    expect(refreshCalls.some((u) => u.includes(`${UM_ORIGIN}/api/auth/refresh`))).toBe(true);
+    // Token refresh now targets the single consolidated EMS.API host.
+    expect(refreshCalls.some((u) => u.includes(`${EMS_ORIGIN}/api/auth/refresh`))).toBe(true);
   });
 });

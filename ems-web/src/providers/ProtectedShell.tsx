@@ -12,12 +12,16 @@ import { Spinner } from "@/shared/components/Spinner";
 const LOGIN_PATH = "/login";
 const CHANGE_PASSWORD_PATH = "/change-password";
 const ACCEPT_INVITATION_PATH = "/accept-invitation";
+const FORGOT_PASSWORD_PATH = "/forgot-password";
+const RESET_PASSWORD_PATH = "/reset-password";
 
 function isPublicAuthPath(pathname: string): boolean {
   return (
     pathname === LOGIN_PATH ||
     pathname === CHANGE_PASSWORD_PATH ||
-    pathname === ACCEPT_INVITATION_PATH
+    pathname === ACCEPT_INVITATION_PATH ||
+    pathname === FORGOT_PASSWORD_PATH ||
+    pathname === RESET_PASSWORD_PATH
   );
 }
 
@@ -62,6 +66,10 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
   }
 
   if (pathname === ACCEPT_INVITATION_PATH) {
+    return <>{children}</>;
+  }
+
+  if (pathname === FORGOT_PASSWORD_PATH || pathname === RESET_PASSWORD_PATH) {
     return <>{children}</>;
   }
 

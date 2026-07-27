@@ -458,15 +458,14 @@ public sealed class InvitationService : IInvitationService
 
         {
 
+            // Persistence already succeeded: the user and invitation exist. Record the
+            // delivery failure but DO NOT throw — the caller (e.g. EMS) must still receive
+            // the user/invitation id so it can link ExternalIdentityKey and retry delivery
+            // later via resend. Throwing here would strand a persisted account.
+
             invitation.DeliveryStatus = AccountInvitationDeliveryStatus.Failed;
 
             invitation.DeliveryFailureReason = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
-
-            _invitations.Update(invitation);
-
-            await _invitations.SaveChangesAsync(cancellationToken);
-
-            throw new BusinessRuleException("Invitation email could not be delivered. The invitation remains pending for retry.");
 
         }
 
@@ -614,15 +613,13 @@ public sealed class InvitationService : IInvitationService
 
         {
 
+            // Resend rotates the token before delivery; a delivery failure is recorded but
+            // not thrown so repeated resends stay recoverable rather than becoming a
+            // permanent error. The rotated token was already persisted below.
+
             invitation.DeliveryStatus = AccountInvitationDeliveryStatus.Failed;
 
             invitation.DeliveryFailureReason = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
-
-            _invitations.Update(invitation);
-
-            await _invitations.SaveChangesAsync(cancellationToken);
-
-            throw new BusinessRuleException("Invitation email could not be delivered.");
 
         }
 

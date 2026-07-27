@@ -11,6 +11,8 @@ public interface IIntegrationOutboxWriter
     Task EnqueueRevokeLinkedIdentityAsync(int employeeId, CancellationToken cancellationToken = default);
 
     Task EnqueueSyncEmployeeRolesAsync(int employeeId, CancellationToken cancellationToken = default);
+
+    Task EnqueueProvisionEmployeeIdentityAsync(int employeeId, CancellationToken cancellationToken = default);
 }
 
 public sealed class IntegrationOutboxWriter : IIntegrationOutboxWriter
@@ -33,6 +35,13 @@ public sealed class IntegrationOutboxWriter : IIntegrationOutboxWriter
         => EnqueueAsync(
             IntegrationOutboxMessageType.SyncEmployeeRoles,
             $"sync-roles:employee:{employeeId}",
+            new { employeeId },
+            cancellationToken);
+
+    public Task EnqueueProvisionEmployeeIdentityAsync(int employeeId, CancellationToken cancellationToken = default)
+        => EnqueueAsync(
+            IntegrationOutboxMessageType.ProvisionEmployeeIdentity,
+            $"provision-identity:employee:{employeeId}",
             new { employeeId },
             cancellationToken);
 
