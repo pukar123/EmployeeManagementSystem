@@ -34,6 +34,13 @@ public sealed class ShiftService : IShiftService
         if (employee.OrganizationId != request.OrganizationId)
             throw new BusinessRuleException("Shift organization must match the employee organization.");
 
+        await EnsureNoOverlappingShiftsAsync(
+            request.EmployeeId,
+            request.StartAtUtc,
+            request.EndAtUtc,
+            excludeShiftId: null,
+            cancellationToken);
+
         var now = DateTime.UtcNow;
         var entity = ShiftMapper.ToEntity(request);
         entity.CreatedAtUtc = now;
@@ -72,6 +79,10 @@ public sealed class ShiftService : IShiftService
         return list.Select(ShiftMapper.ToResponse).ToList();
     }
 
+    /// <summary>
+    /// Shifts relevant to the employee portal: in-progress or not yet finished (scheduled/started),
+    /// so a scheduled block that already began but has not ended still appears.
+    /// </summary>
     public async Task<IReadOnlyList<ShiftResponseModel>> GetUpcomingByEmployeeAsync(
         int employeeId,
         DateTime? fromUtc,
@@ -83,9 +94,10 @@ public sealed class ShiftService : IShiftService
             .AsNoTracking()
             .Where(s =>
                 s.EmployeeId == employeeId
-                && s.Status == ShiftStatus.Scheduled
-                && s.StartAtUtc >= from)
-            .OrderBy(s => s.StartAtUtc)
+                && s.EndAtUtc >= from
+                && (s.Status == ShiftStatus.Scheduled || s.Status == ShiftStatus.Started))
+            .OrderByDescending(s => s.Status == ShiftStatus.Started ? 1 : 0)
+            .ThenBy(s => s.StartAtUtc)
             .ThenBy(s => s.Title)
             .ToListAsync(cancellationToken);
 
@@ -101,6 +113,13 @@ public sealed class ShiftService : IShiftService
         request.Title = StringHelper.NormalizeRequired(request.Title);
         request.Description = StringHelper.NormalizeOptional(request.Description);
         ValidateTimeframe(request.StartAtUtc, request.EndAtUtc);
+
+        await EnsureNoOverlappingShiftsAsync(
+            entity.EmployeeId,
+            request.StartAtUtc,
+            request.EndAtUtc,
+            excludeShiftId: entity.Id,
+            cancellationToken);
 
         ShiftMapper.ApplyUpdate(entity, request);
         entity.UpdatedAtUtc = DateTime.UtcNow;
@@ -150,6 +169,29 @@ public sealed class ShiftService : IShiftService
         await _shiftRepository.SaveChangesAsync(cancellationToken);
 
         return ShiftMapper.ToResponse(entity);
+    }
+
+    private async Task EnsureNoOverlappingShiftsAsync(
+        int employeeId,
+        DateTime startAtUtc,
+        DateTime endAtUtc,
+        int? excludeShiftId,
+        CancellationToken cancellationToken)
+    {
+        var query = _shiftRepository.GetQueryable()
+            .AsNoTracking()
+            .Where(s =>
+                s.EmployeeId == employeeId
+                && s.Status != ShiftStatus.Cancelled
+                && s.StartAtUtc < endAtUtc
+                && s.EndAtUtc > startAtUtc);
+
+        if (excludeShiftId.HasValue)
+            query = query.Where(s => s.Id != excludeShiftId.Value);
+
+        var hasOverlap = await query.AnyAsync(cancellationToken);
+        if (hasOverlap)
+            throw new BusinessRuleException("This employee already has a shift scheduled during that time.");
     }
 
     private static void ValidateTimeframe(DateTime startAtUtc, DateTime endAtUtc)

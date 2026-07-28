@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -17,6 +18,8 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="9.0.4" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.6.1" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
@@ -28,9 +31,15 @@
     <ProjectReference Include="..\EMS.Application\EMS.Application.csproj" />
     <ProjectReference Include="..\EMS.Domain\EMS.Domain.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Shared\Pukar.Shared.csproj" />
+    <ProjectReference Include="..\Pukar.Notifications\Pukar.Notifications.Application\Pukar.Notifications.Application.csproj" />
     <ProjectReference Include="..\EMS.Infrastructure\EMS.Infrastructure.csproj" />
-    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.API\Pukar.Usermanagement.API.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Contracts\Pukar.Usermanagement.Contracts.csproj" />
+    <!-- EMS.API is the composition root for the single deployable host: it may reference
+         the User Management implementation projects to compose the in-process bounded context. -->
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Application\Pukar.Usermanagement.Application.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Infrastructure\Pukar.Usermanagement.Infrastructure.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.Domain\Pukar.Usermanagement.Domain.csproj" />
+    <ProjectReference Include="..\Pukar.Usermanagement\Pukar.Usermanagement.API\Pukar.Usermanagement.API.csproj" />
   </ItemGroup>
 
 </Project>

@@ -31,6 +31,7 @@ public sealed class EmsRbacSeedHostedService : IHostedService
             {
                 new MenuSeedRow("home", "Home", "/", null, 0, "home"),
                 new MenuSeedRow("employees", "Employees", "/employees", null, 10, "users"),
+                new MenuSeedRow("manager.team", "My team", "/manager/team", null, 12, "users"),
                 new MenuSeedRow("departments", "Departments", "/departments", null, 20, "building2"),
                 new MenuSeedRow("attendance", "Attendance", "/attendance", null, 30, "clock3"),
                 new MenuSeedRow("attendance.reports", "Reports", "/attendance/reports", "attendance", 10, "layout-list"),
@@ -39,14 +40,17 @@ public sealed class EmsRbacSeedHostedService : IHostedService
                 new MenuSeedRow("leave.admin", "Leave Admin", "/leave/admin", "leave", 10, "calendar-days"),
                 new MenuSeedRow("leave.admin.overview", "Overview", "/leave/admin", "leave.admin", 10, "layout-list"),
                 new MenuSeedRow("leave.admin.settings", "Leave Setting", "/leave/admin/settings", "leave.admin", 20, "settings"),
+                new MenuSeedRow("shifts", "Shifts", "/shifts", null, 34, "clock3"),
                 new MenuSeedRow("tasks", "Tasks", "/tasks", null, 35, "list-todo"),
                 new MenuSeedRow("positions", "Positions", "/positions", null, 40, "briefcase"),
                 new MenuSeedRow("sites", "Sites", "/sites", null, 50, "mappin"),
                 new MenuSeedRow("organization", "Organization", "/organization/setup", null, 60, "settings"),
+                new MenuSeedRow("organization.onboarding", "Onboarding", "/organization/onboarding", "organization", 10, "list-todo"),
                 new MenuSeedRow("user-management", "User management", "/user-management", null, 70, "shield"),
                 new MenuSeedRow("user-management.users", "Users", "/user-management/users", "user-management", 10, "users"),
                 new MenuSeedRow("user-management.roles", "Roles", "/user-management/roles", "user-management", 20, "shield"),
                 new MenuSeedRow("user-management.menu-access", "Menu access", "/user-management/menu-access", "user-management", 30, "layout-list"),
+                new MenuSeedRow("user-management.employee-capabilities", "Employee capabilities", "/user-management/employee-capabilities", "user-management", 40, "shield"),
             };
 
             var keyToId = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -123,6 +127,7 @@ public sealed class EmsRbacSeedHostedService : IHostedService
             }
 
             await db.SaveChangesAsync(cancellationToken);
+            await SeedEmployeeCapabilitiesAsync(db, keyToId, cancellationToken);
             _logger.LogInformation("EMS RBAC seed completed for role key {RoleKey}.", AdminRoleKey);
         }
         catch (Exception ex)
@@ -132,6 +137,72 @@ public sealed class EmsRbacSeedHostedService : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private static async Task SeedEmployeeCapabilitiesAsync(
+        AppDbContext db,
+        IReadOnlyDictionary<string, int> keyToId,
+        CancellationToken cancellationToken)
+    {
+        const string employeesMenuKey = "employees";
+        var capabilityKeys = new[]
+        {
+            "employees.view",
+            "employees.manage",
+            "employees.access",
+            "employees.export",
+        };
+
+        foreach (var capabilityKey in capabilityKeys)
+        {
+            var hasAdmin = await db.RoleKeyCapabilities.AsNoTracking()
+                .AnyAsync(r => r.RoleKey == AdminRoleKey && r.CapabilityKey == capabilityKey, cancellationToken);
+            if (hasAdmin)
+                continue;
+
+            db.RoleKeyCapabilities.Add(new RoleKeyCapability
+            {
+                RoleKey = AdminRoleKey,
+                CapabilityKey = capabilityKey,
+                Allowed = true,
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        if (!keyToId.TryGetValue(employeesMenuKey, out var employeesMenuId))
+        {
+            var menu = await db.Menus.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Key == employeesMenuKey, cancellationToken);
+            if (menu is null)
+                return;
+            employeesMenuId = menu.Id;
+        }
+
+        var roleKeysWithEmployeesMenu = await db.RoleKeyPermissions.AsNoTracking()
+            .Where(rp => rp.MenuId == employeesMenuId && rp.Allowed && rp.RoleKey != AdminRoleKey)
+            .Select(rp => rp.RoleKey)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        foreach (var roleKey in roleKeysWithEmployeesMenu)
+        {
+            var hasView = await db.RoleKeyCapabilities.AsNoTracking()
+                .AnyAsync(
+                    r => r.RoleKey == roleKey && r.CapabilityKey == "employees.view" && r.Allowed,
+                    cancellationToken);
+            if (hasView)
+                continue;
+
+            db.RoleKeyCapabilities.Add(new RoleKeyCapability
+            {
+                RoleKey = roleKey,
+                CapabilityKey = "employees.view",
+                Allowed = true,
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
 
     private sealed record MenuSeedRow(
         string Key,

@@ -1,5 +1,7 @@
 export { useEmployees } from "./useEmployees";
 export { useEmployee } from "./useEmployee";
+export { useEmployeeDirectory } from "./useEmployeeDirectory";
+export { useEmployeeProfile, useEmployeeHistory } from "./useEmployeeProfile";
 export { useCreateEmployee } from "./useCreateEmployee";
 export { useUpdateEmployee } from "./useUpdateEmployee";
 export { useDeleteEmployee } from "./useDeleteEmployee";

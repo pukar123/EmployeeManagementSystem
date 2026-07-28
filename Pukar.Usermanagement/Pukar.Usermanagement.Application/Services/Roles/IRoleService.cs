@@ -1,4 +1,4 @@
-using Pukar.Usermanagement.Application.DTOs.Roles;
+using Pukar.Usermanagement.Contracts.Roles;
 
 namespace Pukar.Usermanagement.Application.Services.Roles;
 

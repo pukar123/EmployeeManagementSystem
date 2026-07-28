@@ -141,6 +141,15 @@ $RECYCLE.BIN/
 # Docker Compose local overrides (may contain URLs / build args)
 .env
 
+# Private / test RSA keys — generate locally; never commit
+*.pem
+!**/docs/**/*.pem.pub
+
+# Local JWT signing keys (User Management)
+secrets/
+Pukar.Usermanagement/Pukar.Usermanagement.Host/dev-rsa-key.pem
+Pukar.Usermanagement/Pukar.Usermanagement.IntegrationTests/test-rsa-key.pem
+
 # Uploaded attachments (do not commit user files)
 EMS.API/wwwroot/attachments/
 EMS.API/wwwroot/uploads/

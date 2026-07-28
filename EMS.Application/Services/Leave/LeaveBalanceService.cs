@@ -10,16 +10,22 @@ namespace EMS.Application.Services.Leave;
 public sealed class LeaveBalanceService : ILeaveBalanceService
 {
     private readonly ILeaveBalanceRepository _leaveBalanceRepository;
+    private readonly ILeaveEmployeeAccessService _leaveEmployeeAccess;
 
-    public LeaveBalanceService(ILeaveBalanceRepository leaveBalanceRepository)
+    public LeaveBalanceService(
+        ILeaveBalanceRepository leaveBalanceRepository,
+        ILeaveEmployeeAccessService leaveEmployeeAccess)
     {
         _leaveBalanceRepository = leaveBalanceRepository;
+        _leaveEmployeeAccess = leaveEmployeeAccess;
     }
 
     public async Task<IReadOnlyList<LeaveBalanceResponseModel>> GetByEmployeeAsync(
         int employeeId,
         CancellationToken cancellationToken = default)
     {
+        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(employeeId, cancellationToken);
+
         var rows = await _leaveBalanceRepository.GetQueryable()
             .AsNoTracking()
             .Where(x => x.EmployeeId == employeeId)
@@ -34,6 +40,8 @@ public sealed class LeaveBalanceService : ILeaveBalanceService
         int leaveTypeId,
         CancellationToken cancellationToken = default)
     {
+        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(employeeId, cancellationToken);
+
         var entity = await _leaveBalanceRepository.GetByEmployeeAndTypeAsync(
                 employeeId,
                 leaveTypeId,

@@ -1,11 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EMS.Application.DTOs.Task;
+using EMS.Application.Services.EmployeePortal;
 using EMS.Application.Services.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
-using Pukar.Usermanagement.Application;
+using Pukar.Usermanagement.Contracts.Roles;
 
 namespace EMS.API.Controllers;
 
@@ -15,10 +16,12 @@ namespace EMS.API.Controllers;
 public sealed class TasksController : ControllerBase
 {
     private readonly ITaskService _taskService;
+    private readonly ILinkedEmployeeService _linkedEmployeeService;
 
-    public TasksController(ITaskService taskService)
+    public TasksController(ITaskService taskService, ILinkedEmployeeService linkedEmployeeService)
     {
         _taskService = taskService;
+        _linkedEmployeeService = linkedEmployeeService;
     }
 
     [HttpGet]
@@ -29,10 +32,24 @@ public sealed class TasksController : ControllerBase
         [FromQuery] DateTime? rangeEndUtc,
         CancellationToken cancellationToken)
     {
-        if (!IsAdmin() && employeeId.HasValue && employeeId.Value != GetCurrentUserId())
-            return Forbid();
+        int? effectiveEmployeeId;
+        if (IsAdmin())
+        {
+            effectiveEmployeeId = employeeId;
+        }
+        else
+        {
+            // Tasks are keyed by EMS Employee.Id, not the identity user id; resolve the linked employee.
+            var linkedEmployee = await _linkedEmployeeService.TryGetLinkedEmployeeAsync(cancellationToken);
+            if (linkedEmployee is null)
+                return Ok(Array.Empty<TaskResponseModel>());
 
-        var effectiveEmployeeId = IsAdmin() ? employeeId : GetCurrentUserId();
+            if (employeeId.HasValue && employeeId.Value != linkedEmployee.Id)
+                return Forbid();
+
+            effectiveEmployeeId = linkedEmployee.Id;
+        }
+
         try
         {
             var items = await _taskService.GetAllAsync(effectiveEmployeeId, assignedByUserId, rangeStartUtc, rangeEndUtc, cancellationToken);
@@ -51,7 +68,7 @@ public sealed class TasksController : ControllerBase
         if (task is null)
             return NotFound();
 
-        if (!CanAccessTask(task))
+        if (!await CanAccessTaskAsync(task, cancellationToken))
             return Forbid();
 
         return Ok(task);
@@ -104,7 +121,7 @@ public sealed class TasksController : ControllerBase
             if (existing is null)
                 return NotFound();
 
-            if (!CanAccessTask(existing))
+            if (!await CanAccessTaskAsync(existing, cancellationToken))
                 return Forbid();
 
             var updated = await _taskService.UpdateStatusAsync(id, request, cancellationToken);
@@ -133,13 +150,17 @@ public sealed class TasksController : ControllerBase
 
     private bool IsAdmin() => User.IsInRole(WellKnownRoles.Admin);
 
-    private bool CanAccessTask(TaskResponseModel task)
+    private async Task<bool> CanAccessTaskAsync(TaskResponseModel task, CancellationToken cancellationToken)
     {
         if (IsAdmin())
             return true;
 
         var currentUserId = GetCurrentUserId();
-        return currentUserId.HasValue
-            && (task.AssignedByUserId == currentUserId.Value || task.EmployeeId == currentUserId.Value);
+        if (currentUserId.HasValue && task.AssignedByUserId == currentUserId.Value)
+            return true;
+
+        // task.EmployeeId is an EMS Employee.Id; compare against the employee linked to the current user.
+        var linkedEmployee = await _linkedEmployeeService.TryGetLinkedEmployeeAsync(cancellationToken);
+        return linkedEmployee is not null && task.EmployeeId == linkedEmployee.Id;
     }
 }

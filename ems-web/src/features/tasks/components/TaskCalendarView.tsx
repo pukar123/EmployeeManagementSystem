@@ -29,7 +29,7 @@ type TaskCalendarViewProps = {
 
 export function TaskCalendarView({ events, employeeLabelById, onRangeChange, defaultView = "month" }: TaskCalendarViewProps) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
+    <div className="rounded-xl border border-border bg-card p-3 dark:bg-card">
       <div className="h-[700px]">
         <Calendar
           localizer={localizer}

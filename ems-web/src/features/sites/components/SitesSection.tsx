@@ -11,7 +11,7 @@ import { useCreateSite, useDeleteSite, useSites, useUpdateSite } from "../hooks"
 import type { Site } from "../types/site.types";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 export function SitesSection() {
   const { data, isLoading, isError, error } = useSites();
@@ -116,8 +116,8 @@ export function SitesSection() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Sites</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Manage office and work locations.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Sites</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Manage office and work locations.</p>
         </div>
         <Button type="button" onClick={openCreate}>
           Add site
@@ -125,7 +125,7 @@ export function SitesSection() {
       </div>
 
       <div className="max-w-md">
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Search
         </label>
         <input
@@ -149,27 +149,27 @@ export function SitesSection() {
           {getErrorMessage(error)}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-          <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
-            <thead className="bg-zinc-50 dark:bg-zinc-900/50">
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="min-w-full divide-y divide-border text-left text-sm ">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">#</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Name</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Location</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Description</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Active</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">#</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Location</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Description</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Active</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+            <tbody className="divide-y divide-border">
               {filtered.map((row, index) => (
-                <tr key={row.siteId} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
+                <tr key={row.siteId} className="bg-card hover:bg-muted/40">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-muted-foreground">
                     {index + 1}
                   </td>
-                  <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{row.siteName}</td>
-                  <td className="max-w-[12rem] px-4 py-3 text-zinc-700 dark:text-zinc-300">{row.siteLocation}</td>
-                  <td className="max-w-xs px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                  <td className="px-4 py-3 text-foreground">{row.siteName}</td>
+                  <td className="max-w-[12rem] px-4 py-3 text-muted-foreground">{row.siteLocation}</td>
+                  <td className="max-w-xs px-4 py-3 text-muted-foreground">
                     {row.siteDescription ? (
                       <span className="line-clamp-2" title={row.siteDescription}>
                         {row.siteDescription}
@@ -184,7 +184,7 @@ export function SitesSection() {
                         "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                         row.isActive
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                          : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+                          : "bg-muted text-muted-foreground",
                       )}
                     >
                       {row.isActive ? "Yes" : "No"}
@@ -211,7 +211,7 @@ export function SitesSection() {
             </tbody>
           </table>
           {filtered.length === 0 ? (
-            <p className="p-6 text-center text-sm text-zinc-500">No sites match the current filter.</p>
+            <p className="p-6 text-center text-sm text-muted-foreground">No sites match the current filter.</p>
           ) : null}
         </div>
       )}
@@ -219,7 +219,7 @@ export function SitesSection() {
       <Modal open={formOpen} title={editing ? "Edit site" : "New site"} onClose={closeForm} className="max-w-lg">
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Site name
             </label>
             <input
@@ -231,7 +231,7 @@ export function SitesSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Location
             </label>
             <input
@@ -243,7 +243,7 @@ export function SitesSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Description
             </label>
             <textarea
@@ -253,12 +253,12 @@ export function SitesSection() {
               placeholder="Optional"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded border-zinc-300 dark:border-zinc-600"
+              className="rounded border-input"
             />
             Active
           </label>

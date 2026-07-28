@@ -111,20 +111,20 @@ export function MenuAccessSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Menu access</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menu access</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Choose a role and select which menus that role may access. Parent menus are included automatically when a
           child is selected.
         </p>
       </div>
 
       <div className="max-w-xl space-y-2">
-        <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400" htmlFor="role">
+        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="role">
           Role
         </label>
         <select
           id="role"
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+          className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground"
           value={roleKey ?? ""}
           onChange={(e) => setRoleKey(e.target.value || null)}
         >
@@ -138,7 +138,7 @@ export function MenuAccessSection() {
       </div>
 
       {!roleKey ? (
-        <p className="text-sm text-zinc-500">Select a role to view and edit its menus.</p>
+        <p className="text-sm text-muted-foreground">Select a role to view and edit its menus.</p>
       ) : accessLoading || accessFetching ? (
         <div className="flex justify-center py-12">
           <Spinner />
@@ -249,7 +249,7 @@ function MenuAccessTreeEditor({
 
   return (
     <>
-      <div className="rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="rounded-xl border border-border bg-card p-2 dark:bg-card">
         {roots.map((root) => (
           <MenuPermissionNode
             key={root.id}
@@ -301,14 +301,14 @@ function MenuPermissionNode({
   return (
     <div className="rounded-md">
       <div
-        className="flex flex-wrap items-center gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+        className="flex flex-wrap items-center gap-2 rounded-md px-2 py-2 hover:bg-muted/40/60"
         style={{ paddingLeft: `${0.5 + level * 1.1}rem` }}
       >
         {hasChildren ? (
           <button
             type="button"
             onClick={() => setExpandedForNode(node.id, !open)}
-            className="inline-flex h-6 w-6 items-center justify-center rounded hover:bg-zinc-200/70 dark:hover:bg-zinc-800"
+            className="inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted/70"
             aria-label={open ? "Collapse branch" : "Expand branch"}
           >
             <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
@@ -321,8 +321,8 @@ function MenuPermissionNode({
           indeterminate={state.indeterminate}
           onChange={(checked) => onToggle(node.id, checked)}
         />
-        <span className="min-w-[14rem] flex-1 text-sm text-zinc-900 dark:text-zinc-100">{node.label}</span>
-        <span className="min-w-[12rem] flex-1 text-xs text-zinc-500 dark:text-zinc-400">{node.routePath}</span>
+        <span className="min-w-[14rem] flex-1 text-sm text-foreground">{node.label}</span>
+        <span className="min-w-[12rem] flex-1 text-xs text-muted-foreground">{node.routePath}</span>
         {hasChildren ? (
           <div className="ml-auto flex items-center gap-1">
             <Button type="button" variant="secondary" className="h-7 px-2 text-xs" onClick={() => onToggleBranch(node.id, true)}>
@@ -372,7 +372,7 @@ function TriStateCheckbox({
         }
       }}
       type="checkbox"
-      className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500"
+      className="h-4 w-4 rounded border-input text-foreground focus:ring-primary/20"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
       aria-checked={indeterminate ? "mixed" : checked}

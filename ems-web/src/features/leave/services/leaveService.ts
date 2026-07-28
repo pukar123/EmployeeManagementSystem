@@ -1,4 +1,4 @@
-import { postFormData, httpClient } from "@/shared/api/http-client";
+import { postFormData, emsHttpClient } from "@/shared/api/http-client";
 import type {
   LeaveAdminSummary,
   BulkLeaveImportPayload,
@@ -15,64 +15,64 @@ import type {
 
 export const leaveService = {
   getLeaveTypes: async (organizationId: number): Promise<LeaveType[]> => {
-    const { data } = await httpClient.get<LeaveType[]>("/api/LeaveTypes", { params: { organizationId } });
+    const { data } = await emsHttpClient.get<LeaveType[]>("/api/LeaveTypes", { params: { organizationId } });
     return data;
   },
 
 
   createLeaveType: async (payload: CreateLeaveTypePayload): Promise<LeaveType> => {
-    const { data } = await httpClient.post<LeaveType>("/api/LeaveTypes", payload);
+    const { data } = await emsHttpClient.post<LeaveType>("/api/LeaveTypes", payload);
     return data;
   },
 
   updateLeaveType: async (id: number, payload: UpdateLeaveTypePayload): Promise<LeaveType> => {
-    const { data } = await httpClient.put<LeaveType>(`/api/LeaveTypes/${id}`, payload);
+    const { data } = await emsHttpClient.put<LeaveType>(`/api/LeaveTypes/${id}`, payload);
     return data;
   },
 
   deleteLeaveType: async (id: number): Promise<void> => {
-    await httpClient.delete(`/api/LeaveTypes/${id}`);
+    await emsHttpClient.delete(`/api/LeaveTypes/${id}`);
   },
 
   getLeaveBalances: async (employeeId: number): Promise<LeaveBalance[]> => {
-    const { data } = await httpClient.get<LeaveBalance[]>(`/api/LeaveBalances/employee/${employeeId}`);
+    const { data } = await emsHttpClient.get<LeaveBalance[]>(`/api/LeaveBalances/employee/${employeeId}`);
     return data;
   },
 
   getLeaveRequests: async (employeeId: number): Promise<LeaveRequest[]> => {
-    const { data } = await httpClient.get<LeaveRequest[]>(`/api/LeaveRequests/employee/${employeeId}`);
+    const { data } = await emsHttpClient.get<LeaveRequest[]>(`/api/LeaveRequests/employee/${employeeId}`);
     return data;
   },
 
   getAdminSummary: async (organizationId: number, asOfDateUtc?: string): Promise<LeaveAdminSummary> => {
-    const { data } = await httpClient.get<LeaveAdminSummary>("/api/LeaveRequests/admin/summary", {
+    const { data } = await emsHttpClient.get<LeaveAdminSummary>("/api/LeaveRequests/admin/summary", {
       params: { organizationId, asOfDateUtc },
     });
     return data;
   },
 
   createLeaveRequest: async (payload: CreateLeaveRequestPayload): Promise<LeaveRequest> => {
-    const { data } = await httpClient.post<LeaveRequest>("/api/LeaveRequests", payload);
+    const { data } = await emsHttpClient.post<LeaveRequest>("/api/LeaveRequests", payload);
     return data;
   },
 
   updateLeaveRequest: async (id: number, payload: UpdateLeaveRequestPayload): Promise<LeaveRequest> => {
-    const { data } = await httpClient.put<LeaveRequest>(`/api/LeaveRequests/${id}`, payload);
+    const { data } = await emsHttpClient.put<LeaveRequest>(`/api/LeaveRequests/${id}`, payload);
     return data;
   },
 
   cancelLeaveRequest: async (id: number): Promise<LeaveRequest> => {
-    const { data } = await httpClient.post<LeaveRequest>(`/api/LeaveRequests/${id}/cancel`);
+    const { data } = await emsHttpClient.post<LeaveRequest>(`/api/LeaveRequests/${id}/cancel`);
     return data;
   },
 
   getPolicyRules: async (leaveTypeId: number): Promise<LeavePolicyRule[]> => {
-    const { data } = await httpClient.get<LeavePolicyRule[]>(`/api/LeavePolicyRules/leave-type/${leaveTypeId}`);
+    const { data } = await emsHttpClient.get<LeavePolicyRule[]>(`/api/LeavePolicyRules/leave-type/${leaveTypeId}`);
     return data;
   },
 
   bulkImport: async (payload: BulkLeaveImportPayload): Promise<BulkLeaveImportResult> => {
-    const { data } = await httpClient.post<BulkLeaveImportResult>("/api/LeaveImports/bulk", payload);
+    const { data } = await emsHttpClient.post<BulkLeaveImportResult>("/api/LeaveImports/bulk", payload);
     return data;
   },
 

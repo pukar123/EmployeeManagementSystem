@@ -6,5 +6,8 @@ export function useEmployeePortal() {
   return useQuery({
     queryKey: employeePortalKeys.summary(),
     queryFn: () => employeePortalService.getPortal(),
+    /** Portal link state can change without remounting; avoid long-lived stale "unlinked" snapshot. */
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }

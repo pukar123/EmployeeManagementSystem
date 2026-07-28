@@ -2,7 +2,7 @@ namespace EMS.Application.DTOs.Employee;
 
 public sealed class EmployeeEffectiveRoleResponseModel
 {
-    public int RoleId { get; set; }
+    public string RoleKey { get; set; } = string.Empty;
     public string RoleName { get; set; } = string.Empty;
     public string RoleNormalizedName { get; set; } = string.Empty;
     public string Source { get; set; } = string.Empty;

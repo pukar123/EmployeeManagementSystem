@@ -141,25 +141,25 @@ export function LeaveAdminSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Leave Admin</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Policy and import operations (workflow deferred).</p>
+        <h1 className="text-2xl font-semibold text-foreground">Leave Admin</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Policy and import operations (workflow deferred).</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
-          <p className="text-xs text-zinc-500">Applied</p>
+        <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
+          <p className="text-xs text-muted-foreground">Applied</p>
           <p className="text-2xl font-semibold">{summary?.appliedCount ?? 0}</p>
-          <p className="mt-1 text-xs text-zinc-500">Pending + modified pending requests</p>
+          <p className="mt-1 text-xs text-muted-foreground">Pending + modified pending requests</p>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
-          <p className="text-xs text-zinc-500">Approved</p>
+        <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
+          <p className="text-xs text-muted-foreground">Approved</p>
           <p className="text-2xl font-semibold">{summary?.approvedCount ?? 0}</p>
-          <p className="mt-1 text-xs text-zinc-500">Separate metric; workflow approval remains deferred</p>
+          <p className="mt-1 text-xs text-muted-foreground">Separate metric; workflow approval remains deferred</p>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
-          <p className="text-xs text-zinc-500">On leave today</p>
+        <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
+          <p className="text-xs text-muted-foreground">On leave today</p>
           <p className="text-2xl font-semibold">{summary?.currentlyOnLeaveCount ?? 0}</p>
-          <p className="mt-1 text-xs text-zinc-500">Date-overlap based active leave count</p>
+          <p className="mt-1 text-xs text-muted-foreground">Date-overlap based active leave count</p>
         </div>
       </div>
 
@@ -169,7 +169,7 @@ export function LeaveAdminSection() {
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
         <h2 className="text-lg font-medium">Configured leave types</h2>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
           {(leaveTypesQuery.data ?? []).map((t) => (
@@ -178,14 +178,14 @@ export function LeaveAdminSection() {
         </ul>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
         <h2 className="text-lg font-medium">Manual leave entry</h2>
-        <p className="mt-1 text-xs text-zinc-500">Create leave for any employee.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Create leave for any employee.</p>
         <div className="mt-3 grid gap-4 md:grid-cols-3">
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Employee</span>
+            <span className="text-xs font-medium text-muted-foreground">Employee</span>
             <select
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
               value={employeeId ?? ""}
               onChange={(e) => setSelectedEmployeeId(Number(e.target.value))}
             >
@@ -197,9 +197,9 @@ export function LeaveAdminSection() {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Leave type</span>
+            <span className="text-xs font-medium text-muted-foreground">Leave type</span>
             <select
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
               value={selectedLeaveTypeId ?? ""}
               onChange={(e) => setLeaveTypeId(Number(e.target.value))}
             >
@@ -210,8 +210,8 @@ export function LeaveAdminSection() {
               ))}
             </select>
           </label>
-          <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950">
-            <p className="text-xs text-zinc-500">Unit</p>
+          <div className="rounded-xl border border-border bg-card px-4 py-3 dark:bg-card">
+            <p className="text-xs text-muted-foreground">Unit</p>
             <p className="text-xl font-semibold">
               {leaveUnitLabel(selectedLeaveType?.unit ?? 1)}
             </p>
@@ -220,40 +220,40 @@ export function LeaveAdminSection() {
 
         <div className="mt-4 grid gap-4 md:grid-cols-4">
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Start date</span>
+            <span className="text-xs font-medium text-muted-foreground">Start date</span>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input px-3 py-2 text-sm dark:bg-card"
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">End date</span>
+            <span className="text-xs font-medium text-muted-foreground">End date</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input px-3 py-2 text-sm dark:bg-card"
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Requested amount</span>
+            <span className="text-xs font-medium text-muted-foreground">Requested amount</span>
             <input
               type="number"
               min="0.5"
               step="0.5"
               value={requestedAmount}
               onChange={(e) => setRequestedAmount(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input px-3 py-2 text-sm dark:bg-card"
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Reason</span>
+            <span className="text-xs font-medium text-muted-foreground">Reason</span>
             <input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input px-3 py-2 text-sm dark:bg-card"
             />
           </label>
         </div>
@@ -269,13 +269,13 @@ export function LeaveAdminSection() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
         <h2 className="text-lg font-medium">Bulk import (CSV lines)</h2>
-        <p className="mt-1 text-xs text-zinc-500">Format per line: employeeId,leaveTypeId,startDate,endDate,requestedAmount</p>
+        <p className="mt-1 text-xs text-muted-foreground">Format per line: employeeId,leaveTypeId,startDate,endDate,requestedAmount</p>
         <textarea
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
-          className="mt-3 min-h-40 w-full rounded-lg border border-zinc-300 px-3 py-2 font-mono text-xs dark:border-zinc-600 dark:bg-zinc-900"
+          className="mt-3 min-h-40 w-full rounded-lg border border-input px-3 py-2 font-mono text-xs dark:bg-card"
           placeholder="1,2,2026-05-01,2026-05-03,3"
         />
         <div className="mt-3">

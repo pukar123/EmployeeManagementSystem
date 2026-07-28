@@ -6,8 +6,8 @@ export function useSetPositionRoles(organizationId: number | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, roleIds }: { id: number; roleIds: number[] }) =>
-      jobPositionService.setPositionRoles(id, { roleIds }),
+    mutationFn: ({ id, roleKeys }: { id: number; roleKeys: string[] }) =>
+      jobPositionService.setPositionRoles(id, { roleKeys }),
     onSuccess: (_, variables) => {
       if (organizationId != null) {
         void queryClient.invalidateQueries({ queryKey: jobPositionKeys.list(organizationId) });

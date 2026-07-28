@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
+import { ApiAvailabilityAlert } from "@/shared/components/ApiAvailabilityAlert";
 import { cn } from "@/shared/utils/cn";
 import type { UserSummaryDto } from "../types";
 import {
@@ -20,7 +21,7 @@ import {
 } from "../services/userManagementApi";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 export function UsersSection() {
   const queryClient = useQueryClient();
@@ -216,19 +217,15 @@ export function UsersSection() {
   }
 
   if (usersQuery.isError || rolesQuery.isError) {
-    return (
-      <p className="text-sm text-red-600 dark:text-red-400">
-        {getErrorMessage(usersQuery.error ?? rolesQuery.error)}
-      </p>
-    );
+    return <ApiAvailabilityAlert error={usersQuery.error ?? rolesQuery.error} />;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Users</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Users</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Admin-only. Passwords are never shown; use &quot;Set password&quot; to reset an account.
           </p>
         </div>
@@ -237,28 +234,28 @@ export function UsersSection() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
-        <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
-          <thead className="bg-zinc-50 dark:bg-zinc-900/50">
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="min-w-full divide-y divide-border text-left text-sm ">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Email</th>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Display name</th>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Active</th>
-              <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Email</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Display name</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Active</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+          <tbody className="divide-y divide-border">
             {users.map((u) => (
-              <tr key={u.id} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
-                <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{u.email}</td>
-                <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{u.userName ?? "—"}</td>
+              <tr key={u.id} className="bg-card hover:bg-muted/40">
+                <td className="px-4 py-3 text-foreground">{u.email}</td>
+                <td className="px-4 py-3 text-muted-foreground">{u.userName ?? "—"}</td>
                 <td className="px-4 py-3">
                   <span
                     className={cn(
                       "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                       u.isActive
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                        : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+                        : "bg-muted text-muted-foreground",
                     )}
                   >
                     {u.isActive ? "Yes" : "No"}
@@ -297,7 +294,7 @@ export function UsersSection() {
           </tbody>
         </table>
         {users.length === 0 ? (
-          <p className="p-6 text-center text-sm text-zinc-500">No users yet.</p>
+          <p className="p-6 text-center text-sm text-muted-foreground">No users yet.</p>
         ) : null}
       </div>
 
@@ -309,7 +306,7 @@ export function UsersSection() {
       >
         <form onSubmit={(e) => void handleSubmitUser(e)} className="space-y-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Email
             </label>
             <input
@@ -322,7 +319,7 @@ export function UsersSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Display name
             </label>
             <input
@@ -335,7 +332,7 @@ export function UsersSection() {
           </div>
           {!editing ? (
             <div>
-              <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Password
               </label>
               <input
@@ -348,12 +345,12 @@ export function UsersSection() {
               />
             </div>
           ) : null}
-          <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded border-zinc-300 dark:border-zinc-600"
+              className="rounded border-input"
             />
             Active
           </label>
@@ -396,17 +393,17 @@ export function UsersSection() {
           <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
             {allRoles.map((r) => (
               <li key={r.id}>
-                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-3 py-2 dark:border-border">
                   <input
                     type="checkbox"
-                    className="mt-0.5 size-4 rounded border-zinc-300"
+                    className="mt-0.5 size-4 rounded border-input"
                     checked={effectiveSelectedRoleIds.has(r.id)}
                     onChange={(e) => toggleRole(r.id, e.target.checked)}
                   />
                   <span>
-                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{r.name}</span>
+                    <span className="text-sm font-medium text-foreground">{r.name}</span>
                     {r.description ? (
-                      <span className="mt-0.5 block text-xs text-zinc-500">{r.description}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{r.description}</span>
                     ) : null}
                     {r.isSystem ? (
                       <span className="mt-0.5 block text-xs text-amber-700 dark:text-amber-400">System role</span>
@@ -427,7 +424,7 @@ export function UsersSection() {
       >
         <form onSubmit={(e) => void handleSavePassword(e)} className="space-y-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               New password
             </label>
             <input

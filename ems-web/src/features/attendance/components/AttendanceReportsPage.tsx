@@ -92,8 +92,8 @@ export function AttendanceReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Attendance reports</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Daily and weekly/monthly summaries with export options.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Attendance reports</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Daily and weekly/monthly summaries with export options.</p>
         </div>
         <AttendanceExportMenu pending={exportMutation.isPending} onExport={(format) => void onExport(format)} />
       </div>

@@ -5,11 +5,9 @@ const require = createRequire(import.meta.url);
 const svgrLoader = require.resolve("@svgr/webpack");
 
 /**
- * When `NEXT_PUBLIC_API_BASE_URL` is unset, the browser uses same-origin paths; rewrites
- * forward to EMS.API (default `http://127.0.0.1:5246`). That avoids direct browser→API
- * connection issues and matches `npm run dev:all`. `/attachments` is proxied too so logos
- * and document links work with an empty public API origin. Set `NEXT_PUBLIC_API_BASE_URL`
- * to call the API directly (e.g. Docker/production).
+ * When `NEXT_PUBLIC_EMS_API_BASE_URL` is unset, the browser uses same-origin paths; rewrites
+ * forward to EMS.API (default `http://127.0.0.1:5246`). User Management is never proxied —
+ * set `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` so auth and identity calls hit UM Host directly.
  */
 const nextConfig: NextConfig = {
   /* Enables Docker image using standalone output (see ems-web/Dockerfile). */
@@ -30,7 +28,9 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
-    const publicBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+    const publicBase =
+      process.env.NEXT_PUBLIC_EMS_API_BASE_URL?.trim() ||
+      process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
     if (publicBase) {
       return [];
     }

@@ -4,5 +4,6 @@ public enum EmploymentStatus
 {
     Active = 0,
     Inactive = 1,
-    Terminated = 2
+    Terminated = 2,
+    Preboarding = 3
 }

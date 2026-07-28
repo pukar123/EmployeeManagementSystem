@@ -3,7 +3,7 @@ import { employeeService } from "../services/employeeService";
 
 export function useAssignEmployeeUserRoles() {
   return useMutation({
-    mutationFn: ({ employeeId, roleIds }: { employeeId: number; roleIds: number[] }) =>
-      employeeService.assignEmployeeUserRoles(employeeId, { roleIds }),
+    mutationFn: ({ employeeId, roleKeys }: { employeeId: number; roleKeys: string[] }) =>
+      employeeService.assignEmployeeUserRoles(employeeId, { roleKeys }),
   });
 }

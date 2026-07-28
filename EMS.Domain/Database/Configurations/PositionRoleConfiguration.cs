@@ -12,6 +12,10 @@ public sealed class PositionRoleConfiguration : IEntityTypeConfiguration<Positio
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.RoleKey)
+            .HasMaxLength(128)
+            .IsRequired();
+
         builder.Property(x => x.CreatedAtUtc)
             .HasDefaultValueSql("GETUTCDATE()");
 
@@ -20,9 +24,9 @@ public sealed class PositionRoleConfiguration : IEntityTypeConfiguration<Positio
             .HasForeignKey(x => x.JobPositionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(x => new { x.JobPositionId, x.RoleId })
+        builder.HasIndex(x => new { x.JobPositionId, x.RoleKey })
             .IsUnique();
 
-        builder.HasIndex(x => x.RoleId);
+        builder.HasIndex(x => x.RoleKey);
     }
 }

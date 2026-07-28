@@ -21,7 +21,7 @@ type DepartmentTransferFormProps = {
 };
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 function formatDepartmentLabel(d: Department): string {
   return d.code ? `${d.name} (${d.code})` : d.name;
@@ -51,14 +51,14 @@ export function DepartmentTransferForm({
 
   return (
     <form
-      className="space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700"
+      className="space-y-4 rounded-lg border border-border p-4 dark:border-border"
       onSubmit={form.handleSubmit(async (values) => onSubmit(values))}
     >
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Department Transfer</h3>
-      <p className="text-xs text-zinc-500">Current department ID: {employee.departmentId ?? "—"}</p>
+      <h3 className="text-sm font-semibold text-foreground">Department Transfer</h3>
+      <p className="text-xs text-muted-foreground">Current department ID: {employee.departmentId ?? "—"}</p>
 
       <div>
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">New department</label>
+        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">New department</label>
         <Controller
           name="newDepartmentId"
           control={form.control}
@@ -80,7 +80,7 @@ export function DepartmentTransferForm({
       </div>
 
       <div>
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">Effective date</label>
+        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">Effective date</label>
         <input type="date" className={inputClass} {...form.register("effectiveFromUtc")} />
         {form.formState.errors.effectiveFromUtc ? (
           <p className="mt-1 text-xs text-red-600">{form.formState.errors.effectiveFromUtc.message}</p>
@@ -88,7 +88,7 @@ export function DepartmentTransferForm({
       </div>
 
       <div>
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">Reason (optional)</label>
+        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">Reason (optional)</label>
         <textarea className={inputClass} rows={3} {...form.register("reason")} />
       </div>
 

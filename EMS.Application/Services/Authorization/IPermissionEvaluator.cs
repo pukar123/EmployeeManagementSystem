@@ -10,4 +10,9 @@ public interface IPermissionEvaluator
         IReadOnlyList<string> roleKeys,
         int menuId,
         CancellationToken cancellationToken = default);
+
+    Task<bool> HasCapabilityAsync(
+        IReadOnlyList<string> roleKeys,
+        string capabilityKey,
+        CancellationToken cancellationToken = default);
 }

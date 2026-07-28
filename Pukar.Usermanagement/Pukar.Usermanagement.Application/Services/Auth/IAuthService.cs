@@ -1,4 +1,4 @@
-using Pukar.Usermanagement.Application.DTOs.Auth;
+using Pukar.Usermanagement.Contracts.Auth;
 
 namespace Pukar.Usermanagement.Application.Services.Auth;
 
@@ -13,4 +13,8 @@ public interface IAuthService
     Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
 
     Task ChangePasswordAsync(int userId, ChangePasswordRequestModel request, CancellationToken cancellationToken = default);
+
+    Task RequestPasswordResetAsync(ForgotPasswordRequestModel request, CancellationToken cancellationToken = default);
+
+    Task ResetPasswordAsync(ResetPasswordRequestModel request, CancellationToken cancellationToken = default);
 }

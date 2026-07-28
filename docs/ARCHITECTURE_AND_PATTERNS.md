@@ -119,26 +119,39 @@ Infrastructure  →  Domain (implements interfaces; uses DbContext)
 | `EMS.Domain` | `AppDbContext`, `DbModels/`, `Configurations/`, migrations, `IBaseRepository<T>` |
 | `EMS.Application` | DTOs, services, mapping |
 | `EMS.Infrastructure` | `BaseRepository<T>` |
-| `EMS.API` | Controllers, `Program.cs`, CORS, Serilog, health checks |
-| `ems-web` | Next.js App Router client; `NEXT_PUBLIC_API_BASE_URL` for API calls |
+| `EMS.API` | Controllers, `Program.cs`, CORS, Serilog, health checks; **JWT validation only** (does not issue tokens) |
+| `EMS.ArchitectureTests` | NetArchTest rules: EMS must not reference UM implementation assemblies |
+| `ems-web` | Next.js App Router client; `NEXT_PUBLIC_EMS_API_BASE_URL` (EMS), `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` (User Management Host) |
+| `Pukar.Notifications.Domain` / `.Application` | Reusable notification center core (entity, repository contract, inbox service) — see [notifications.md](../docs/notifications.md) |
 
 **Migrations:** `EMS.Domain`; startup project for EF tools: **`EMS.API`**.
+
+**EMS ↔ User Management boundary:** EMS consumes User Management **exclusively through HTTP contracts** (`Pukar.Usermanagement.Contracts`). EMS never references `Pukar.Usermanagement.API`, `.Application`, `.Domain`, or `.Infrastructure`, and never reads or writes User Management tables. See [ems-um-http-integration.md](ems-um-http-integration.md).
 
 More diagrams: [architecture.md](architecture.md) (EMS-focused overview).
 
 ---
 
-## 8. Pukar.Usermanagement module (reusable auth)
+## 8. Pukar.Usermanagement module (standalone identity service)
 
 | Project | Role |
 |---------|------|
 | `Pukar.Shared` | Shared helpers/exceptions (also used by EMS) — lives under `Pukar.Usermanagement/Pukar.Shared/` |
-| `Pukar.Usermanagement.Domain` | `User`, `RefreshToken`, `UserManagementDbContext`, schema **`um`**, migrations |
-| `Pukar.Usermanagement.Application` | Auth DTOs, `IAuthService`, JWT options interfaces |
-| `Pukar.Usermanagement.Infrastructure` | Repositories, JWT signing, BCrypt, `AddPukarUserManagement` |
-| `Pukar.Usermanagement.API` | `AuthController`, `AddPukarUserManagementApi`, JWT bearer registration |
+| `Pukar.Usermanagement.Contracts` | HTTP DTOs, service scopes, well-known roles — **only UM assembly EMS may reference** |
+| `Pukar.Usermanagement.Domain` | `User`, `Role`, `AccountInvitation`, `UserManagementDbContext`, schema **`um`**, migrations |
+| `Pukar.Usermanagement.Application` | Auth, invitations, internal services |
+| `Pukar.Usermanagement.Infrastructure` | Repositories, JWT signing (RSA), BCrypt, SMTP |
+| `Pukar.Usermanagement.API` | Controllers (public + `api/internal/v1/*`) |
+| `Pukar.Usermanagement.Host` | **Canonical deployment host** — issues JWTs, owns identity data |
 
-**Host integration:** `AddControllers().AddPukarUserManagementControllers()`, `AddPukarUserManagementApi(configuration)`, `UseAuthentication()` before `UseAuthorization()`.
+**EMS integration (HTTP only):**
+
+- EMS validates user JWTs via UM issuer/audience/JWKS (`AddUserManagementJwtAuthentication`).
+- EMS calls internal APIs with a cached **service token** (`POST /api/internal/v1/service-token`).
+- Anti-corruption interface: `IEmployeeUserManagementGateway` → `HttpEmployeeUserManagementGateway`.
+- Invitations: EMS orchestrates eligibility and stores `Employee.ExternalIdentityKey`; passwords, tokens, and email delivery stay in UM.
+- Position/employee role assignments store stable **`RoleKey`** (normalized name), not numeric UM role ids.
+- EMS-owned: `RoleKeyPermission`, `RoleKeyCapability`, menus, integration outbox.
 
 Standalone clone: build **`Pukar.Usermanagement.sln`** (includes `Pukar.Shared`). See [Pukar.Usermanagement/README.md](../Pukar.Usermanagement/README.md).
 
@@ -147,8 +160,9 @@ Standalone clone: build **`Pukar.Usermanagement.sln`** (includes `Pukar.Shared`)
 ## 9. Frontend (`ems-web`)
 
 - **Next.js** App Router, feature folders under `src/features/{area}/` (`components`, `hooks`, `services`, `types`).
-- **HTTP:** shared client under `src/shared/api/http-client.ts`; base URL **`NEXT_PUBLIC_API_BASE_URL`**.
-- See [ems-web/README.md](../ems-web/README.md) for scripts and env.
+- **HTTP:** `emsHttpClient` → EMS (`NEXT_PUBLIC_EMS_API_BASE_URL`); `userManagementHttpClient` → User Management Host (`NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL`) for auth, invitation accept, and admin users/roles.
+- Local stack: `npm run dev:all` starts UM Host, EMS.API, and Next.js.
+- See [ems-web/README.md](../ems-web/README.md) and [ems-um-http-integration.md](ems-um-http-integration.md).
 
 ---
 
@@ -239,6 +253,12 @@ Standalone clone: build **`Pukar.Usermanagement.sln`** (includes `Pukar.Shared`)
   - `hooks`: query/mutation orchestration
   - `components`: report and analytics rendering
   - `types`: report/analytics contracts aligned with backend DTOs
+
+### Local build: MSB3027 / MSB3021 (file locked)
+
+If **`dotnet build`**, **`dotnet ef`**, or Visual Studio reports errors copying DLLs into **`EMS.API\bin\Debug\...`** (often after many **MSB3026** retries), the usual cause is that **EMS.API is already running** and has those assemblies loaded.
+
+**Fix:** stop the running API (debug session, `dotnet run` terminal, or Task Manager process **EMS.API**), then build again. This is not a C# compiler failure.
 
 ---
 

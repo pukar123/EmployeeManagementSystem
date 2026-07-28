@@ -15,13 +15,13 @@ type DeleteEmployeeDialogProps = {
 };
 
 export function DeleteEmployeeDialog({ employee, open, onClose, onDeleted }: DeleteEmployeeDialogProps) {
-  const deleteMutation = useDeleteEmployee();
+  const archiveMutation = useDeleteEmployee();
 
-  const handleDelete = () => {
+  const handleArchive = () => {
     if (!employee) return;
-    deleteMutation.mutate(employee.id, {
+    archiveMutation.mutate(employee.id, {
       onSuccess: () => {
-        toast.success("Employee deleted");
+        toast.success("Employee archived");
         onClose();
         onDeleted();
       },
@@ -32,26 +32,27 @@ export function DeleteEmployeeDialog({ employee, open, onClose, onDeleted }: Del
   return (
     <Modal
       open={open}
-      title="Delete employee"
+      title="Archive employee"
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={deleteMutation.isPending}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={archiveMutation.isPending}>
             Cancel
           </Button>
-          <Button type="button" variant="danger" onClick={handleDelete} disabled={deleteMutation.isPending}>
-            {deleteMutation.isPending ? "Deleting…" : "Delete"}
+          <Button type="button" variant="danger" onClick={handleArchive} disabled={archiveMutation.isPending}>
+            {archiveMutation.isPending ? "Archiving…" : "Archive"}
           </Button>
         </>
       }
     >
       {employee ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">
-          Are you sure you want to delete{" "}
-          <strong className="text-zinc-900 dark:text-white">
+        <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+          Archive{" "}
+          <strong className="text-foreground dark:text-white">
             {employee.firstName} {employee.lastName}
           </strong>{" "}
-          ({employee.email})? This cannot be undone.
+          ({employee.email})? The employee will disappear from active lists but remains retained according to your
+          organization&apos;s policy. Repeating archive is safe if the record is already archived.
         </p>
       ) : null}
     </Modal>

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Pukar.Usermanagement.Application.DTOs.Roles;
-using Pukar.Usermanagement.Application.DTOs.UserRoles;
+using Pukar.Usermanagement.Contracts.Roles;
+using Pukar.Usermanagement.Contracts.UserRoles;
 using Pukar.Usermanagement.Domain.Repositories.Interface;
 using Pukar.Shared;
 

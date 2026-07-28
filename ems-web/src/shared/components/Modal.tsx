@@ -1,49 +1,74 @@
 "use client";
 
 import { cn } from "@/shared/utils/cn";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useModalFocusTrap } from "@/shared/hooks/useUnsavedChangesWarning";
 
 type ModalProps = {
   open: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
+  /** Return false to prevent closing (e.g. unsaved changes). */
+  onRequestClose?: () => boolean;
   footer?: ReactNode;
   className?: string;
 };
 
-export function Modal({ open, title, children, onClose, footer, className }: ModalProps) {
+export function Modal({ open, title, children, onClose, onRequestClose, footer, className }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocusTrap(open, dialogRef);
+
+  const requestClose = useCallback(() => {
+    if (onRequestClose && !onRequestClose()) return;
+    onClose();
+  }, [onClose, onRequestClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") requestClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, requestClose]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         aria-label="Close dialog overlay"
-        onClick={onClose}
+        onClick={requestClose}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="modal-title"
         className={cn(
-          "relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-950",
+          "relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-soft-lg",
+          "animate-in fade-in zoom-in-95 duration-200",
           className,
         )}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
+          <h2 id="modal-title" className="text-lg font-semibold tracking-tight text-foreground">
+            {title}
+          </h2>
           <button
             type="button"
-            onClick={onClose}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            onClick={requestClose}
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Close"
           >
             ✕
           </button>
         </div>
-        <div className="text-zinc-800 dark:text-zinc-200">{children}</div>
-        {footer ? <div className="mt-6 flex flex-wrap justify-end gap-2">{footer}</div> : null}
+        <div className="text-foreground">{children}</div>
+        {footer ? <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-border pt-4">{footer}</div> : null}
       </div>
     </div>
   );

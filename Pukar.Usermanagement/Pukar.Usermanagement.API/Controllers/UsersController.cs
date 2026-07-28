@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Pukar.Usermanagement.Application;
-using Pukar.Usermanagement.Application.DTOs.Roles;
-using Pukar.Usermanagement.Application.DTOs.UserRoles;
-using Pukar.Usermanagement.Application.DTOs.Users;
+using Pukar.Usermanagement.Contracts.Roles;
+using Pukar.Usermanagement.Contracts.UserRoles;
+using Pukar.Usermanagement.Contracts.Users;
 using Pukar.Usermanagement.Application.Services.UserRoles;
 using Pukar.Usermanagement.Application.Services.Users;
 using Pukar.Shared;

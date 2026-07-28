@@ -31,8 +31,15 @@ public class LeaveAttachmentsController : ControllerBase
         int leaveRequestId,
         CancellationToken cancellationToken)
     {
-        var result = await _attachmentService.GetByRequestIdAsync(leaveRequestId, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _attachmentService.GetByRequestIdAsync(leaveRequestId, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
     }
 
     [HttpPost]
@@ -69,7 +76,7 @@ public class LeaveAttachmentsController : ControllerBase
         {
             if (!string.IsNullOrWhiteSpace(relativePath))
                 _storage.TryDelete(relativePath);
-            return BadRequest(new { message = ex.Message });
+            return HandleBusinessRule(ex);
         }
     }
 
@@ -85,7 +92,7 @@ public class LeaveAttachmentsController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return HandleBusinessRule(ex);
         }
     }
 
@@ -106,8 +113,18 @@ public class LeaveAttachmentsController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return HandleBusinessRule(ex);
         }
+    }
+
+    private ActionResult HandleBusinessRule(BusinessRuleException ex)
+    {
+        if (string.Equals(ex.Message, LeaveAccessMessages.Denied, StringComparison.Ordinal))
+            return Forbid();
+
+        if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            return NotFound(new { message = ex.Message });
+        return BadRequest(new { message = ex.Message });
     }
 }
 

@@ -18,19 +18,22 @@ public sealed class EmployeeRoleService : IEmployeeRoleService
     private readonly IBaseRepository<JobPosition> _jobPositionRepository;
     private readonly IUserManagementRoleMetadataClient _roleMetadataClient;
     private readonly IEmployeeRoleSyncService _employeeRoleSyncService;
+    private readonly ILegacyRoleKeyGuard _legacyRoleKeyGuard;
 
     public EmployeeRoleService(
         IBaseRepository<Employee> employeeRepository,
         IBaseRepository<EmployeeRoleAssignment> employeeRoleAssignmentRepository,
         IBaseRepository<JobPosition> jobPositionRepository,
         IUserManagementRoleMetadataClient roleMetadataClient,
-        IEmployeeRoleSyncService employeeRoleSyncService)
+        IEmployeeRoleSyncService employeeRoleSyncService,
+        ILegacyRoleKeyGuard legacyRoleKeyGuard)
     {
         _employeeRepository = employeeRepository;
         _employeeRoleAssignmentRepository = employeeRoleAssignmentRepository;
         _jobPositionRepository = jobPositionRepository;
         _roleMetadataClient = roleMetadataClient;
         _employeeRoleSyncService = employeeRoleSyncService;
+        _legacyRoleKeyGuard = legacyRoleKeyGuard;
     }
 
     public async Task<IReadOnlyList<EmployeeEffectiveRoleResponseModel>?> GetEffectiveRolesAsync(
@@ -45,8 +48,8 @@ public sealed class EmployeeRoleService : IEmployeeRoleService
             .Where(x => x.EmployeeId == employeeId)
             .ToListAsync(cancellationToken);
 
-        var roleMetadataById = (await _roleMetadataClient.GetRolesAsync(cancellationToken))
-            .ToDictionary(x => x.Id);
+        var roleMetadataByKey = (await _roleMetadataClient.GetRolesAsync(cancellationToken))
+            .ToDictionary(x => x.NormalizedName, StringComparer.OrdinalIgnoreCase);
 
         var jobPositionIds = assignments
             .Where(x => x.Source == EmployeeRoleSource.PositionInherited && x.JobPositionId.HasValue)
@@ -61,16 +64,16 @@ public sealed class EmployeeRoleService : IEmployeeRoleService
         var response = assignments
             .Select(x =>
             {
-                var metadataExists = roleMetadataById.TryGetValue(x.RoleId, out var metadata);
+                var metadataExists = roleMetadataByKey.TryGetValue(x.RoleKey, out var metadata);
                 var source = x.Source == EmployeeRoleSource.PositionInherited
                     ? SourcePositionInherited
                     : SourceDirectOverride;
 
                 return new EmployeeEffectiveRoleResponseModel
                 {
-                    RoleId = x.RoleId,
-                    RoleName = metadataExists ? metadata!.Name : $"Role #{x.RoleId}",
-                    RoleNormalizedName = metadataExists ? metadata!.NormalizedName : string.Empty,
+                    RoleKey = x.RoleKey,
+                    RoleName = metadataExists ? metadata!.Name : x.RoleKey,
+                    RoleNormalizedName = metadataExists ? metadata!.NormalizedName : x.RoleKey,
                     Source = source,
                     JobPositionId = x.Source == EmployeeRoleSource.PositionInherited ? x.JobPositionId : null,
                     JobPositionTitle = x.Source == EmployeeRoleSource.PositionInherited && x.JobPositionId is int jobPositionId
@@ -95,16 +98,20 @@ public sealed class EmployeeRoleService : IEmployeeRoleService
         if (employee is null || employee.IsArchived)
             return false;
 
-        var desiredRoleIds = (request.RoleIds ?? Array.Empty<int>())
-            .Distinct()
-            .ToHashSet();
+        await _legacyRoleKeyGuard.EnsureRoleMutationsAllowedAsync(cancellationToken);
+
+        var desiredRoleKeys = (request.RoleKeys ?? Array.Empty<string>())
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Select(k => k.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
 
         var roleMetadata = await _roleMetadataClient.GetRolesAsync(cancellationToken);
         if (roleMetadata.Count > 0)
         {
-            var metadataById = roleMetadata.ToDictionary(x => x.Id);
-            var invalidRoleIds = desiredRoleIds.Where(roleId => !metadataById.ContainsKey(roleId)).ToList();
-            if (invalidRoleIds.Count > 0)
+            var metadataByKey = roleMetadata.ToDictionary(x => x.NormalizedName, StringComparer.OrdinalIgnoreCase);
+            var invalidRoleKeys = desiredRoleKeys.Where(roleKey => !metadataByKey.ContainsKey(roleKey)).ToList();
+            if (invalidRoleKeys.Count > 0)
                 throw new BusinessRuleException("One or more selected roles are invalid.");
         }
 
@@ -115,24 +122,26 @@ public sealed class EmployeeRoleService : IEmployeeRoleService
         var hasChanges = false;
         foreach (var assignment in existingDirectAssignments)
         {
-            if (desiredRoleIds.Contains(assignment.RoleId))
+            if (desiredRoleKeys.Contains(assignment.RoleKey.Trim().ToUpperInvariant()))
                 continue;
 
             _employeeRoleAssignmentRepository.Remove(assignment);
             hasChanges = true;
         }
 
-        var existingRoleIds = existingDirectAssignments.Select(x => x.RoleId).ToHashSet();
-        foreach (var roleId in desiredRoleIds)
+        var existingRoleKeys = existingDirectAssignments
+            .Select(x => x.RoleKey.Trim().ToUpperInvariant())
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var roleKey in desiredRoleKeys)
         {
-            if (existingRoleIds.Contains(roleId))
+            if (existingRoleKeys.Contains(roleKey))
                 continue;
 
             await _employeeRoleAssignmentRepository.AddAsync(
                 new EmployeeRoleAssignment
                 {
                     EmployeeId = employeeId,
-                    RoleId = roleId,
+                    RoleKey = roleKey,
                     Source = EmployeeRoleSource.DirectOverride,
                     JobPositionId = null,
                     CreatedAtUtc = DateTime.UtcNow,

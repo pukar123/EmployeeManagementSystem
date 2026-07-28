@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
+using EMS.Application.Services.Notifications;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -11,6 +12,14 @@ namespace EMS.Application.UnitTests;
 
 public class LeaveRequestServiceTests
 {
+    private static IEmsNotificationProducer CreateNotificationProducer()
+    {
+        var mock = new Mock<IEmsNotificationProducer>();
+        mock.Setup(x => x.NotifyLeaveSubmittedAsync(It.IsAny<LeaveRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return mock.Object;
+    }
+
     [Test]
     public void CreateAsync_Throws_WhenDateRangeOverlaps()
     {
@@ -18,6 +27,10 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
+        leaveEmployeeAccess
+            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var existing = new List<LeaveRequest>
         {
@@ -44,7 +57,9 @@ public class LeaveRequestServiceTests
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var request = new CreateLeaveRequestRequestModel
         {
@@ -66,6 +81,10 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
+        leaveEmployeeAccess
+            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         requestRepo.Setup(x => x.GetQueryable()).Returns(new List<LeaveRequest>().BuildMock());
         leaveTypeRepo.Setup(x => x.GetByIdAsync(3, It.IsAny<CancellationToken>()))
@@ -88,7 +107,9 @@ public class LeaveRequestServiceTests
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var request = new CreateLeaveRequestRequestModel
         {
@@ -110,6 +131,7 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
 
         var rows = new List<LeaveRequest>
         {
@@ -126,7 +148,9 @@ public class LeaveRequestServiceTests
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var result = await sut.GetAdminSummaryAsync(9, new DateTime(2026, 5, 2), CancellationToken.None);
 
@@ -148,13 +172,16 @@ public class LeaveRequestServiceTests
         var balanceRepo = new Mock<ILeaveBalanceRepository>();
         var leaveTypeRepo = new Mock<ILeaveTypeRepository>();
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
 
         requestRepo.Setup(x => x.GetQueryable()).Returns(new List<LeaveRequest>().BuildMock());
         var sut = new LeaveRequestService(
             requestRepo.Object,
             balanceRepo.Object,
             leaveTypeRepo.Object,
-            employeeRepo.Object);
+            employeeRepo.Object,
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
 
         var ex = Assert.ThrowsAsync<BusinessRuleException>(async () =>
             await sut.GetAdminSummaryAsync(0, DateTime.UtcNow, CancellationToken.None));

@@ -30,6 +30,8 @@ public sealed class UserManagementDbContextFactory : IDesignTimeDbContextFactory
         string? apiRoot = null;
         foreach (var rel in new[]
                  {
+                     Path.Combine("Pukar.Usermanagement.Host"),
+                     Path.Combine("..", "Pukar.Usermanagement.Host"),
                      Path.Combine("EMS.API"),
                      Path.Combine("..", "EMS.API"),
                      Path.Combine("..", "..", "EMS.API"),
@@ -52,7 +54,8 @@ public sealed class UserManagementDbContextFactory : IDesignTimeDbContextFactory
                 .AddJsonFile("appsettings.Development.json", optional: true)
                 .Build();
 
-            var um = configuration.GetConnectionString("UserManagement");
+            var um = configuration.GetConnectionString("UserManagementDb")
+                     ?? configuration.GetConnectionString("UserManagement");
             var def = configuration.GetConnectionString("DefaultConnection");
             var resolved = !string.IsNullOrWhiteSpace(um) ? um : def;
             if (!string.IsNullOrWhiteSpace(resolved))

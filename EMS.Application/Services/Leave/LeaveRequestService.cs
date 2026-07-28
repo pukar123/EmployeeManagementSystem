@@ -1,5 +1,6 @@
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Mapping;
+using EMS.Application.Services.Notifications;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -14,23 +15,31 @@ public sealed class LeaveRequestService : ILeaveRequestService
     private readonly ILeaveBalanceRepository _leaveBalanceRepository;
     private readonly ILeaveTypeRepository _leaveTypeRepository;
     private readonly IBaseRepository<Employee> _employeeRepository;
+    private readonly ILeaveEmployeeAccessService _leaveEmployeeAccess;
+    private readonly IEmsNotificationProducer _notificationProducer;
 
     public LeaveRequestService(
         ILeaveRequestRepository leaveRequestRepository,
         ILeaveBalanceRepository leaveBalanceRepository,
         ILeaveTypeRepository leaveTypeRepository,
-        IBaseRepository<Employee> employeeRepository)
+        IBaseRepository<Employee> employeeRepository,
+        ILeaveEmployeeAccessService leaveEmployeeAccess,
+        IEmsNotificationProducer notificationProducer)
     {
         _leaveRequestRepository = leaveRequestRepository;
         _leaveBalanceRepository = leaveBalanceRepository;
         _leaveTypeRepository = leaveTypeRepository;
         _employeeRepository = employeeRepository;
+        _leaveEmployeeAccess = leaveEmployeeAccess;
+        _notificationProducer = notificationProducer;
     }
 
     public async Task<IReadOnlyList<LeaveRequestResponseModel>> GetByEmployeeAsync(
         int employeeId,
         CancellationToken cancellationToken = default)
     {
+        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(employeeId, cancellationToken);
+
         var rows = await _leaveRequestRepository.GetByEmployeeAsync(employeeId, cancellationToken);
 
         return rows.Select(LeaveMapper.ToResponse).ToList();
@@ -40,6 +49,8 @@ public sealed class LeaveRequestService : ILeaveRequestService
     {
         var entity = await _leaveRequestRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new BusinessRuleException("Leave request was not found.");
+
+        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(entity.EmployeeId, cancellationToken);
 
         return LeaveMapper.ToResponse(entity);
     }
@@ -89,6 +100,8 @@ public sealed class LeaveRequestService : ILeaveRequestService
         CreateLeaveRequestRequestModel request,
         CancellationToken cancellationToken = default)
     {
+        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(request.EmployeeId, cancellationToken);
+
         await ValidateLeaveRequestRangeAsync(
             request.EmployeeId,
             request.LeaveTypeId,
@@ -105,6 +118,9 @@ public sealed class LeaveRequestService : ILeaveRequestService
 
         await _leaveRequestRepository.AddAsync(entity, cancellationToken);
         await _leaveRequestRepository.SaveChangesAsync(cancellationToken);
+
+        await _notificationProducer.NotifyLeaveSubmittedAsync(entity, cancellationToken);
+
         return LeaveMapper.ToResponse(entity);
     }
 
@@ -115,6 +131,8 @@ public sealed class LeaveRequestService : ILeaveRequestService
     {
         var entity = await _leaveRequestRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new BusinessRuleException("Leave request was not found.");
+
+        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(entity.EmployeeId, cancellationToken);
 
         if (entity.Status is not LeaveRequestStatus.Pending and not LeaveRequestStatus.ModifiedPending)
             throw new BusinessRuleException("Only pending leave requests can be modified.");
@@ -145,6 +163,8 @@ public sealed class LeaveRequestService : ILeaveRequestService
     {
         var entity = await _leaveRequestRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new BusinessRuleException("Leave request was not found.");
+
+        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(entity.EmployeeId, cancellationToken);
 
         if (entity.Status is LeaveRequestStatus.Cancelled or LeaveRequestStatus.Rejected)
             throw new BusinessRuleException("Leave request cannot be cancelled in its current state.");

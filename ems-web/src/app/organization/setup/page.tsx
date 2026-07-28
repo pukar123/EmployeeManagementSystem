@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,10 +11,10 @@ import { getErrorMessage } from "@/shared/api/http-client";
 import { Button } from "@/shared/components/Button";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 const textareaClass =
-  "mt-1 w-full min-h-[120px] resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full min-h-[120px] resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 export default function OrganizationSetupEditPage() {
   const router = useRouter();
@@ -66,16 +67,20 @@ export default function OrganizationSetupEditPage() {
 
   return (
     <main className="mx-auto max-w-2xl flex-1 px-4 py-12 sm:px-6">
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Organization settings</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Update your organization profile, logo, and active status.
+      <div className="rounded-xl border border-border bg-card p-6 shadow-sm dark:bg-card">
+        <h1 className="text-2xl font-semibold text-foreground">Organization settings</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Update your organization profile, logo, and active status. Configure{" "}
+          <Link href="/organization/onboarding" className="text-primary hover:underline">
+            onboarding checklists
+          </Link>{" "}
+          for preboarding employees.
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-8">
           <div className="flex flex-col gap-8 md:flex-row md:items-start">
             <div className="md:shrink-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Logo</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Logo</p>
               <div className="mt-2">
                 <OrganizationLogoUpload
                   organizationId={organizationId}
@@ -86,7 +91,7 @@ export default function OrganizationSetupEditPage() {
 
             <div className="min-w-0 flex-1 space-y-4">
               <div>
-                <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Name
                 </label>
                 <input
@@ -99,7 +104,7 @@ export default function OrganizationSetupEditPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Code
                 </label>
                 <input
@@ -111,7 +116,7 @@ export default function OrganizationSetupEditPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Description
                 </label>
                 <textarea
@@ -123,7 +128,7 @@ export default function OrganizationSetupEditPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Motto
                 </label>
                 <input
@@ -134,12 +139,12 @@ export default function OrganizationSetupEditPage() {
                   placeholder="Optional tagline"
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={resolvedIsActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="rounded border-zinc-300 dark:border-zinc-600"
+                  className="rounded border-input"
                 />
                 Active
               </label>

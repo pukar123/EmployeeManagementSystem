@@ -5,11 +5,25 @@ import { usePathname, useRouter } from "next/navigation";
 import { OrganizationGate } from "@/providers/OrganizationGate";
 import { OrganizationProvider } from "@/providers/OrganizationProvider";
 import { useAuth } from "@/providers/AuthProvider";
+import { EmployeePortalShell } from "@/shared/components/layout/EmployeePortalShell";
 import { EmsTailAdminShell } from "@/shared/components/layout/EmsTailAdminShell";
 import { Spinner } from "@/shared/components/Spinner";
 
 const LOGIN_PATH = "/login";
 const CHANGE_PASSWORD_PATH = "/change-password";
+const ACCEPT_INVITATION_PATH = "/accept-invitation";
+const FORGOT_PASSWORD_PATH = "/forgot-password";
+const RESET_PASSWORD_PATH = "/reset-password";
+
+function isPublicAuthPath(pathname: string): boolean {
+  return (
+    pathname === LOGIN_PATH ||
+    pathname === CHANGE_PASSWORD_PATH ||
+    pathname === ACCEPT_INVITATION_PATH ||
+    pathname === FORGOT_PASSWORD_PATH ||
+    pathname === RESET_PASSWORD_PATH
+  );
+}
 
 export function ProtectedShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -25,7 +39,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isReady) return;
-    if (pathname === LOGIN_PATH || pathname === CHANGE_PASSWORD_PATH) return;
+    if (isPublicAuthPath(pathname)) return;
     if (!isAuthenticated) {
       router.replace(LOGIN_PATH);
     }
@@ -46,9 +60,17 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
+  }
+
+  if (pathname === ACCEPT_INVITATION_PATH) {
+    return <>{children}</>;
+  }
+
+  if (pathname === FORGOT_PASSWORD_PATH || pathname === RESET_PASSWORD_PATH) {
+    return <>{children}</>;
   }
 
   if (pathname === LOGIN_PATH) {
@@ -56,7 +78,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
           <Spinner />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting…</p>
+          <p className="text-sm text-muted-foreground">Redirecting…</p>
         </div>
       );
     }
@@ -68,7 +90,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
           <Spinner />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting to sign in…</p>
+          <p className="text-sm text-muted-foreground">Redirecting to sign in…</p>
         </div>
       );
     }
@@ -76,7 +98,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
           <Spinner />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting…</p>
+          <p className="text-sm text-muted-foreground">Redirecting…</p>
         </div>
       );
     }
@@ -87,15 +109,21 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4">
         <Spinner />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Redirecting to sign in…</p>
+        <p className="text-sm text-muted-foreground">Redirecting to sign in…</p>
       </div>
     );
   }
 
+  const isEmployeePortal = pathname.startsWith("/employee-portal");
+
   return (
     <OrganizationProvider>
       <OrganizationGate>
-        <EmsTailAdminShell>{children}</EmsTailAdminShell>
+        {isEmployeePortal ? (
+          <EmployeePortalShell>{children}</EmployeePortalShell>
+        ) : (
+          <EmsTailAdminShell>{children}</EmsTailAdminShell>
+        )}
       </OrganizationGate>
     </OrganizationProvider>
   );

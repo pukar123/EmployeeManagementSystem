@@ -29,6 +29,7 @@ export const emsNavItemsSetup: readonly EmsNavItem[] = [
 /** Main app routes when organization exists (matches AppNav `mainLinks` + Organization). */
 export const emsNavItemsMain: readonly EmsNavItem[] = [
   { href: "/", label: "Home", icon: Home },
+  /** Shown only during setup fallback nav; main shell uses API menus. Portal CTA on home uses eligibility. */
   { href: "/employee-portal", label: "Employee portal", icon: UserCircle },
   { href: "/employees", label: "Employees", icon: Users },
   { href: "/employee-transfers", label: "Transfers", icon: ArrowLeftRight },

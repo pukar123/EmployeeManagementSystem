@@ -3,7 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Pukar.Usermanagement.Application.DTOs.Auth;
+using Pukar.Usermanagement.Contracts.Auth;
 using Pukar.Usermanagement.Application.Services.Auth;
 using Pukar.Shared;
 
@@ -91,6 +91,36 @@ public class AuthController : ControllerBase
     {
         await _auth.RevokeRefreshTokenAsync(request.RefreshToken, cancellationToken);
         return NoContent();
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        await _auth.RequestPasswordResetAsync(request, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _auth.ResetPasswordAsync(request, cancellationToken);
+            return NoContent();
+        }
+        catch (BusinessRuleException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("change-password")]

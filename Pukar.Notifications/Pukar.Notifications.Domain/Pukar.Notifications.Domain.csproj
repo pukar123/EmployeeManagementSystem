@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Pukar.Notifications.Domain</RootNamespace>
+    <AssemblyName>Pukar.Notifications.Domain</AssemblyName>
+    <Description>Reusable notification center domain model and repository contracts.</Description>
+  </PropertyGroup>
+
+</Project>

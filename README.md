@@ -2,7 +2,7 @@
 
 Backend API for employee and organization directory data. The solution uses a layered structure: **Domain** (entities, EF Core context, migrations), **Application** (DTOs, services, mapping), **Infrastructure** (repository implementations), and **API** (HTTP endpoints, hosting).
 
-**Architecture, patterns, and methods (shared across projects):** [docs/ARCHITECTURE_AND_PATTERNS.md](docs/ARCHITECTURE_AND_PATTERNS.md). For an EMS-only diagram and request flow, see [docs/architecture.md](docs/architecture.md). For business goals, personas, and capability scope, see [docs/business-perspective.md](docs/business-perspective.md).
+**Architecture, patterns, and methods (shared across projects):** [docs/ARCHITECTURE_AND_PATTERNS.md](docs/ARCHITECTURE_AND_PATTERNS.md). For an EMS-only diagram and request flow, see [docs/architecture.md](docs/architecture.md). For business goals, personas, and capability scope, see [docs/business-perspective.md](docs/business-perspective.md). For a step-by-step guide to using the web app (HR, admins, employees), see [docs/END_USER_GUIDE.md](docs/END_USER_GUIDE.md).
 
 ## Prerequisites
 
@@ -22,13 +22,28 @@ Backend API for employee and organization directory data. The solution uses a la
 
 Cursor rules for layering and naming live in [`.cursor/rules/`](.cursor/rules/).
 
+## Single-host architecture
+
+There is **one deployable ASP.NET Core process: `EMS.API`**. User Management is composed **in-process** as a separate bounded context (its own `UserManagementDbContext`, EF migrations, application services, and controllers served from the same host). The two bounded contexts keep **two separate SQL databases** — `EMSDevDB` (`AppDbContext`) and `UserManagementDb` (`UserManagementDbContext`). There is no message broker; cross-database reliability uses the existing EMS database outbox. `Pukar.Usermanagement.Host` is no longer required at runtime.
+
+```mermaid
+flowchart LR
+  Web[ems-web] --> Api[EMS.API single host]
+  Api --> EmsApp[EMS Application and Infrastructure]
+  EmsApp --> AppDb[AppDbContext]
+  AppDb --> EmsDb[(EMSDevDB)]
+  Api --> UmApp[UM Application and Infrastructure in-process]
+  UmApp --> UmCtx[UserManagementDbContext]
+  UmCtx --> UmDb[(UserManagementDb)]
+```
+
 ## Authentication
 
-The API uses **JWT Bearer** authentication ([Pukar.Usermanagement](Pukar.Usermanagement/README.md)). EMS endpoints require an `Authorization: Bearer <token>` header except **`/api/auth/*`** (login, register, refresh, revoke) and **`/health`**. OpenAPI (`/openapi/v1.json`) is anonymous in Development only.
+The single host **issues** user JWTs at **`/api/auth/login`** and **validates** those same tokens in-process for protected EMS endpoints (no remote JWKS fetch). EMS endpoints require an `Authorization: Bearer <token>` header except **`/api/auth/*`** (login, register, refresh, revoke, forgot/reset password), invitation acceptance, `/.well-known/jwks.json`, and **`/health`**. OpenAPI (`/openapi/v1.json`) is anonymous in Development only.
 
-In **Development**, [`appsettings.Development.json`](EMS.API/appsettings.Development.json) can **seed a default admin** when `SeedAdmin` is enabled (email `admin@localhost`, password `Admin123!` unless you change it). For other environments, set `SeedAdmin:Password` via user secrets or environment variables, or disable seeding (`SeedAdmin:Enabled` false).
+User accounts and roles are owned by the User Management bounded context and seeded from `EMS.API` (composition root) via the opt-in `SeedAdmin` configuration. EMS stores employee data and links employees to User Management accounts through `ExternalIdentityKey`. Every successfully created employee is automatically provisioned an inactive UM account + invitation through the `ProvisionEmployeeIdentity` outbox message.
 
-The **ems-web** client signs in at **`/login`** and stores tokens in the browser. Point `NEXT_PUBLIC_API_BASE_URL` at the API (see [ems-web/README.md](ems-web/README.md)).
+The **ems-web** client signs in at **`/login`** and stores tokens in the browser. Point only `NEXT_PUBLIC_EMS_API_BASE_URL` at `EMS.API` — auth, users, roles, and invitations are all served by the same origin (see [ems-web/README.md](ems-web/README.md)). `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` is retained only as a temporary backward-compatible fallback.
 
 ## Docker Compose (SQL Server, MongoDB, Redis, Mongo Express, Next.js)
 
@@ -44,7 +59,12 @@ Connection strings and other settings live under `EMS.API` (`appsettings.json`, 
 
 | Key | Purpose |
 |-----|---------|
-| `ConnectionStrings:DefaultConnection` | SQL Server for EF Core (required) |
+| `ConnectionStrings:DefaultConnection` | SQL Server for EMS `AppDbContext` → `EMSDevDB` (required) |
+| `ConnectionStrings:UserManagementDb` | SQL Server for `UserManagementDbContext` → `UserManagementDb` (required; must not equal `DefaultConnection`) |
+| `Jwt:Issuer` / `Jwt:Audience` | Token issuer/audience (`Pukar.Usermanagement` / `ems`) |
+| `Jwt:SigningKey` | Symmetric signing key (32+ chars) used to both issue and validate tokens; keep in User Secrets/env |
+| `Smtp:*` | Invitation / password-reset email delivery |
+| `SeedAdmin:*` | Opt-in admin seed (`Enabled=false` and `ResetExistingPassword=false` by default) |
 | `ConnectionStrings:MongoLogs` | Optional; enables Serilog MongoDB sink and MongoDB health check when set |
 
 For local development, prefer [User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) so credentials are not committed:
@@ -59,13 +79,29 @@ Replace placeholders in `appsettings*.json` with your own values for any environ
 
 ## Database migrations
 
-Migrations are in **EMS.Domain** (same assembly as `AppDbContext`). Apply them using the API project as startup (so configuration loads from `EMS.API`):
+**Before** `dotnet ef` or a **full rebuild** of **EMS.API**: **stop the running API** (stop debugging, close the `dotnet run` terminal, or run `powershell -NoProfile -File scripts\stop-ems-api.ps1`). If **EMS.API.exe** is still running, MSBuild usually fails with **MSB3027 / MSB3021** (“cannot copy … file is being used by another process”) because it locks DLLs under `EMS.API\bin\Debug\net9.0\`.
 
-```bash
-dotnet ef database update --project EMS.Domain --startup-project EMS.API
+There are **two migration histories**, one per bounded context, kept in their respective Domain projects. Apply them using **`EMS.API` as the startup project** (so configuration loads from one place). Apply **User Management first**, then **EMS**.
+
+PowerShell (note the backtick line-continuation):
+
+```powershell
+# User Management → UserManagementDb
+dotnet ef database update `
+  --project Pukar.Usermanagement/Pukar.Usermanagement.Domain `
+  --startup-project EMS.API `
+  --context UserManagementDbContext
+
+# EMS → EMSDevDB
+dotnet ef database update `
+  --project EMS.Domain `
+  --startup-project EMS.API `
+  --context AppDbContext
 ```
 
-If the web app shows **Could not load organization** and the API logs report SQL **`Invalid column name`** (for example on `Description`, `LogoRelativePath`, or `Motto`), your database is behind the code: run the command above so pending migrations apply. If `dotnet ef` fails to **build** because **EMS.API is running** (file lock on DLLs), stop the API process, run the command again, or build only `EMS.Domain` and run `dotnet ef database update --project EMS.Domain --startup-project EMS.API --no-build` using a configuration that already built successfully.
+> **Destructive migration (manual approval required):** `20260719091637_RemoveLegacyUserManagementTables` drops the legacy `[um]` schema from `EMSDevDB` and is **irreversible**. It is operator-gated: it performs no drop unless the marker table `[emp].[_UmLegacyDropApproved]` exists. Do **not** create that marker or run this cleanup until database-split validation and a verified backup are complete.
+
+If the web app shows **Could not load organization** and the API logs report SQL **`Invalid column name`** (for example on `Description`, `LogoRelativePath`, or `Motto`), your database is behind the code: run the command above so pending migrations apply. If `dotnet ef` still fails to **build** after stopping the API, run `dotnet build EMS.Domain` then `dotnet ef database update --project EMS.Domain --startup-project EMS.API --no-build`.
 
 Add a new migration after model changes:
 
@@ -108,12 +144,12 @@ cp .env.example .env.local   # Windows: copy .env.example .env.local
 npm run dev:all
 ```
 
-Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` to match the API profile you use (see the table below). On first launch with an empty `org.Organizations` table, the web app prompts for **organization setup** at `/setup` before the main navigation is available. The API enforces **at most one** organization per database on create.
+Set `NEXT_PUBLIC_EMS_API_BASE_URL` and `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` in `.env.local` to match the API profiles you use (see the table below). On first launch with an empty `org.Organizations` table, the web app prompts for **organization setup** at `/setup` before the main navigation is available. The API enforces **at most one** organization per database on create.
 
 | npm script (from **solution root** or **`ems-web`**) | What it runs |
 |------------------------------------------------------|----------------|
-| `npm run dev:all` | API with **`http`** launch profile **and** `next dev` (typical local setup). Point `NEXT_PUBLIC_API_BASE_URL` at `http://localhost:5246`. |
-| `npm run dev:https` | API with **`https`** profile **and** `next dev`. Use `NEXT_PUBLIC_API_BASE_URL=https://localhost:7056` if you call the API over HTTPS. |
+| `npm run dev:all` | User Management Host, EMS.API (`http` profiles), and `next dev`. Point `NEXT_PUBLIC_EMS_API_BASE_URL` at `http://localhost:5246` and `NEXT_PUBLIC_USER_MANAGEMENT_API_BASE_URL` at `http://localhost:5137`. |
+| `npm run dev:https` | Same with **`https`** profiles. Use matching HTTPS origins in `.env.local` if you call the APIs over HTTPS. |
 | `npm run dev:api` | API only (`http` profile). |
 | `npm run dev` | Next.js only (expects the API to be running separately). |
 
@@ -136,11 +172,13 @@ REST-style CRUD under `api/{resource}`:
 | Resource | Base route |
 |----------|------------|
 | Employees | `GET/POST /api/Employees`, `GET/PUT/DELETE /api/Employees/{id}` |
+| Manager team | `GET /api/Manager/team?organizationId={id}&managerId={id}` — direct reports, summary counts, and operational indicators for the scoped manager |
 | Organizations | `GET/POST /api/Organizations`, `GET/PUT/DELETE /api/Organizations/{id}` |
 | Departments | `GET/POST /api/Departments`, `GET/PUT/DELETE /api/Departments/{id}` |
 | Locations | `GET/POST /api/Locations`, `GET/PUT/DELETE /api/Locations/{id}` |
 | Job positions | `GET /api/JobPositions?organizationId={id}`, `GET/POST/PUT/DELETE /api/JobPositions/{id}` |
 | Documents | `GET /api/Documents/types`, `GET /api/Documents?employeeId={id}`, `GET/PUT/DELETE /api/Documents/{id}`, `POST /api/Documents` (multipart: file + metadata), `GET /api/Documents/{id}/file` (download). PDF, Word, or images; files under `wwwroot/uploads/documents/`. `EmployeeId` on a document is nullable for future associations. |
+| Notifications | `GET /api/Notifications`, `GET /api/Notifications/unread-count`, `POST /api/Notifications/{id}/read`, `POST /api/Notifications/read-all` — see [docs/notifications.md](docs/notifications.md) |
 
 **Employees** may reference an optional **`jobPositionId`** (nullable) pointing at a row in **`org.JobPositions`**. Job positions are scoped per organization (`organizationId` on create; title and optional code are unique within the org). This replaces an older two-level Role/Job model so the name **JobPosition** stays distinct from application **user roles** (e.g. identity/authorization).
 

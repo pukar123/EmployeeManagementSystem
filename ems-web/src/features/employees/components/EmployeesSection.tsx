@@ -1,507 +1,292 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useCreateActionParam } from "@/features/command-palette/hooks/useCreateActionParam";
+import { useDepartments } from "@/features/departments/hooks";
 import { useJobPositions } from "@/features/job-positions/hooks";
-import type { JobPosition } from "@/features/job-positions/types/job-position.types";
+import { useSites } from "@/features/sites/hooks";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
+import { PageHeader } from "@/shared/components/PageHeader";
 import { Spinner } from "@/shared/components/Spinner";
-import { cn } from "@/shared/utils/cn";
-import { EmployeeTable } from "./EmployeeTable";
-import { EmployeeHistoryModal } from "./EmployeeHistoryModal";
-import { EmployeeForm } from "./EmployeeForm";
-import { DeleteEmployeeDialog } from "./DeleteEmployeeDialog";
 import { getErrorMessage } from "@/shared/api/http-client";
-import { fetchRoles } from "@/features/user-management/services/userManagementApi";
-import type { RoleDto } from "@/features/user-management/types";
-import {
-  useAssignEmployeeUserRoles,
-  useEmployeeEffectiveRoles,
-  useEmployees,
-  useProvisionEmployeeUser,
-  useSetEmployeeDirectRoles,
-} from "../hooks";
-import { employeeKeys } from "../services/query-keys";
+import { cn } from "@/shared/utils/cn";
+import { useEmployeeDirectory } from "../hooks";
+import { useEmployeeCapabilities } from "../hooks/useEmployeeCapabilities";
 import { employeeService } from "../services/employeeService";
-import { useEmployeeUiStore } from "../store/employee-ui-store";
-import type { Employee, ProvisionEmployeeUserResponse } from "../types/employee.types";
-
-function jobPositionLabel(j: JobPosition): string {
-  return j.code ? `${j.title} (${j.code})` : j.title;
-}
+import { employeeKeys } from "../services/query-keys";
+import type { EmployeeDirectoryItem, EmployeeDirectoryQuery } from "../types/employee.types";
+import { defaultDirectoryQuery, EmployeeDirectoryFilters } from "./EmployeeDirectoryFilters";
+import { EmployeeTable } from "./EmployeeTable";
+import { CreateEmployeeWizard } from "./CreateEmployeeWizard";
 
 export function EmployeesSection() {
   const queryClient = useQueryClient();
   const { organizationId } = useOrganizationContext();
-  const { data, isLoading, isError, error } = useEmployees();
+  const { capabilities, isLoading: capabilitiesLoading } = useEmployeeCapabilities();
+  const [filterState, setFilterState] = useState<EmployeeDirectoryQuery | null>(null);
+
+  useEffect(() => {
+    if (organizationId) {
+      setFilterState((prev) => prev ?? defaultDirectoryQuery(organizationId));
+    }
+  }, [organizationId]);
+
+  const directoryQuery = useMemo(() => {
+    if (!organizationId) return null;
+    const base = filterState ?? defaultDirectoryQuery(organizationId);
+    return { ...base, organizationId };
+  }, [organizationId, filterState]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const createCloseGuardRef = useRef<(() => boolean) | null>(null);
+
+  useCreateActionParam(() => setCreateOpen(true), capabilities.manage);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [restoreBusy, setRestoreBusy] = useState(false);
+
+  const { data: departments = [] } = useDepartments();
   const { data: jobPositions = [] } = useJobPositions(organizationId);
-  const rolesQuery = useQuery({ queryKey: ["roles"], queryFn: fetchRoles });
-  const provisionMutation = useProvisionEmployeeUser();
-  const assignRolesMutation = useAssignEmployeeUserRoles();
-  const setEmployeeDirectRolesMutation = useSetEmployeeDirectRoles();
+  const { data: sites = [] } = useSites();
 
-  const jobPositionLabelById = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const j of jobPositions) {
-      map.set(j.id, jobPositionLabel(j));
-    }
-    return map;
-  }, [jobPositions]);
-  const jobPositionCodeById = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const j of jobPositions) {
-      map.set(j.id, j.code?.trim() || j.title);
-    }
-    return map;
-  }, [jobPositions]);
-  const immediateManagerPositionByEmployeeId = useMemo(() => {
-    const all = data ?? [];
-    const employeeById = new Map<number, (typeof all)[number]>();
-    for (const e of all) {
-      employeeById.set(e.id, e);
-    }
-
-    const map = new Map<number, string>();
-    for (const e of all) {
-      if (e.managerId != null) {
-        const manager = employeeById.get(e.managerId);
-        const managerPositionCode =
-          manager?.jobPositionId != null ? jobPositionCodeById.get(manager.jobPositionId) : undefined;
-        map.set(e.id, managerPositionCode ?? "—");
-      } else {
-        const ownPositionCode =
-          e.jobPositionId != null ? jobPositionCodeById.get(e.jobPositionId) : undefined;
-        map.set(e.id, ownPositionCode ?? "—");
-      }
-    }
-    return map;
-  }, [data, jobPositionCodeById]);
-  const [search, setSearch] = useState("");
-
-  const formMode = useEmployeeUiStore((s) => s.formMode);
-  const selectedEmployee = useEmployeeUiStore((s) => s.selectedEmployee);
-  const openCreateForm = useEmployeeUiStore((s) => s.openCreateForm);
-  const openEditForm = useEmployeeUiStore((s) => s.openEditForm);
-  const closeForm = useEmployeeUiStore((s) => s.closeForm);
-
-  const isDeleteOpen = useEmployeeUiStore((s) => s.isDeleteOpen);
-  const employeeToDelete = useEmployeeUiStore((s) => s.employeeToDelete);
-  const openDeleteDialog = useEmployeeUiStore((s) => s.openDeleteDialog);
-  const closeDeleteDialog = useEmployeeUiStore((s) => s.closeDeleteDialog);
-  const [provisioningEmployee, setProvisioningEmployee] = useState<Employee | null>(null);
-  const [provisioningResult, setProvisioningResult] = useState<ProvisionEmployeeUserResponse | null>(null);
-  const [wizardStep, setWizardStep] = useState<"password" | "roles">("password");
-  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
-  const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
-  const [rolesEmployee, setRolesEmployee] = useState<Employee | null>(null);
-  const [selectedDirectRoleIds, setSelectedDirectRoleIds] = useState<Set<number>>(new Set());
-  const employeeRolesQuery = useEmployeeEffectiveRoles(rolesEmployee?.id ?? null);
-  const historyQuery = useQuery({
-    queryKey: ["employees", "history", historyEmployee?.id],
-    queryFn: () => employeeService.getEmployeeHistory(historyEmployee!.id),
-    enabled: historyEmployee != null,
-  });
-
-  const filtered = useMemo(() => {
-    const list = data ?? [];
-    const q = search.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter((e) => {
-      const hay = `${e.firstName} ${e.lastName} ${e.email} ${e.employeeNumber}`.toLowerCase();
-      return hay.includes(q);
-    });
-  }, [data, search]);
-
-  const refetchList = () => {
-    void queryClient.invalidateQueries({ queryKey: employeeKeys.list() });
-  };
-
-  const closeRolesModal = () => {
-    setRolesEmployee(null);
-    setSelectedDirectRoleIds(new Set());
-  };
-
-  const openRolesModal = (employee: Employee) => {
-    setRolesEmployee(employee);
-  };
-
-  const closeProvisioningModal = () => {
-    setProvisioningEmployee(null);
-    setProvisioningResult(null);
-    setWizardStep("password");
-    setSelectedRoleIds(new Set());
-  };
-
-  const handleEmployeeSuccess = (employee: Employee, mode: "create" | "edit") => {
-    refetchList();
-
-    if (mode !== "create") {
-      return;
-    }
-
-    setProvisioningEmployee(employee);
-    provisionMutation.mutate(employee.id, {
-      onSuccess: (result) => {
-        setProvisioningResult(result);
-        setSelectedRoleIds(new Set(result.assignedRoleIds));
-        setWizardStep(result.temporaryPassword ? "password" : "roles");
-      },
-      onError: (mutationError) => {
-        toast.error(getErrorMessage(mutationError));
-        closeProvisioningModal();
-      },
-    });
-  };
-
-  const toggleRole = (roleId: number, checked: boolean) => {
-    setSelectedRoleIds((prev) => {
-      const next = new Set(prev);
-      if (checked) {
-        next.add(roleId);
-      } else {
-        next.delete(roleId);
-      }
-      return next;
-    });
-  };
-
-  const handleSaveRoles = async () => {
-    if (!provisioningEmployee) return;
-
-    try {
-      await assignRolesMutation.mutateAsync({
-        employeeId: provisioningEmployee.id,
-        roleIds: Array.from(selectedRoleIds),
-      });
-      toast.success("Roles assigned.");
-      closeProvisioningModal();
-    } catch (mutationError) {
-      toast.error(getErrorMessage(mutationError));
-    }
-  };
-
-  const availableRoles = rolesQuery.data ?? [];
-  const effectiveRoles = useMemo(() => employeeRolesQuery.data ?? [], [employeeRolesQuery.data]);
-  const inheritedRoleIds = useMemo(
+  const managerPickerQuery = useMemo<EmployeeDirectoryQuery | null>(
     () =>
-      new Set(
-        effectiveRoles
-          .filter((role) => role.source === "position_inherited")
-          .map((role) => role.roleId),
-      ),
-    [effectiveRoles],
+      organizationId
+        ? {
+            ...defaultDirectoryQuery(organizationId),
+            page: 1,
+            pageSize: 100,
+            employmentStatus: 0,
+          }
+        : null,
+    [organizationId],
   );
-  const directRoleIds = useMemo(
-    () =>
-      new Set(
-        effectiveRoles
-          .filter((role) => role.source === "direct_override")
-          .map((role) => role.roleId),
-      ),
-    [effectiveRoles],
-  );
+  const managersQuery = useEmployeeDirectory(managerPickerQuery);
+  const managers = managersQuery.data?.items ?? [];
 
-  const displayDirectRoleIds = selectedDirectRoleIds.size > 0 ? selectedDirectRoleIds : directRoleIds;
+  const { data, isLoading, isError, error, refetch, isFetching } = useEmployeeDirectory(directoryQuery);
 
-  const toggleDirectRole = (roleId: number, checked: boolean) => {
-    setSelectedDirectRoleIds((prev) => {
-      const next = new Set(prev.size > 0 ? prev : directRoleIds);
-      if (checked) {
-        next.add(roleId);
-      } else {
-        next.delete(roleId);
-      }
-      return next;
+  const updateQuery = (patch: Partial<EmployeeDirectoryQuery>) => {
+    setFilterState((prev) => {
+      if (!organizationId) return prev;
+      const base = prev ?? defaultDirectoryQuery(organizationId);
+      return { ...base, ...patch };
     });
   };
 
-  const handleSaveDirectRoles = async () => {
-    if (!rolesEmployee) return;
+  const handleSort = (sortBy: string) => {
+    const current = directoryQuery?.sortBy ?? "name";
+    const currentDir = directoryQuery?.sortDirection ?? "asc";
+    const nextDir = current === sortBy && currentDir === "asc" ? "desc" : "asc";
+    updateQuery({ sortBy, sortDirection: nextDir, page: 1 });
+  };
 
-    const nextRoleIds = Array.from(displayDirectRoleIds);
-    const removingRoles = Array.from(directRoleIds).filter((roleId) => !displayDirectRoleIds.has(roleId));
-    if (removingRoles.length > 0 && !window.confirm("Remove selected direct override role(s) for this employee?")) {
-      return;
-    }
+  const clearFilters = () => {
+    if (!organizationId) return;
+    setFilterState({
+      ...defaultDirectoryQuery(organizationId),
+      isArchived: filterState?.isArchived ?? false,
+    });
+  };
 
+  const invalidateDirectory = () => {
+    void queryClient.invalidateQueries({ queryKey: employeeKeys.all });
+  };
+
+  const handleExport = async () => {
+    if (!directoryQuery) return;
+    setExportBusy(true);
     try {
-      await setEmployeeDirectRolesMutation.mutateAsync({
-        employeeId: rolesEmployee.id,
-        roleIds: nextRoleIds,
-      });
-      toast.success("Employee direct roles updated.");
-      closeRolesModal();
+      const blob = await employeeService.exportEmployeeDirectoryCsv(directoryQuery);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `employees-${new Date().toISOString().slice(0, 10)}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success("Employee directory exported.");
     } catch (err) {
       toast.error(getErrorMessage(err));
+    } finally {
+      setExportBusy(false);
     }
   };
-  const provisioningOpen = provisioningEmployee != null;
-  const provisioningBusy = provisionMutation.isPending || assignRolesMutation.isPending;
+
+  const handleRestore = async (employee: EmployeeDirectoryItem) => {
+    if (!window.confirm(`Restore ${employee.firstName} ${employee.lastName} (${employee.employeeNumber})?`)) return;
+    setRestoreBusy(true);
+    try {
+      await employeeService.restoreEmployee(employee.id);
+      toast.success("Employee restored.");
+      invalidateDirectory();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
+
+  const items = data?.items ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const page = data?.page ?? 1;
+  const totalPages = data?.totalPages ?? 1;
+  const isArchiveView = directoryQuery?.isArchived ?? false;
+
+  if (capabilitiesLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!capabilities.view) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-8 text-center">
+        <p className="text-sm text-muted-foreground">You do not have permission to view employees.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Employees</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            View and manage your employee records.
-          </p>
-          <Link href="/employee-transfers" className="mt-2 inline-block text-sm text-zinc-700 underline underline-offset-4 dark:text-zinc-300">
-            Open transfer workspace
-          </Link>
-        </div>
-        <Button type="button" onClick={openCreateForm}>
-          Add employee
-        </Button>
-      </div>
+      <PageHeader
+        title={isArchiveView ? "Employee archive" : "Employees"}
+        description="Search, filter, and open employee profiles. Employment lifecycle actions live on each profile."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => updateQuery({ isArchived: !isArchiveView, page: 1 })}
+            >
+              {isArchiveView ? "Active directory" : "Archive view"}
+            </Button>
+            <Button type="button" variant="secondary" disabled={exportBusy || isLoading || !capabilities.export} onClick={() => void handleExport()}>
+              {exportBusy ? "Exporting…" : "Export CSV"}
+            </Button>
+            {!isArchiveView && capabilities.manage ? (
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                Add employee
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
 
-      <div className="max-w-md">
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Search
-        </label>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, email, or employee #"
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+      {directoryQuery ? (
+        <EmployeeDirectoryFilters
+          query={directoryQuery}
+          onChange={updateQuery}
+          onClearAll={clearFilters}
+          departments={departments.filter((d) => d.organizationId === organizationId)}
+          jobPositions={jobPositions}
+          managers={managers}
+          sites={sites}
+          totalCount={totalCount}
         />
-      </div>
+      ) : null}
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
+        <div className="flex flex-col items-center justify-center gap-2 py-16">
           <Spinner />
+          <p className="text-sm text-muted-foreground">Loading employees…</p>
         </div>
       ) : isError ? (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
-          role="alert"
-        >
-          {getErrorMessage(error)}
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+          <p className="text-sm text-destructive">Could not load the employee directory.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{getErrorMessage(error)}</p>
+          <Button type="button" className="mt-4" variant="secondary" onClick={() => void refetch()}>
+            Retry
+          </Button>
+        </div>
+      ) : totalCount === 0 && !isArchiveView && !directoryQuery?.search && !directoryQuery?.departmentId ? (
+        <div className="rounded-xl border border-dashed border-border p-10 text-center">
+          <p className="text-lg font-medium">No employees yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Add your first employee to start building the directory.</p>
+          <Button type="button" className="mt-4" onClick={() => setCreateOpen(true)} disabled={!capabilities.manage}>
+            Add employee
+          </Button>
         </div>
       ) : (
-        <EmployeeTable
-          employees={filtered}
-          jobPositionLabelById={jobPositionLabelById}
-          immediateManagerPositionByEmployeeId={immediateManagerPositionByEmployeeId}
-          onViewHistory={(e) => setHistoryEmployee(e)}
-          onManageRoles={openRolesModal}
-          onEdit={(e) => openEditForm(e)}
-          onDelete={(e) => openDeleteDialog(e)}
-        />
-      )}
-
-      <Modal
-        open={formMode != null}
-        title={formMode === "create" ? "New employee" : "Edit employee"}
-        onClose={closeForm}
-        className="max-w-2xl"
-      >
-        {formMode ? (
-          <EmployeeForm
-            mode={formMode === "create" ? "create" : "edit"}
-            employee={formMode === "edit" ? selectedEmployee : null}
-            onSuccess={handleEmployeeSuccess}
-            onCancel={closeForm}
-          />
-        ) : null}
-      </Modal>
-
-      <Modal
-        open={provisioningOpen}
-        title={wizardStep === "roles" ? "Assign roles" : "Account created"}
-        onClose={closeProvisioningModal}
-        className="max-w-xl"
-        footer={
-          wizardStep === "roles" ? (
-            <>
-              <Button type="button" variant="secondary" onClick={closeProvisioningModal}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={() => void handleSaveRoles()} disabled={provisioningBusy}>
-                {assignRolesMutation.isPending ? "Saving…" : "Save roles"}
-              </Button>
-            </>
-          ) : undefined
-        }
-      >
-        {provisionMutation.isPending || !provisioningResult ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
+        <>
+          <div className={cn(isFetching && "opacity-70 transition-opacity")}>
+            <EmployeeTable
+              employees={items}
+              isArchiveView={isArchiveView}
+              onRestore={isArchiveView && capabilities.manage ? handleRestore : undefined}
+              restoreBusy={restoreBusy}
+              sortBy={directoryQuery?.sortBy ?? "name"}
+              sortDirection={directoryQuery?.sortDirection ?? "asc"}
+              onSort={handleSort}
+            />
           </div>
-        ) : wizardStep === "password" ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-              <p className="text-sm text-zinc-700 dark:text-zinc-200">
-                Login account created for <span className="font-medium">{provisioningResult.employeeName}</span>.
-              </p>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{provisioningResult.email}</p>
-            </div>
-            {provisioningResult.temporaryPassword ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Temporary password</p>
-                <p className="mt-2 rounded-md bg-white px-3 py-2 font-mono text-sm text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-                  {provisioningResult.temporaryPassword}
-                </p>
-                <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-                  This password is shown once. Ask the employee to change it after first sign-in.
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200">
-                An account already exists for this email. Continue to review and assign roles.
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={closeProvisioningModal}>
-                Close
-              </Button>
-              <Button type="button" onClick={() => setWizardStep("roles")}>
-                Continue to roles
-              </Button>
-            </div>
-          </div>
-        ) : rolesQuery.isLoading ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
-          </div>
-        ) : rolesQuery.isError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
-            {getErrorMessage(rolesQuery.error)}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200">
-              Assign roles for <span className="font-medium">{provisioningResult.employeeName}</span>.
-            </div>
-            <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
-              {availableRoles.map((role: RoleDto) => (
-                <li key={role.id}>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 size-4 rounded border-zinc-300"
-                      checked={selectedRoleIds.has(role.id)}
-                      onChange={(e) => toggleRole(role.id, e.target.checked)}
-                    />
-                    <span>
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{role.name}</span>
-                      {role.description ? (
-                        <span className="mt-0.5 block text-xs text-zinc-500">{role.description}</span>
-                      ) : null}
-                      {role.isSystem ? (
-                        <span
-                          className={cn(
-                            "mt-0.5 block text-xs",
-                            "text-amber-700 dark:text-amber-400",
-                          )}
-                        >
-                          System role
-                        </span>
-                      ) : null}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </Modal>
-
-      <DeleteEmployeeDialog
-        employee={employeeToDelete}
-        open={isDeleteOpen}
-        onClose={closeDeleteDialog}
-        onDeleted={refetchList}
-      />
-
-      <EmployeeHistoryModal
-        open={historyEmployee != null}
-        employee={historyEmployee}
-        history={historyQuery.data}
-        isLoading={historyQuery.isLoading || historyQuery.isFetching}
-        isError={historyQuery.isError}
-        errorMessage={historyQuery.isError ? getErrorMessage(historyQuery.error) : null}
-        onClose={() => setHistoryEmployee(null)}
-      />
-
-      <Modal
-        open={rolesEmployee != null}
-        title={rolesEmployee ? `Employee roles: ${rolesEmployee.firstName} ${rolesEmployee.lastName}` : "Employee roles"}
-        onClose={closeRolesModal}
-        className="max-w-2xl"
-        footer={
-          <>
-            <Button type="button" variant="secondary" onClick={closeRolesModal}>
-              Close
-            </Button>
-            <Button type="button" onClick={() => void handleSaveDirectRoles()} disabled={setEmployeeDirectRolesMutation.isPending}>
-              {setEmployeeDirectRolesMutation.isPending ? "Saving…" : "Save direct overrides"}
-            </Button>
-          </>
-        }
-      >
-        {employeeRolesQuery.isLoading ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
-          </div>
-        ) : employeeRolesQuery.isError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
-            {getErrorMessage(employeeRolesQuery.error)}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200">
-              Effective roles are inherited from position plus direct overrides. Position-inherited roles are read-only.
-            </div>
-            <div className="space-y-2">
-              {availableRoles.map((role) => {
-                const inherited = inheritedRoleIds.has(role.id);
-                const checked = inherited || displayDirectRoleIds.has(role.id);
-                return (
-                  <label
-                    key={role.id}
-                    className="flex items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 size-4 rounded border-zinc-300"
-                      checked={checked}
-                      disabled={inherited}
-                      onChange={(e) => toggleDirectRole(role.id, e.target.checked)}
-                    />
-                    <span className="text-sm">
-                      <span className="font-medium text-zinc-900 dark:text-zinc-100">{role.name}</span>
-                      <span className="mt-0.5 block text-xs text-zinc-500">
-                        {inherited ? "Source: position_inherited" : checked ? "Source: direct_override" : "Not assigned"}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            {effectiveRoles.length > 0 ? (
-              <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Current effective roles</p>
-                <ul className="space-y-1 text-sm text-zinc-700 dark:text-zinc-200">
-                  {effectiveRoles.map((role) => (
-                    <li key={`${role.roleId}-${role.source}-${role.jobPositionId ?? "none"}`}>
-                      {role.roleName}
-                      {" - "}
-                      {role.source === "position_inherited"
-                        ? `position_inherited (${role.jobPositionTitle ?? "position"})`
-                        : "direct_override"}
-                    </li>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <label className="flex items-center gap-2">
+                <span>Rows per page</span>
+                <select
+                  className="rounded-lg border border-input bg-background px-2 py-1 text-sm"
+                  value={directoryQuery?.pageSize ?? 25}
+                  onChange={(e) => updateQuery({ pageSize: Number(e.target.value), page: 1 })}
+                >
+                  {[10, 25, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
                   ))}
-                </ul>
+                </select>
+              </label>
+              {totalPages > 1 ? (
+                <p>
+                  Page {page} of {totalPages}
+                </p>
+              ) : null}
+            </div>
+            {totalPages > 1 ? (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => updateQuery({ page: page - 1 })}
+                >
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => updateQuery({ page: page + 1 })}
+                >
+                  Next
+                </Button>
               </div>
             ) : null}
           </div>
-        )}
+        </>
+      )}
+
+      <Modal
+        open={createOpen}
+        title="Add employee"
+        onClose={() => setCreateOpen(false)}
+        onRequestClose={() => createCloseGuardRef.current?.() ?? true}
+        className="max-w-3xl"
+      >
+        <CreateEmployeeWizard
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            invalidateDirectory();
+          }}
+          onRegisterCloseGuard={(guard) => {
+            createCloseGuardRef.current = guard;
+          }}
+        />
       </Modal>
     </div>
   );

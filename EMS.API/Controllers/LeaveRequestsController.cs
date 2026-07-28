@@ -23,8 +23,15 @@ public class LeaveRequestsController : ControllerBase
         int employeeId,
         CancellationToken cancellationToken)
     {
-        var result = await _leaveRequestService.GetByEmployeeAsync(employeeId, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _leaveRequestService.GetByEmployeeAsync(employeeId, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
     }
 
     [HttpGet("admin/summary")]
@@ -110,6 +117,9 @@ public class LeaveRequestsController : ControllerBase
 
     private ActionResult HandleBusinessRule(BusinessRuleException ex)
     {
+        if (string.Equals(ex.Message, LeaveAccessMessages.Denied, StringComparison.Ordinal))
+            return Forbid();
+
         if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
             return NotFound(new { message = ex.Message });
         return BadRequest(new { message = ex.Message });

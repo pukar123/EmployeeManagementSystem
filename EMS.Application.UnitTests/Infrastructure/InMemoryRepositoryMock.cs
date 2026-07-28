@@ -23,6 +23,8 @@ public sealed class InMemoryRepositoryMock<T> where T : class
 
     public IReadOnlyList<T> Items => _items;
 
+    public void Seed(params T[] items) => _items.AddRange(items);
+
     public Mock<IBaseRepository<T>> CreateMock()
     {
         var mock = new Mock<IBaseRepository<T>>();
@@ -38,10 +40,10 @@ public sealed class InMemoryRepositoryMock<T> where T : class
                 return Task.FromResult<IEnumerable<T>>(_items.Where(compiled).ToList());
             });
         mock.Setup(r => r.AddAsync(It.IsAny<T>(), It.IsAny<CancellationToken>()))
-            .Callback<T>(e => _items.Add(e))
+            .Callback<T, CancellationToken>((e, _) => _items.Add(e))
             .Returns(Task.CompletedTask);
         mock.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<T>>(), It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<T>>(e => _items.AddRange(e))
+            .Callback<IEnumerable<T>, CancellationToken>((e, _) => _items.AddRange(e))
             .Returns(Task.CompletedTask);
         mock.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>())).Returns(() =>
         {

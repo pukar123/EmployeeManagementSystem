@@ -1,10 +1,10 @@
-import { httpClient } from "@/shared/api/http-client";
+import { emsHttpClient } from "@/shared/api/http-client";
 import type { AttendanceExportRequest } from "../types/attendance-analytics.types";
 
 const PATH = "/api/Attendance";
 
 export async function exportAttendanceReport(request: AttendanceExportRequest): Promise<Blob> {
-  const { data } = await httpClient.get(`${PATH}/reports/export`, {
+  const { data } = await emsHttpClient.get(`${PATH}/reports/export`, {
     params: request,
     responseType: "blob",
   });

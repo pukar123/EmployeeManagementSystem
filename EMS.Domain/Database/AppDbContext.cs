@@ -23,6 +23,7 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.EmployeeSite> EmployeeSites { get; set; }
         public DbSet<DbModels.Menu> Menus { get; set; }
         public DbSet<DbModels.RoleKeyPermission> RoleKeyPermissions { get; set; }
+        public DbSet<DbModels.RoleKeyCapability> RoleKeyCapabilities { get; set; }
         public DbSet<DbModels.AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<DbModels.AttendanceBreak> AttendanceBreaks { get; set; }
         public DbSet<DbModels.AttendancePolicy> AttendancePolicies { get; set; }
@@ -37,9 +38,17 @@ namespace EMS.Domain.Database
         public DbSet<DbModels.EmployeePositionHistory> EmployeePositionHistories { get; set; }
         public DbSet<DbModels.EmployeeDepartmentHistory> EmployeeDepartmentHistories { get; set; }
         public DbSet<DbModels.EmployeeManagerHistory> EmployeeManagerHistories { get; set; }
+        public DbSet<DbModels.EmployeeEmploymentStatusHistory> EmployeeEmploymentStatusHistories { get; set; }
         public DbSet<DbModels.EmployeeRetentionPolicy> EmployeeRetentionPolicies { get; set; }
         public DbSet<DbModels.PositionRole> PositionRoles { get; set; }
         public DbSet<DbModels.EmployeeRoleAssignment> EmployeeRoleAssignments { get; set; }
+        public DbSet<DbModels.OrganizationEmployeeNumberSequence> OrganizationEmployeeNumberSequences { get; set; }
+        public DbSet<DbModels.EmployeeScheduledChange> EmployeeScheduledChanges { get; set; }
+        public DbSet<DbModels.IntegrationOutboxMessage> IntegrationOutboxMessages { get; set; }
+        public DbSet<DbModels.OnboardingChecklistTemplate> OnboardingChecklistTemplates { get; set; }
+        public DbSet<DbModels.OnboardingChecklistTemplateItem> OnboardingChecklistTemplateItems { get; set; }
+        public DbSet<DbModels.EmployeeOnboardingChecklist> EmployeeOnboardingChecklists { get; set; }
+        public DbSet<Pukar.Notifications.Domain.DbModels.Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

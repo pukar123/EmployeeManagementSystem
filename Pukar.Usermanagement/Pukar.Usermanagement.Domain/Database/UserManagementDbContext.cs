@@ -18,6 +18,14 @@ public class UserManagementDbContext : DbContext
 
     public DbSet<UserRole> UserRoles => Set<UserRole>();
 
+    public DbSet<AccountInvitation> AccountInvitations => Set<AccountInvitation>();
+
+    public DbSet<ServiceClient> ServiceClients => Set<ServiceClient>();
+
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("um");

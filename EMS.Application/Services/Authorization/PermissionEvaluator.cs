@@ -1,3 +1,5 @@
+using EMS.Application.Services.Authorization;
+using EMS.Application.Services.Employees;
 using EMS.Domain.DbModels;
 using EMS.Domain.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +16,14 @@ public sealed class PermissionEvaluator : IPermissionEvaluator
     };
 
     private readonly IBaseRepository<RoleKeyPermission> _roleKeyPermissions;
+    private readonly IBaseRepository<RoleKeyCapability> _roleKeyCapabilities;
 
-    public PermissionEvaluator(IBaseRepository<RoleKeyPermission> roleKeyPermissions)
+    public PermissionEvaluator(
+        IBaseRepository<RoleKeyPermission> roleKeyPermissions,
+        IBaseRepository<RoleKeyCapability> roleKeyCapabilities)
     {
         _roleKeyPermissions = roleKeyPermissions;
+        _roleKeyCapabilities = roleKeyCapabilities;
     }
 
     public async Task<IReadOnlySet<int>> GetAllowedMenuIdsAsync(
@@ -50,6 +56,40 @@ public sealed class PermissionEvaluator : IPermissionEvaluator
         return await _roleKeyPermissions.GetQueryable()
             .AsNoTracking()
             .AnyAsync(rp => normalized.Contains(rp.RoleKey) && rp.MenuId == menuId && rp.Allowed, cancellationToken);
+    }
+
+    public async Task<bool> HasCapabilityAsync(
+        IReadOnlyList<string> roleKeys,
+        string capabilityKey,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = NormalizeRoleKeys(roleKeys);
+        if (normalized.Count == 0 || string.IsNullOrWhiteSpace(capabilityKey))
+            return false;
+
+        var keysToCheck = ResolveCapabilityKeysToCheck(capabilityKey.Trim());
+        if (keysToCheck.Count == 0)
+            return false;
+
+        return await _roleKeyCapabilities.GetQueryable()
+            .AsNoTracking()
+            .AnyAsync(
+                rc => normalized.Contains(rc.RoleKey) && keysToCheck.Contains(rc.CapabilityKey) && rc.Allowed,
+                cancellationToken);
+    }
+
+    private static IReadOnlyList<string> ResolveCapabilityKeysToCheck(string capabilityKey)
+    {
+        if (capabilityKey.Equals(EmployeeCapabilities.View, StringComparison.Ordinal))
+        {
+            return
+            [
+                EmployeeCapabilities.View,
+                ..EmployeeCapabilities.ViewImpliedBy,
+            ];
+        }
+
+        return [capabilityKey];
     }
 
     private static IReadOnlyList<string> NormalizeRoleKeys(IReadOnlyList<string> roleKeys)

@@ -13,8 +13,8 @@ Full cross-project narrative (Pukar, `Pukar.Shared`, EMS, `ems-web`, Git) lives 
 |---------|----------------|
 | **EMS.Domain** | Entities (`DbModels`), EF `AppDbContext`, entity configurations, migrations, `IBaseRepository<T>` (and other domain interfaces). |
 | **EMS.Application** | DTOs per business area, application services, static mapping helpers under `Mapping/`. |
-| **EMS.Infrastructure** | `BaseRepository<T>` and other implementations wired to `AppDbContext`. |
-| **EMS.API** | ASP.NET Core host: controllers, `Program.cs`, middleware, health, OpenAPI. **No** direct `DbContext` or EF usage in controllers. |
+| **EMS.Infrastructure** | `BaseRepository<T>` and HTTP adapters (e.g. `HttpEmployeeUserManagementGateway`) wired to `AppDbContext` / external services. |
+| **EMS.API** | ASP.NET Core host: controllers, `Program.cs`, middleware, health, OpenAPI. **No** direct `DbContext` or EF usage in controllers. JWT **validation only** (User Management issues tokens). |
 | **ems-web** | Next.js client (separate from backend projects above). |
 
 ## Dependency direction
@@ -22,6 +22,7 @@ Full cross-project narrative (Pukar, `Pukar.Shared`, EMS, `ems-web`, Git) lives 
 - **EMS.API** references **EMS.Application** (and indirectly Domain for hosting/migrations tooling as configured).
 - **EMS.Application** uses **Domain** abstractions (e.g. `IBaseRepository<T>`, entities); it **must not** reference **EMS.Infrastructure** directly.
 - **EMS.Infrastructure** implements Domain interfaces and references **EMS.Domain** + EF Core.
+- **User Management:** EMS may reference **`Pukar.Usermanagement.Contracts`** and **`Pukar.Shared` only**. Never reference `Pukar.Usermanagement.API`, `.Application`, `.Domain`, `.Infrastructure`, or `.Host`. Never open UM tables. Identity goes through `IEmployeeUserManagementGateway` (HTTP). See [docs/ems-um-http-integration.md](../../docs/ems-um-http-integration.md).
 
 ## Request flow
 

@@ -124,11 +124,11 @@ export function LeaveSettingsSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Leave Setting</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Manage organization leave types and future leave settings.</p>
+        <h1 className="text-2xl font-semibold text-foreground">Leave Setting</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Manage organization leave types and future leave settings.</p>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Configured leave types</h2>
           <Button type="button" variant="secondary" onClick={startCreate}>
@@ -138,7 +138,7 @@ export function LeaveSettingsSection() {
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-left text-zinc-500">
+              <tr className="text-left text-muted-foreground">
                 <th className="pb-2 pr-3">Name</th>
                 <th className="pb-2 pr-3">Unit</th>
                 <th className="pb-2 pr-3">Attachment</th>
@@ -148,7 +148,7 @@ export function LeaveSettingsSection() {
             </thead>
             <tbody>
               {(leaveTypesQuery.data ?? []).map((row) => (
-                <tr key={row.id} className="border-t border-zinc-200 dark:border-zinc-800">
+                <tr key={row.id} className="border-t border-border">
                   <td className="py-2 pr-3">{row.name}</td>
                   <td className="py-2 pr-3">{unitLabel(row.unit)}</td>
                   <td className="py-2 pr-3">{row.requiresAttachment ? "Required" : "Optional"}</td>
@@ -165,34 +165,34 @@ export function LeaveSettingsSection() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
         <h2 className="text-lg font-medium">{editingId == null ? "Add leave type" : `Edit: ${selectedLeaveType?.name ?? "Leave type"}`}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Name</span>
+            <span className="text-xs font-medium text-muted-foreground">Name</span>
             <input
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input px-3 py-2 text-sm dark:bg-card"
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Unit</span>
+            <span className="text-xs font-medium text-muted-foreground">Unit</span>
             <select
               value={form.unit}
               onChange={(e) => setForm((prev) => ({ ...prev, unit: Number(e.target.value) as LeaveUnitValue }))}
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
             >
               <option value={1}>Days</option>
               <option value={2}>Hours</option>
             </select>
           </label>
           <label className="block md:col-span-2">
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Description</span>
+            <span className="text-xs font-medium text-muted-foreground">Description</span>
             <input
               value={form.description}
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-input px-3 py-2 text-sm dark:bg-card"
             />
           </label>
           <label className="inline-flex items-center gap-2 text-sm">

@@ -1,5 +1,18 @@
 # EMS architecture (overview)
 
+> **Single-host topology:** EMS runs as **one deployable process (`EMS.API`)** that composes User Management **in-process** as a separate bounded context. Two SQL databases remain (`EMSDevDB` via `AppDbContext`, `UserManagementDb` via `UserManagementDbContext`). EMS issues and validates JWTs locally (no remote JWKS) and calls UM through in-process anti-corruption adapters instead of HTTP.
+>
+> ```mermaid
+> flowchart LR
+>   Web[ems-web] --> Api[EMS.API single host]
+>   Api --> EmsApp[EMS Application/Infrastructure]
+>   EmsApp --> AppDb[AppDbContext]
+>   AppDb --> EmsDb[(EMSDevDB)]
+>   Api --> UmApp[UM Application/Infrastructure in-process]
+>   UmApp --> UmCtx[UserManagementDbContext]
+>   UmCtx --> UmDb[(UserManagementDb)]
+> ```
+
 This document is the **EMS-focused** map: diagrams and how requests flow through this solution today. The **canonical guide** for layering, naming, `Pukar.Shared`, `Pukar.Usermanagement`, frontend, Git, and checklists—reusable across **all** projects—is [ARCHITECTURE_AND_PATTERNS.md](ARCHITECTURE_AND_PATTERNS.md). For business goals, personas, capability scope, and roadmap context, see [business-perspective.md](business-perspective.md). Expand this file when you add authentication, validation pipelines, or deployment-specific concerns that are specific to EMS.
 
 ## Layering
@@ -7,28 +20,51 @@ This document is the **EMS-focused** map: diagrams and how requests flow through
 ```mermaid
 flowchart TB
   subgraph api [EMS.API]
-    Controllers[Controllers]
+    Controllers[Controllers incl. in-process UM controllers]
+    JwtValidate[JWT issue + validate in-process]
   end
   subgraph app [EMS.Application]
     DTOs[DTOs per area Employee Org Dept Location]
     Services[Services per entity]
+    GatewayIf[IEmployeeUserManagementGateway]
     Mapping[Mapping helpers]
   end
   subgraph infra [EMS.Infrastructure]
     Repo[BaseRepository of T]
+    HttpGateway[HttpEmployeeUserManagementGateway]
   end
   subgraph domain [EMS.Domain]
     DbCtx[AppDbContext]
     Entities[DbModels]
     RepoIf[IBaseRepository of T]
   end
+  subgraph um [Pukar.Usermanagement.Host]
+    UmApi[Public and internal HTTP APIs]
+    UmDb[(UserManagement DB)]
+  end
   Controllers --> Services
+  Controllers --> JwtValidate
   Services --> Mapping
   Services --> RepoIf
+  Services --> GatewayIf
+  HttpGateway -.-> GatewayIf
+  HttpGateway -->|service token HTTP| UmApi
   Repo -.-> RepoIf
   Repo --> DbCtx
   DbCtx --> Entities
+  UmApi --> UmDb
 ```
+
+## EMS ↔ User Management service boundary
+
+| Owner | Data / concerns |
+|-------|-----------------|
+| **EMS** | Employees, org structure, `RoleKey` assignments, `RoleKeyPermission` / `RoleKeyCapability`, menus, integration outbox |
+| **User Management** | Users, roles, invitations, passwords, tokens, email delivery |
+
+EMS never reads or writes UM tables. Identity mutations go through HTTP; optional identity enrichment on employee reads degrades gracefully when UM is down; mutations return **503** (`user_management_unavailable`). Outbox messages stay pending and retry with idempotency keys.
+
+Details: [ems-um-http-integration.md](ems-um-http-integration.md).
 
 ## Responsibility split
 
@@ -36,6 +72,7 @@ flowchart TB
 - **Application services** orchestrate use cases: load or create entities via `IBaseRepository<T>`, map to/from DTOs, call `SaveChangesAsync` through the repository.
 - **Mappers** (static helpers in `EMS.Application/Mapping`) keep mapping logic in one place per aggregate.
 - **Domain** owns persistence model, EF configuration, and migrations; **Infrastructure** implements `IBaseRepository<T>` using `AppDbContext`.
+- **Employee–identity link:** at most one non-archived employee per `ExternalIdentityKey` (filtered unique index + application checks). Before applying that migration on a database, run the duplicate checks in [employee-external-identity-key-operations.md](employee-external-identity-key-operations.md).
 
 ## DTO conventions
 
@@ -60,6 +97,18 @@ Registrations live in `EMS.API/Program.cs`: open-generic `IBaseRepository<>` →
 - **Automatic audit trail:** persistence-level save interception records who changed what and when for tracked entity changes.
 - **Retention-safe employee deletion:** employee delete API behavior archives records (`IsArchived`) and computes `RetentionUntilUtc` from policy instead of hard delete.
 - **Attendance reporting and analytics:** attendance now includes daily summaries, weekly/monthly aggregation, punctuality analytics (late/early), absenteeism analytics, and report export endpoints (CSV/XLSX/PDF).
+- **Notification Center:** reusable `Pukar.Notifications` core with EMS producers, API inbox endpoints, and header bell UI — see [notifications.md](notifications.md).
+
+## Notification Center flow
+
+```mermaid
+flowchart LR
+  producers[EmsNotificationProducer] --> notifService[INotificationService]
+  notifService --> notifRepo[INotificationRepository]
+  notifRepo --> ntfTable[ntf.Notifications]
+  bell[NotificationBell] --> notifApi[NotificationsController]
+  notifApi --> notifService
+```
 
 ## Attendance reporting flow
 

@@ -29,11 +29,11 @@ export function OrganizationLogoUpload({ organizationId, logoRelativePath }: Pro
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/50 dark:border-border dark:bg-card">
         {src ? (
           <img src={src} alt="" className="max-h-full max-w-full object-contain" />
         ) : (
-          <span className="px-2 text-center text-xs text-zinc-400">No logo</span>
+          <span className="px-2 text-center text-xs text-muted-foreground">No logo</span>
         )}
       </div>
       <input
@@ -46,7 +46,7 @@ export function OrganizationLogoUpload({ organizationId, logoRelativePath }: Pro
       />
       <label
         htmlFor={inputId}
-        className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 shadow-sm hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+        className="cursor-pointer rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-card dark:text-foreground dark:hover:bg-muted/60"
       >
         {uploadMut.isPending ? "Uploading…" : "Change logo"}
       </label>

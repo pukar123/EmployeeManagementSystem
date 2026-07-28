@@ -2,8 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useCreateActionParam } from "@/features/command-palette/hooks/useCreateActionParam";
 import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { SearchInput } from "@/shared/components/SearchInput";
 import { SearchableSelect } from "@/shared/components/SearchableSelect";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
@@ -19,7 +22,7 @@ import {
 import type { Department } from "../types/department.types";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100";
+  "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
 
 function formatDepartmentLabel(d: Department): string {
   return d.code ? `${d.name} (${d.code})` : d.name;
@@ -78,6 +81,8 @@ export function DepartmentsSection() {
     setIsActive(true);
     setFormOpen(true);
   };
+
+  useCreateActionParam(openCreate);
 
   const openEdit = (d: Department) => {
     setEditing(d);
@@ -161,28 +166,22 @@ export function DepartmentsSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Departments</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Manage departments across your organization.</p>
-        </div>
-        <Button type="button" onClick={openCreate}>
-          Add department
-        </Button>
-      </div>
+      <PageHeader
+        title="Departments"
+        description="Manage departments across your organization."
+        actions={
+          <Button type="button" onClick={openCreate}>
+            Add department
+          </Button>
+        }
+      />
 
-      <div className="max-w-md">
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Search
-        </label>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name or code"
-          className={inputClass}
-        />
-      </div>
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Name or code"
+        aria-label="Search departments"
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-16">
@@ -196,27 +195,28 @@ export function DepartmentsSection() {
           {getErrorMessage(error)}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-          <table className="min-w-full divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-700">
-            <thead className="bg-zinc-50 dark:bg-zinc-900/50">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+          <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border text-left text-sm ">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">#</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Name</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Code</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Parent</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Active</th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">#</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Code</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Parent</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Active</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+            <tbody className="divide-y divide-border">
               {filtered.map((row, index) => (
-                <tr key={row.id} className="bg-white hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900">
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">
+                <tr key={row.id} className="bg-card hover:bg-muted/40">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-muted-foreground">
                     {index + 1}
                   </td>
-                  <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{row.name}</td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{row.code ?? "—"}</td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                  <td className="px-4 py-3 text-foreground">{row.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{row.code ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
                     {row.parentDepartmentId != null ? (departmentNameById.get(row.parentDepartmentId) ?? "—") : "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -225,7 +225,7 @@ export function DepartmentsSection() {
                         "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                         row.isActive
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                          : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+                          : "bg-muted text-muted-foreground",
                       )}
                     >
                       {row.isActive ? "Yes" : "No"}
@@ -251,8 +251,9 @@ export function DepartmentsSection() {
               ))}
             </tbody>
           </table>
+          </div>
           {filtered.length === 0 ? (
-            <p className="p-6 text-center text-sm text-zinc-500">No departments match the current filter.</p>
+            <p className="border-t border-border p-6 text-center text-sm text-muted-foreground">No departments match the current filter.</p>
           ) : null}
         </div>
       )}
@@ -265,7 +266,7 @@ export function DepartmentsSection() {
       >
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Name</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
             <input
               type="text"
               value={name}
@@ -275,7 +276,7 @@ export function DepartmentsSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Code</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Code</label>
             <input
               type="text"
               value={code}
@@ -285,7 +286,7 @@ export function DepartmentsSection() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Parent department (optional)
             </label>
             <SearchableSelect<number>
@@ -296,12 +297,12 @@ export function DepartmentsSection() {
               emptyLabel="No parent"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded border-zinc-300 dark:border-zinc-600"
+              className="rounded border-input"
             />
             Active
           </label>

@@ -1,7 +1,7 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 using EMS.Application.DTOs.Employee;
 using EMS.Domain.DbModels;
+using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
 using Pukar.Shared;
 
@@ -9,73 +9,52 @@ namespace EMS.Application.Services.Employees;
 
 public sealed class EmployeeIdentityProvisioningService : IEmployeeIdentityProvisioningService
 {
-    private static readonly Regex PasswordSegmentCleaner = new(
-        @"[^A-Za-z0-9]",
-        RegexOptions.CultureInvariant,
-        TimeSpan.FromMilliseconds(250));
-
     private readonly IBaseRepository<Employee> _employees;
-    private readonly IBaseRepository<Organization> _organizations;
     private readonly IEmployeeUserManagementGateway _gateway;
+    private readonly EmployeeRelationshipValidator _validator;
 
     public EmployeeIdentityProvisioningService(
         IBaseRepository<Employee> employees,
-        IBaseRepository<Organization> organizations,
-        IEmployeeUserManagementGateway gateway)
+        IEmployeeUserManagementGateway gateway,
+        EmployeeRelationshipValidator validator)
     {
         _employees = employees;
-        _organizations = organizations;
         _gateway = gateway;
+        _validator = validator;
     }
 
-    public async Task<ProvisionEmployeeUserResponseModel> ProvisionAsync(
+    public async Task<ProvisionEmployeeUserResponseModel> LinkExistingUserAsync(
         int employeeId,
+        LinkEmployeeUserRequestModel request,
         CancellationToken cancellationToken = default)
     {
         var employee = await _employees.GetByIdAsync(employeeId, cancellationToken);
         if (employee is null)
             throw new BusinessRuleException("Employee was not found.");
 
-        var organization = await _organizations.GetByIdAsync(employee.OrganizationId, cancellationToken);
-        if (organization is null)
-            throw new BusinessRuleException("Organization was not found.");
+        _validator.EnsureNotArchived(employee);
 
-        var existingUser = await ResolveLinkedUserAsync(employee, cancellationToken);
-        var isNewUser = existingUser is null;
-        string? temporaryPassword = null;
+        var user = await _gateway.GetUserByIdAsync(request.UserId, cancellationToken);
+        if (user is null)
+            throw new BusinessRuleException("User account was not found.");
 
-        if (existingUser is null)
+        if (!EmailNormalizer.Normalize(user.Email).Equals(
+                EmailNormalizer.Normalize(employee.Email),
+                StringComparison.Ordinal))
         {
-            temporaryPassword = GenerateTemporaryPassword(employee);
-            existingUser = await _gateway.CreateUserAsync(
-                new CreateEmployeeLinkedUserRequest
-                {
-                    Email = employee.Email,
-                    UserName = BuildEmployeeName(employee),
-                    Password = temporaryPassword,
-                    IsActive = employee.IsActive,
-                    MustChangePassword = true,
-                },
-                cancellationToken);
+            throw new BusinessRuleException("User account email must match the employee email before linking.");
         }
 
-        var externalKey = existingUser.Id.ToString(CultureInfo.InvariantCulture);
-        if (!string.Equals(employee.ExternalIdentityKey, externalKey, StringComparison.Ordinal))
-        {
-            employee.ExternalIdentityKey = externalKey;
-            _employees.Update(employee);
-            await _employees.SaveChangesAsync(cancellationToken);
-        }
+        await LinkEmployeeToUserAsync(employee, user, cancellationToken);
 
-        var assignedRoleIds = await _gateway.GetRoleIdsForUserAsync(existingUser.Id, cancellationToken);
+        var assignedRoleKeys = await _gateway.GetRoleKeysForUserAsync(user.Id, cancellationToken);
         return new ProvisionEmployeeUserResponseModel
         {
             EmployeeName = BuildEmployeeName(employee),
             EmployeeNumber = employee.EmployeeNumber,
-            Email = existingUser.Email,
-            TemporaryPassword = temporaryPassword,
-            IsNewUser = isNewUser,
-            AssignedRoleIds = assignedRoleIds,
+            Email = user.Email,
+            IsNewUser = false,
+            AssignedRoleKeys = assignedRoleKeys,
         };
     }
 
@@ -88,58 +67,63 @@ public sealed class EmployeeIdentityProvisioningService : IEmployeeIdentityProvi
         if (employee is null)
             throw new BusinessRuleException("Employee was not found.");
 
-        var userId = await ResolveLinkedUserIdAsync(employee, cancellationToken);
-        await _gateway.SetRoleIdsForUserAsync(userId, request.RoleIds ?? Array.Empty<int>(), cancellationToken);
-    }
+        _validator.EnsureNotArchived(employee);
 
-    private async Task<EmployeeLinkedUserSnapshot?> ResolveLinkedUserAsync(
-        Employee employee,
-        CancellationToken cancellationToken)
-    {
-        if (int.TryParse(employee.ExternalIdentityKey, NumberStyles.Integer, CultureInfo.InvariantCulture, out var linkedUserId))
-        {
-            var linkedUser = await _gateway.GetUserByIdAsync(linkedUserId, cancellationToken);
-            if (linkedUser is not null)
-                return linkedUser;
-        }
-
-        return await _gateway.GetUserByEmailAsync(employee.Email, cancellationToken);
-    }
-
-    private async Task<int> ResolveLinkedUserIdAsync(Employee employee, CancellationToken cancellationToken)
-    {
-        var linkedUser = await ResolveLinkedUserAsync(employee, cancellationToken);
+        var linkedUser = await EmployeeLinkedIdentityHelper.TryResolveLinkedUserAsync(employee, _gateway, cancellationToken);
         if (linkedUser is null)
             throw new BusinessRuleException("Linked user account has not been provisioned for this employee.");
 
-        var externalKey = linkedUser.Id.ToString(CultureInfo.InvariantCulture);
-        if (!string.Equals(employee.ExternalIdentityKey, externalKey, StringComparison.Ordinal))
-        {
-            employee.ExternalIdentityKey = externalKey;
-            _employees.Update(employee);
-            await _employees.SaveChangesAsync(cancellationToken);
-        }
+        var roleKeys = (request.RoleKeys ?? Array.Empty<string>())
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Select(k => k.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-        return linkedUser.Id;
+        await _gateway.SetRoleKeysForUserAsync(
+            linkedUser.Id,
+            roleKeys,
+            $"assign-roles:employee:{employeeId}",
+            cancellationToken);
+    }
+
+    public async Task ReactivateLoginAsync(int employeeId, CancellationToken cancellationToken = default)
+    {
+        var employee = await _employees.GetByIdAsync(employeeId, cancellationToken);
+        if (employee is null)
+            throw new BusinessRuleException("Employee was not found.");
+
+        _validator.EnsureNotArchived(employee);
+
+        if (employee.EmploymentStatus != EmploymentStatus.Active)
+            throw new BusinessRuleException("Login can only be reactivated for active employees.");
+
+        var linkedUser = await EmployeeLinkedIdentityHelper.TryResolveLinkedUserAsync(employee, _gateway, cancellationToken);
+        if (linkedUser is null)
+            throw new BusinessRuleException("Linked user account has not been provisioned for this employee.");
+
+        await _gateway.ActivateLinkedUserAsync(
+            linkedUser.Id,
+            $"reactivate:employee:{employeeId}",
+            cancellationToken);
+    }
+
+    private async Task LinkEmployeeToUserAsync(
+        Employee employee,
+        EmployeeLinkedUserSnapshot user,
+        CancellationToken cancellationToken)
+    {
+        var externalKey = user.Id.ToString(CultureInfo.InvariantCulture);
+        await EmployeeLinkedIdentityHelper.EnsureNoOtherActiveEmployeeUsesExternalIdentityKeyAsync(
+            _employees,
+            employee.Id,
+            externalKey,
+            cancellationToken);
+
+        employee.ExternalIdentityKey = externalKey;
+        _employees.Update(employee);
+        await _employees.SaveChangesAsync(cancellationToken);
     }
 
     private static string BuildEmployeeName(Employee employee)
-    {
-        return $"{employee.FirstName} {employee.LastName}".Trim();
-    }
-
-    private static string GenerateTemporaryPassword(Employee employee)
-    {
-        var firstName = PasswordSegmentCleaner.Replace(employee.FirstName?.Trim() ?? string.Empty, string.Empty);
-        if (string.IsNullOrWhiteSpace(firstName))
-        {
-            var employeeNumber = PasswordSegmentCleaner.Replace(employee.EmployeeNumber.Trim(), string.Empty);
-            if (string.IsNullOrWhiteSpace(employeeNumber))
-                throw new BusinessRuleException("Employee number is required before creating a linked user.");
-
-            firstName = $"EMP{employeeNumber}";
-        }
-
-        return $"{firstName}@123";
-    }
+        => $"{employee.FirstName} {employee.LastName}".Trim();
 }

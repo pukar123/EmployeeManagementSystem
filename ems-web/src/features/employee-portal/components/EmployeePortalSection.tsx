@@ -6,9 +6,10 @@ import { getErrorMessage } from "@/shared/api/http-client";
 import { Button } from "@/shared/components/Button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useEmployeePortal, useStartShift } from "../hooks";
+import { useEmployeePortal, useStartShift, useStartTask } from "../hooks";
 import { shiftStatusLabel } from "../utils/shiftDisplay";
-import type { PortalShift } from "../types/employee-portal.types";
+import { taskPriorityLabels, taskStatusLabels } from "@/features/tasks/utils/taskDisplay";
+import type { PortalScheduleEntry, PortalShift, PortalTask } from "../types/employee-portal.types";
 
 function formatUtc(iso: string): string {
   try {
@@ -44,17 +45,77 @@ function ShiftCard({
   );
 }
 
+function TaskCard({ task, highlight }: { task: PortalTask; highlight?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border bg-card p-4 shadow-sm",
+        highlight ? "border-primary/50 ring-2 ring-primary/20" : "border-border",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-semibold text-foreground">{task.title}</p>
+        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+          {taskStatusLabels[task.status]}
+        </span>
+      </div>
+      {task.description ? (
+        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{task.description}</p>
+      ) : null}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {task.priority ? <span>Priority: {taskPriorityLabels[task.priority]}</span> : null}
+        <span>Due: {task.dueAtUtc ? formatUtc(task.dueAtUtc) : "—"}</span>
+      </div>
+    </div>
+  );
+}
+
+function WorkEntryCard({ entry, highlight }: { entry: PortalScheduleEntry; highlight?: boolean }) {
+  if (entry.kind === 0 && entry.shift) {
+    return <ShiftCard shift={entry.shift} highlight={highlight} />;
+  }
+  if (entry.kind === 1 && entry.task) {
+    return <TaskCard task={entry.task} highlight={highlight} />;
+  }
+  return null;
+}
+
+function heroHeading(entry: PortalScheduleEntry | null): string {
+  if (!entry) return "Next work";
+  if (entry.kind === 0 && entry.shift?.status === 1) return "Current shift";
+  if (entry.kind === 1 && entry.task?.status === 2) return "Current task";
+  return "Next work";
+}
+
+function entryCanBeStarted(entry: PortalScheduleEntry | null): boolean {
+  if (!entry) return false;
+  if (entry.kind === 0 && entry.shift) return entry.shift.status === 0;
+  if (entry.kind === 1 && entry.task) {
+    return entry.task.status === 1 || entry.task.status === 3;
+  }
+  return false;
+}
+
 export function EmployeePortalSection() {
   const portalQuery = useEmployeePortal();
   const startShift = useStartShift();
+  const startTask = useStartTask();
 
-  const nearest = portalQuery.data?.nearestUpcomingShift ?? null;
-  const canStartNearest = nearest !== null && nearest.status === 0;
+  const schedule = portalQuery.data?.schedule ?? [];
+  const nextEntry = schedule[0] ?? null;
+  const rest = schedule.slice(1);
 
-  const handleStartNearest = () => {
-    if (!nearest) return;
-    startShift.mutate(nearest.id);
+  const handleStartNext = () => {
+    if (!nextEntry) return;
+    if (nextEntry.kind === 0 && nextEntry.shift) {
+      startShift.mutate(nextEntry.shift.id);
+    } else if (nextEntry.kind === 1 && nextEntry.task) {
+      startTask.mutate(nextEntry.task.id);
+    }
   };
+
+  const startPending = startShift.isPending || startTask.isPending;
+  const startError = startShift.isError ? startShift.error : startTask.isError ? startTask.error : null;
 
   if (portalQuery.isLoading) {
     return (
@@ -82,83 +143,88 @@ export function EmployeePortalSection() {
   const data = portalQuery.data;
   if (!data) return null;
 
-  const topIds = new Set(data.topThreeUpcomingShifts.map((s) => s.id));
+  if (!data.hasLinkedEmployeeProfile) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <div className="space-y-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Employee portal</h1>
+          <div
+            className="rounded-xl border border-border bg-muted/30 px-4 py-5 text-sm text-muted-foreground"
+            role="status"
+          >
+            <p className="font-medium text-foreground">Employee portal is available</p>
+            <p className="mt-2 leading-relaxed">
+              You can access the employee portal. Shifts, tasks, and leave appear when the{" "}
+              <span className="font-medium text-foreground">account you are signed in with</span> is linked to an
+              employee (same user id stored on the employee record). If you used &quot;Link login&quot; for someone else
+              or created a new login, sign in with that user to see their schedule here.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const nextStartable = entryCanBeStarted(nextEntry);
+  const heroShowsProgress =
+    nextEntry &&
+    ((nextEntry.kind === 0 && nextEntry.shift?.status === 1) ||
+      (nextEntry.kind === 1 && nextEntry.task?.status === 2));
 
   return (
     <div className="mx-auto flex max-w-4xl flex-1 flex-col gap-10 px-4 py-10 sm:px-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Employee portal</h1>
         <p className="max-w-2xl text-muted-foreground">
-          Your upcoming shifts and leave snapshot. Admins can schedule shifts for you in the main app.
+          Your shifts, tasks, and leave in one place. Admins schedule work for you in the main app.
         </p>
       </div>
 
-      <section className="space-y-4" aria-labelledby="nearest-shift-heading">
-        <h2 id="nearest-shift-heading" className="text-lg font-semibold text-foreground">
-          Next shift
+      <section className="space-y-4" aria-labelledby="next-work-heading">
+        <h2 id="next-work-heading" className="text-lg font-semibold text-foreground">
+          {heroHeading(nextEntry)}
         </h2>
-        {nearest ? (
+        {nextEntry ? (
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-            <ShiftCard shift={nearest} />
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                onClick={handleStartNearest}
-                disabled={!canStartNearest || startShift.isPending}
-              >
-                {startShift.isPending ? "Starting…" : "Start shift"}
-              </Button>
-              {!canStartNearest ? (
-                <span className="text-sm text-muted-foreground">
-                  {nearest.status !== 0
-                    ? "This shift is not in a startable state."
-                    : "You cannot start this shift right now."}
-                </span>
-              ) : null}
-            </div>
-            {startShift.isError ? (
-              <p className="mt-2 text-sm text-destructive" role="alert">
-                {getErrorMessage(startShift.error)}
-              </p>
-            ) : null}
+            <WorkEntryCard entry={nextEntry} />
+            {nextStartable ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button type="button" onClick={handleStartNext} disabled={startPending}>
+                  {startPending ? "Starting…" : "Start"}
+                </Button>
+                {startError ? (
+                  <p className="w-full text-sm text-destructive" role="alert">
+                    {getErrorMessage(startError)}
+                  </p>
+                ) : null}
+              </div>
+            ) : heroShowsProgress ? (
+              <p className="mt-4 text-sm text-muted-foreground">This item is in progress.</p>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">This item cannot be started from here.</p>
+            )}
           </div>
         ) : (
           <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-            No upcoming shifts scheduled.
+            No shifts or open tasks for this period.
           </p>
         )}
       </section>
 
-      <section className="space-y-4" aria-labelledby="upcoming-heading">
-        <h2 id="upcoming-heading" className="text-lg font-semibold text-foreground">
-          Upcoming shifts
-        </h2>
-        {data.topThreeUpcomingShifts.length > 0 ? (
-          <div>
-            <p className="mb-3 text-sm font-medium text-muted-foreground">Next three</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {data.topThreeUpcomingShifts.map((shift) => (
-                <ShiftCard key={shift.id} shift={shift} highlight />
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        <div>
-          <p className="mb-3 text-sm font-medium text-muted-foreground">All upcoming</p>
-          {data.allUpcomingShifts.length > 0 ? (
-            <ul className="space-y-2">
-              {data.allUpcomingShifts.map((shift) => (
-                <li key={shift.id}>
-                  <ShiftCard shift={shift} highlight={topIds.has(shift.id)} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">No further upcoming shifts.</p>
-          )}
-        </div>
-      </section>
+      {rest.length > 0 ? (
+        <section className="space-y-4" aria-labelledby="schedule-heading">
+          <h2 id="schedule-heading" className="text-lg font-semibold text-foreground">
+            Your schedule
+          </h2>
+          <ul className="space-y-2">
+            {rest.map((entry, idx) => (
+              <li key={entry.kind === 0 && entry.shift ? `s-${entry.shift.id}` : `t-${entry.task!.id}`}>
+                <WorkEntryCard entry={entry} highlight={idx < 2} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="space-y-4" aria-labelledby="leave-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -166,8 +232,8 @@ export function EmployeePortalSection() {
             Leave
           </h2>
           <Link
-            href="/leave"
-            className="inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            href="/employee-portal/leave"
+            className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 dark:bg-card dark:text-foreground dark:hover:bg-muted/60"
           >
             Open leave
           </Link>
@@ -180,9 +246,7 @@ export function EmployeePortalSection() {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Leave type #{b.leaveTypeId}
                 </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-                  {b.availableAmount}
-                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{b.availableAmount}</p>
                 <p className="text-xs text-muted-foreground">Available (as of balance)</p>
               </div>
             ))}

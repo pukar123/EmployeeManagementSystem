@@ -429,6 +429,10 @@ namespace EMS.Domain.Database.Migrations
 
                     b.HasIndex("DepartmentId");
 
+                    b.HasIndex("ExternalIdentityKey")
+                        .IsUnique()
+                        .HasFilter("[ExternalIdentityKey] IS NOT NULL AND [IsArchived] = 0");
+
                     b.HasIndex("IsArchived");
 
                     b.HasIndex("JobPositionId");
@@ -548,6 +552,57 @@ namespace EMS.Domain.Database.Migrations
                     b.ToTable("EmployeeDocuments", "org");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeEmploymentStatusHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ChangedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("ChangedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ChangedByUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateTime>("EffectiveDateUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NewStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PreviousStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("EffectiveDateUtc");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("EmployeeEmploymentStatusHistories", "org");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeManagerHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -604,6 +659,38 @@ namespace EMS.Domain.Database.Migrations
                     b.HasIndex("PreviousManagerId");
 
                     b.ToTable("EmployeeManagerHistories", "org");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeOnboardingChecklist", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<int?>("GeneratedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique();
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("EmployeeOnboardingChecklists", "org");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeePositionHistory", b =>
@@ -719,8 +806,10 @@ namespace EMS.Domain.Database.Migrations
                     b.Property<int?>("JobPositionId")
                         .HasColumnType("int");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<int>("Source")
                         .HasColumnType("int");
@@ -734,13 +823,15 @@ namespace EMS.Domain.Database.Migrations
 
                     b.HasIndex("JobPositionId");
 
+                    b.HasIndex("RoleKey");
+
                     b.HasIndex("EmployeeId", "Source");
 
-                    b.HasIndex("EmployeeId", "RoleId", "Source")
+                    b.HasIndex("EmployeeId", "RoleKey", "Source")
                         .IsUnique()
                         .HasFilter("[Source] = 2 AND [JobPositionId] IS NULL");
 
-                    b.HasIndex("EmployeeId", "RoleId", "Source", "JobPositionId")
+                    b.HasIndex("EmployeeId", "RoleKey", "Source", "JobPositionId")
                         .IsUnique()
                         .HasFilter("[Source] = 1 AND [JobPositionId] IS NOT NULL");
 
@@ -748,6 +839,76 @@ namespace EMS.Domain.Database.Migrations
                         {
                             t.HasCheckConstraint("CK_EmployeeRoleAssignments_SourceJobPosition", "([Source] = 1 AND [JobPositionId] IS NOT NULL) OR ([Source] = 2 AND [JobPositionId] IS NULL)");
                         });
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeScheduledChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChangeType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedByUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("EffectiveAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetReferenceId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetStatus")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EffectiveAtUtc");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("EmployeeId", "ChangeType", "Status")
+                        .IsUnique()
+                        .HasFilter("[Status] = 1");
+
+                    b.ToTable("EmployeeScheduledChanges", "emp");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeSite", b =>
@@ -774,6 +935,55 @@ namespace EMS.Domain.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("EmployeeSites", "org");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.IntegrationOutboxMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("MessageType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageType", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAtUtc");
+
+                    b.ToTable("IntegrationOutboxMessages", "ems");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.JobPosition", b =>
@@ -1206,6 +1416,100 @@ namespace EMS.Domain.Database.Migrations
                     b.ToTable("Menus", "ems");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.OnboardingChecklistTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingChecklistTemplates", "org");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.OnboardingChecklistTemplateItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DefaultDueDaysFromStart")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DefaultPriority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("IsRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TemplateId", "SortOrder");
+
+                    b.ToTable("OnboardingChecklistTemplateItems", "org");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.Organization", b =>
                 {
                     b.Property<int>("Id")
@@ -1247,6 +1551,19 @@ namespace EMS.Domain.Database.Migrations
                     b.ToTable("Organizations", "org");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.OrganizationEmployeeNumberSequence", b =>
+                {
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LastAllocatedNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("OrganizationId");
+
+                    b.ToTable("OrganizationEmployeeNumberSequences", "org");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.PositionRole", b =>
                 {
                     b.Property<int>("Id")
@@ -1263,17 +1580,48 @@ namespace EMS.Domain.Database.Migrations
                     b.Property<int>("JobPositionId")
                         .HasColumnType("int");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex("RoleKey");
 
-                    b.HasIndex("JobPositionId", "RoleId")
+                    b.HasIndex("JobPositionId", "RoleKey")
                         .IsUnique();
 
                     b.ToTable("PositionRoles", "org");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.RoleKeyCapability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Allowed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CapabilityKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleKey", "CapabilityKey")
+                        .IsUnique();
+
+                    b.ToTable("RoleKeyCapabilities", "ems");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.RoleKeyPermission", b =>
@@ -1431,6 +1779,12 @@ namespace EMS.Domain.Database.Migrations
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("EmployeeOnboardingChecklistId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OnboardingTemplateItemId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("OrganizationId")
                         .HasColumnType("int");
 
@@ -1459,6 +1813,10 @@ namespace EMS.Domain.Database.Migrations
 
                     b.HasIndex("EmployeeId");
 
+                    b.HasIndex("EmployeeOnboardingChecklistId");
+
+                    b.HasIndex("OnboardingTemplateItemId");
+
                     b.HasIndex("OrganizationId");
 
                     b.HasIndex("StartAtUtc");
@@ -1466,6 +1824,81 @@ namespace EMS.Domain.Database.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("Tasks", "org");
+                });
+
+            modelBuilder.Entity("Pukar.Notifications.Domain.DbModels.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DedupeKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MetadataJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecipientKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int?>("RecipientUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasDefaultValue("Normal");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("TypeKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientUserId", "DedupeKey")
+                        .IsUnique()
+                        .HasFilter("[DedupeKey] IS NOT NULL AND [IsArchived] = 0");
+
+                    b.HasIndex("RecipientUserId", "IsRead", "CreatedAtUtc");
+
+                    b.ToTable("Notifications", "ntf");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.AttendanceBreak", b =>
@@ -1617,6 +2050,17 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeEmploymentStatusHistory", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeManagerHistory", b =>
                 {
                     b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
@@ -1636,6 +2080,25 @@ namespace EMS.Domain.Database.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeOnboardingChecklist", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EMS.Domain.DbModels.OnboardingChecklistTemplate", "Template")
+                        .WithMany("EmployeeChecklists")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Template");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeePositionHistory", b =>
@@ -1685,6 +2148,17 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("JobPosition");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeScheduledChange", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.EmployeeSite", b =>
@@ -1840,6 +2314,39 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("ParentMenu");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.OnboardingChecklistTemplate", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.OnboardingChecklistTemplateItem", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.OnboardingChecklistTemplate", "Template")
+                        .WithMany("Items")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.OrganizationEmployeeNumberSequence", b =>
+                {
+                    b.HasOne("EMS.Domain.DbModels.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.PositionRole", b =>
                 {
                     b.HasOne("EMS.Domain.DbModels.JobPosition", "JobPosition")
@@ -1896,12 +2403,26 @@ namespace EMS.Domain.Database.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("EMS.Domain.DbModels.EmployeeOnboardingChecklist", "EmployeeOnboardingChecklist")
+                        .WithMany("Tasks")
+                        .HasForeignKey("EmployeeOnboardingChecklistId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("EMS.Domain.DbModels.OnboardingChecklistTemplateItem", "OnboardingTemplateItem")
+                        .WithMany("GeneratedTasks")
+                        .HasForeignKey("OnboardingTemplateItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("EMS.Domain.DbModels.Organization", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Employee");
+
+                    b.Navigation("EmployeeOnboardingChecklist");
+
+                    b.Navigation("OnboardingTemplateItem");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.AttendanceRecord", b =>
@@ -1939,6 +2460,11 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("TaskItems");
                 });
 
+            modelBuilder.Entity("EMS.Domain.DbModels.EmployeeOnboardingChecklist", b =>
+                {
+                    b.Navigation("Tasks");
+                });
+
             modelBuilder.Entity("EMS.Domain.DbModels.JobPosition", b =>
                 {
                     b.Navigation("EmployeeRoleAssignments");
@@ -1967,6 +2493,18 @@ namespace EMS.Domain.Database.Migrations
                     b.Navigation("ChildMenus");
 
                     b.Navigation("RoleKeyPermissions");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.OnboardingChecklistTemplate", b =>
+                {
+                    b.Navigation("EmployeeChecklists");
+
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("EMS.Domain.DbModels.OnboardingChecklistTemplateItem", b =>
+                {
+                    b.Navigation("GeneratedTasks");
                 });
 
             modelBuilder.Entity("EMS.Domain.DbModels.Site", b =>

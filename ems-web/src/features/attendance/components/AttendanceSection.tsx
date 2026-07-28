@@ -111,19 +111,19 @@ export function AttendanceSection() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Attendance</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Track check-ins, breaks, and working time.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Attendance</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Track check-ins, breaks, and working time.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/attendance/reports"
-            className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="inline-flex items-center rounded-xl border border-input px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted/60"
           >
             Reports
           </Link>
           <Link
             href="/attendance/analytics"
-            className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="inline-flex items-center rounded-xl border border-input px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted/60"
           >
             Analytics
           </Link>
@@ -135,9 +135,9 @@ export function AttendanceSection() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="block">
-          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Employee</span>
+          <span className="text-xs font-medium text-muted-foreground">Employee</span>
           <select
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
             value={employeeId ?? ""}
             onChange={(e) => setSelectedEmployeeId(e.target.value ? Number(e.target.value) : null)}
           >
@@ -149,37 +149,37 @@ export function AttendanceSection() {
           </select>
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">From</span>
+          <span className="text-xs font-medium text-muted-foreground">From</span>
           <input
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
           />
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">To</span>
+          <span className="text-xs font-medium text-muted-foreground">To</span>
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
           />
         </label>
       </div>
 
       {summaryQuery.data ? (
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
-            <p className="text-xs text-zinc-500">Records</p>
+          <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
+            <p className="text-xs text-muted-foreground">Records</p>
             <p className="mt-1 text-2xl font-semibold">{summaryQuery.data.totalRecords}</p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
-            <p className="text-xs text-zinc-500">Worked minutes</p>
+          <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
+            <p className="text-xs text-muted-foreground">Worked minutes</p>
             <p className="mt-1 text-2xl font-semibold">{summaryQuery.data.totalWorkedMinutes}</p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-950">
-            <p className="text-xs text-zinc-500">Break minutes</p>
+          <div className="rounded-xl border border-border bg-card p-4 dark:bg-card">
+            <p className="text-xs text-muted-foreground">Break minutes</p>
             <p className="mt-1 text-2xl font-semibold">{summaryQuery.data.totalBreakMinutes}</p>
           </div>
         </div>
