@@ -65,6 +65,7 @@ internal static class LeaveMapper
             SubmittedAtUtc = entity.SubmittedAtUtc,
             ReviewedAtUtc = entity.ReviewedAtUtc,
             ReviewedByEmployeeId = entity.ReviewedByEmployeeId,
+            DecisionComment = entity.DecisionComment,
             CreatedAtUtc = entity.CreatedAtUtc,
             UpdatedAtUtc = entity.UpdatedAtUtc,
         };

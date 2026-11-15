@@ -12,10 +12,14 @@ namespace EMS.API.Controllers;
 public class LeaveRequestsController : ControllerBase
 {
     private readonly ILeaveRequestService _leaveRequestService;
+    private readonly ILeaveApprovalService _leaveApprovalService;
 
-    public LeaveRequestsController(ILeaveRequestService leaveRequestService)
+    public LeaveRequestsController(
+        ILeaveRequestService leaveRequestService,
+        ILeaveApprovalService leaveApprovalService)
     {
         _leaveRequestService = leaveRequestService;
+        _leaveApprovalService = leaveApprovalService;
     }
 
     [HttpGet("employee/{employeeId:int}")]
@@ -115,10 +119,53 @@ public class LeaveRequestsController : ControllerBase
         }
     }
 
+    [HttpPost("{id:int}/approve")]
+    public async Task<ActionResult<LeaveRequestResponseModel>> Approve(
+        int id,
+        [FromBody] ApproveLeaveRequestRequestModel? request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var approved = await _leaveApprovalService.ApproveAsync(
+                id,
+                request ?? new ApproveLeaveRequestRequestModel(),
+                cancellationToken);
+            return Ok(approved);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
+    }
+
+    [HttpPost("{id:int}/reject")]
+    public async Task<ActionResult<LeaveRequestResponseModel>> Reject(
+        int id,
+        [FromBody] RejectLeaveRequestRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var rejected = await _leaveApprovalService.RejectAsync(id, request, cancellationToken);
+            return Ok(rejected);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return HandleBusinessRule(ex);
+        }
+    }
+
     private ActionResult HandleBusinessRule(BusinessRuleException ex)
     {
         if (string.Equals(ex.Message, LeaveAccessMessages.Denied, StringComparison.Ordinal))
             return Forbid();
+
+        if (LeaveApprovalMessages.IsAccessDenied(ex.Message))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+
+        if (string.Equals(ex.Message, LeaveApprovalMessages.ConcurrencyConflict, StringComparison.Ordinal))
+            return Conflict(new { message = ex.Message });
 
         if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
             return NotFound(new { message = ex.Message });

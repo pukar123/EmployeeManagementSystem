@@ -1162,6 +1162,10 @@ namespace EMS.Domain.Database.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETUTCDATE()");
 
+                    b.Property<string>("DecisionComment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
 
@@ -1187,6 +1191,12 @@ namespace EMS.Domain.Database.Migrations
 
                     b.Property<int?>("ReviewedByEmployeeId")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<DateTime>("StartDateUtc")
                         .HasColumnType("date");

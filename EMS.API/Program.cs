@@ -180,6 +180,8 @@ try
     builder.Services.AddScoped<ILeaveEmployeeAccessService, LeaveEmployeeAccessService>();
     builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
     builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
+    builder.Services.AddScoped<ILeaveApprovalAccessService, LeaveApprovalAccessService>();
+    builder.Services.AddScoped<ILeaveApprovalService, LeaveApprovalService>();
     builder.Services.AddScoped<ILeavePolicyRuleService, LeavePolicyRuleService>();
     builder.Services.AddScoped<ILeaveAttachmentService, LeaveAttachmentService>();
     builder.Services.AddScoped<ILeaveAccrualService, LeaveAccrualService>();

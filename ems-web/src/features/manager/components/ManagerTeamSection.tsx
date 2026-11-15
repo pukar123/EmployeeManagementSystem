@@ -11,6 +11,7 @@ import { Button } from "@/shared/components/Button";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
+import { ManagerLeaveApprovalsPanel } from "./ManagerLeaveApprovalsPanel";
 import { ManagerTeamFilters } from "./ManagerTeamFilters";
 import { ManagerTeamQuickLinks, ManagerTeamSummaryCards } from "./ManagerTeamSummaryCards";
 import { ManagerTeamTable } from "./ManagerTeamTable";
@@ -167,6 +168,11 @@ export function ManagerTeamSection() {
 
           <ManagerTeamSummaryCards summary={data?.summary} loading={isLoading || isFetching} />
           <ManagerTeamQuickLinks />
+
+          <ManagerLeaveApprovalsPanel
+            organizationId={organizationId}
+            managerId={adminMode ? selectedManagerId : undefined}
+          />
 
           {query ? (
             <ManagerTeamFilters

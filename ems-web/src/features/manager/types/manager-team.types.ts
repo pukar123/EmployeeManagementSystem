@@ -1,4 +1,5 @@
 import type { EmploymentStatusValue } from "@/features/employees/types/employment-status";
+import type { LeaveRequestStatusValue, LeaveUnitValue } from "@/features/leave/types/leave.types";
 
 export type ManagerTeamTodayAttendanceStatus = 0 | 1 | 2 | 3;
 
@@ -83,4 +84,27 @@ export const todayAttendanceStatusLabels: Record<ManagerTeamTodayAttendanceStatu
   1: "Absent",
   2: "On leave",
   3: "Checked in",
+};
+
+export type ManagerLeaveApprovalQuery = {
+  organizationId: number;
+  managerId?: number | null;
+};
+
+export type ManagerLeaveApprovalItem = {
+  leaveRequestId: number;
+  employeeId: number;
+  employeeNumber: string;
+  employeeName: string;
+  leaveTypeId: number;
+  leaveTypeName: string;
+  startDateUtc: string;
+  endDateUtc: string;
+  unit: LeaveUnitValue;
+  requestedAmount: number;
+  reason?: string | null;
+  status: LeaveRequestStatusValue;
+  submittedAtUtc: string;
+  /** Null when the employee has no balance row for this leave type. */
+  availableBalance?: number | null;
 };

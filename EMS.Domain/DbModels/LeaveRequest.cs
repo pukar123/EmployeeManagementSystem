@@ -17,8 +17,14 @@ public class LeaveRequest
     public DateTime SubmittedAtUtc { get; set; }
     public DateTime? ReviewedAtUtc { get; set; }
     public int? ReviewedByEmployeeId { get; set; }
+
+    /// <summary>Reviewer's comment: optional on approval, required (the rejection reason) on rejection.</summary>
+    public string? DecisionComment { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
+
+    /// <summary>Optimistic concurrency token (SQL Server rowversion), same pattern as EmployeeScheduledChange.</summary>
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public Organization Organization { get; set; } = null!;
     public Employee Employee { get; set; } = null!;

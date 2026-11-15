@@ -79,6 +79,53 @@ public class EmsNotificationProducerTests
             Times.Once);
     }
 
+    [Test]
+    public async Task NotifyLeaveSubmittedAsync_LinksManagerToApprovalsScreen()
+    {
+        var notifications = new Mock<INotificationService>();
+        var employees = new Mock<IBaseRepository<Employee>>();
+        employees.Setup(x => x.GetQueryable()).Returns((IQueryable<Employee>)new List<Employee>
+        {
+            new() { Id = 10, FirstName = "Alex", LastName = "Lee", ManagerId = 20 },
+            new() { Id = 20, ExternalIdentityKey = "77" },
+        }.BuildMock());
+
+        var sut = CreateProducer(notifications.Object, employees.Object);
+        await sut.NotifyLeaveSubmittedAsync(new LeaveRequest { Id = 3, EmployeeId = 10 }, CancellationToken.None);
+
+        notifications.Verify(
+            x => x.CreateAsync(
+                It.Is<CreateNotificationRequestModel>(m => m.ActionUrl == "/manager/team"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task NotifyLeaveRejectedAsync_IncludesRejectionReasonInBody()
+    {
+        var notifications = new Mock<INotificationService>();
+        var employees = new Mock<IBaseRepository<Employee>>();
+        employees.Setup(x => x.GetQueryable()).Returns((IQueryable<Employee>)new List<Employee>
+        {
+            new() { Id = 10, ExternalIdentityKey = "55" },
+        }.BuildMock());
+
+        var sut = CreateProducer(notifications.Object, employees.Object);
+        await sut.NotifyLeaveRejectedAsync(
+            new LeaveRequest { Id = 8, EmployeeId = 10, DecisionComment = "Peak trading period" },
+            CancellationToken.None);
+
+        notifications.Verify(
+            x => x.CreateAsync(
+                It.Is<CreateNotificationRequestModel>(m =>
+                    m.RecipientUserId == 55
+                    && m.TypeKey == EmsNotificationTypeKeys.LeaveRejected
+                    && m.Body.Contains("Peak trading period")
+                    && m.DedupeKey == EmsNotificationTypeKeys.LeaveRejected + ":8"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static EmsNotificationProducer CreateProducer(
         INotificationService notifications,
         IBaseRepository<Employee> employees)

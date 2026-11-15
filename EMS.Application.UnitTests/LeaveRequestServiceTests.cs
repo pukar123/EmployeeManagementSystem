@@ -4,6 +4,7 @@ using EMS.Application.Services.Notifications;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
+using Microsoft.EntityFrameworkCore;
 using MockQueryable;
 using Moq;
 using Pukar.Shared;
@@ -186,5 +187,94 @@ public class LeaveRequestServiceTests
         var ex = Assert.ThrowsAsync<BusinessRuleException>(async () =>
             await sut.GetAdminSummaryAsync(0, DateTime.UtcNow, CancellationToken.None));
         Assert.That(ex!.Message, Is.EqualTo("Organization id must be greater than zero."));
+    }
+
+    [TestCase(2, 5, 3)]
+    [TestCase(4, 1, 0)] // clamped at zero (e.g. after a leave-year reset)
+    public async Task CancelAsync_RestoresUsedBalance_WhenRequestWasApproved(
+        decimal requestedAmount,
+        decimal usedBefore,
+        decimal expectedUsed)
+    {
+        var (sut, requestRepo, balanceRepo, request, balance) = CreateCancelSut(LeaveRequestStatus.Approved);
+        request.RequestedAmount = requestedAmount;
+        balance.UsedAmount = usedBefore;
+
+        var result = await sut.CancelAsync(request.Id, CancellationToken.None);
+
+        Assert.That(result.Status, Is.EqualTo(LeaveRequestStatus.Cancelled));
+        Assert.That(balance.UsedAmount, Is.EqualTo(expectedUsed));
+        balanceRepo.Verify(x => x.Update(balance), Times.Once);
+        requestRepo.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestCase(LeaveRequestStatus.Pending)]
+    [TestCase(LeaveRequestStatus.ModifiedPending)]
+    public async Task CancelAsync_LeavesBalanceUnchanged_WhenRequestWasPending(LeaveRequestStatus status)
+    {
+        var (sut, _, balanceRepo, request, balance) = CreateCancelSut(status);
+        balance.UsedAmount = 5;
+
+        var result = await sut.CancelAsync(request.Id, CancellationToken.None);
+
+        Assert.That(result.Status, Is.EqualTo(LeaveRequestStatus.Cancelled));
+        Assert.That(balance.UsedAmount, Is.EqualTo(5m));
+        balanceRepo.Verify(
+            x => x.GetByEmployeeAndTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public void CancelAsync_MapsConcurrencyConflict()
+    {
+        var (sut, requestRepo, _, request, _) = CreateCancelSut(LeaveRequestStatus.Approved);
+        requestRepo.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException("Row version mismatch."));
+
+        var ex = Assert.ThrowsAsync<BusinessRuleException>(async () =>
+            await sut.CancelAsync(request.Id, CancellationToken.None));
+
+        Assert.That(ex!.Message, Is.EqualTo(LeaveApprovalMessages.ConcurrencyConflict));
+    }
+
+    private static (
+        LeaveRequestService Sut,
+        Mock<ILeaveRequestRepository> RequestRepo,
+        Mock<ILeaveBalanceRepository> BalanceRepo,
+        LeaveRequest Request,
+        LeaveBalance Balance) CreateCancelSut(LeaveRequestStatus status)
+    {
+        var request = new LeaveRequest
+        {
+            Id = 77,
+            OrganizationId = 1,
+            EmployeeId = 10,
+            LeaveTypeId = 3,
+            RequestedAmount = 2,
+            Status = status,
+        };
+        var balance = new LeaveBalance { EmployeeId = 10, LeaveTypeId = 3, OpeningBalance = 10 };
+
+        var requestRepo = new Mock<ILeaveRequestRepository>();
+        requestRepo.Setup(x => x.GetByIdAsync(77, It.IsAny<CancellationToken>())).ReturnsAsync(request);
+        requestRepo.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        var balanceRepo = new Mock<ILeaveBalanceRepository>();
+        balanceRepo.Setup(x => x.GetByEmployeeAndTypeAsync(10, 3, It.IsAny<CancellationToken>())).ReturnsAsync(balance);
+
+        var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
+        leaveEmployeeAccess
+            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var sut = new LeaveRequestService(
+            requestRepo.Object,
+            balanceRepo.Object,
+            new Mock<ILeaveTypeRepository>().Object,
+            new Mock<IBaseRepository<Employee>>().Object,
+            leaveEmployeeAccess.Object,
+            CreateNotificationProducer());
+
+        return (sut, requestRepo, balanceRepo, request, balance);
     }
 }

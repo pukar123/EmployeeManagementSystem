@@ -9,6 +9,8 @@ import type {
   LeaveRequest,
   LeaveType,
   UpdateLeaveRequestPayload,
+  ApproveLeaveRequestPayload,
+  RejectLeaveRequestPayload,
   CreateLeaveTypePayload,
   UpdateLeaveTypePayload,
 } from "../types/leave.types";
@@ -63,6 +65,16 @@ export const leaveService = {
 
   cancelLeaveRequest: async (id: number): Promise<LeaveRequest> => {
     const { data } = await emsHttpClient.post<LeaveRequest>(`/api/LeaveRequests/${id}/cancel`);
+    return data;
+  },
+
+  approveLeaveRequest: async (id: number, payload: ApproveLeaveRequestPayload): Promise<LeaveRequest> => {
+    const { data } = await emsHttpClient.post<LeaveRequest>(`/api/LeaveRequests/${id}/approve`, payload);
+    return data;
+  },
+
+  rejectLeaveRequest: async (id: number, payload: RejectLeaveRequestPayload): Promise<LeaveRequest> => {
+    const { data } = await emsHttpClient.post<LeaveRequest>(`/api/LeaveRequests/${id}/reject`, payload);
     return data;
   },
 

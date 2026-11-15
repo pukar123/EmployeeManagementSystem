@@ -1,5 +1,44 @@
 export type LeaveUnitValue = 1 | 2;
 
+export type LeaveRequestStatusValue = 1 | 2 | 3 | 4 | 5;
+
+export const LeaveRequestStatus = {
+  Pending: 1,
+  Approved: 2,
+  Rejected: 3,
+  Cancelled: 4,
+  ModifiedPending: 5,
+} as const;
+
+const leaveRequestStatusLabels: Record<LeaveRequestStatusValue, string> = {
+  1: "Pending",
+  2: "Approved",
+  3: "Rejected",
+  4: "Cancelled",
+  5: "Modified (pending)",
+};
+
+const leaveRequestStatusByName: Record<string, LeaveRequestStatusValue> = {
+  Pending: 1,
+  Approved: 2,
+  Rejected: 3,
+  Cancelled: 4,
+  ModifiedPending: 5,
+};
+
+/** Normalises a status that may arrive as the numeric enum value or its name. */
+export function toLeaveRequestStatusValue(status: number | string): LeaveRequestStatusValue | null {
+  if (typeof status === "number") {
+    return status >= 1 && status <= 5 ? (status as LeaveRequestStatusValue) : null;
+  }
+  return leaveRequestStatusByName[status] ?? null;
+}
+
+export function leaveRequestStatusLabel(status: number | string): string {
+  const value = toLeaveRequestStatusValue(status);
+  return value == null ? String(status) : leaveRequestStatusLabels[value];
+}
+
 export type LeaveType = {
   id: number;
   organizationId: number;
@@ -38,10 +77,13 @@ export type LeaveRequest = {
   unit: LeaveUnitValue;
   requestedAmount: number;
   reason?: string | null;
-  status: string;
+  /** API sends the numeric enum value (see LeaveRequestStatus); older code compared names. */
+  status: LeaveRequestStatusValue | string;
   submittedAtUtc: string;
   reviewedAtUtc?: string | null;
   reviewedByEmployeeId?: number | null;
+  /** Reviewer comment: the rejection reason, or an optional approval comment. */
+  decisionComment?: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;
 };
@@ -129,4 +171,12 @@ export type UpdateLeaveTypePayload = {
   unit: LeaveUnitValue;
   requiresAttachment: boolean;
   isActive: boolean;
+};
+
+export type ApproveLeaveRequestPayload = {
+  comment?: string;
+};
+
+export type RejectLeaveRequestPayload = {
+  reason: string;
 };
