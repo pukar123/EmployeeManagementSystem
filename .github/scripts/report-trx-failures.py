@@ -6,7 +6,7 @@ Usage: report-trx-failures.py <results-folder> [--test-step-failed]
 - Prints one ::error line per failed test (title = fully qualified test name,
   message = failure message plus the first lines of the stack trace).
 - Shows at most 20 failed tests, then one summary annotation for the rest.
-- Prints a short pass/fail count for every TRX file found.
+- Prints a pass/fail count for every TRX file, plus one ::notice with the totals.
 - Exits 0 when nothing failed. Exits 1 when a test failed, or when the test
   step failed but no TRX file was written (for example the test host crashed).
 
@@ -90,6 +90,7 @@ def main() -> int:
         return 0
 
     all_failed = []
+    grand_totals = {"total": 0, "passed": 0, "failed": 0}
     for trx in trx_files:
         try:
             failed, totals = read_trx(trx)
@@ -98,7 +99,14 @@ def main() -> int:
             return 1
         summary = ", ".join(f"{k} {v}" for k, v in totals.items())
         print(f"{os.path.basename(trx)}: {summary}")
+        for key in grand_totals:
+            if str(totals.get(key, "")).isdigit():
+                grand_totals[key] += int(totals[key])
         all_failed.extend(failed)
+
+    # One notice annotation with the overall counts, so they show on the check run.
+    print(f"::notice title=.NET test results::{len(trx_files)} test project(s): "
+          f"{grand_totals['total']} tests, {grand_totals['passed']} passed, {grand_totals['failed']} failed")
 
     for name, message in all_failed[:MAX_ANNOTATIONS]:
         print(f"::error title={escape_property(name)}::{escape_data(message)}")
