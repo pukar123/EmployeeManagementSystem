@@ -9,6 +9,9 @@ namespace EMS.Application.Services.Departments;
 
 public sealed class DepartmentService : IDepartmentService
 {
+    private const string UpdateConstraintConflictMessage =
+        "Unable to update department due to a data constraint conflict.";
+
     private readonly IBaseRepository<Department> _repository;
 
     public DepartmentService(IBaseRepository<Department> repository)
@@ -88,7 +91,17 @@ public sealed class DepartmentService : IDepartmentService
 
         DepartmentMapper.ApplyUpdate(entity, request);
         _repository.Update(entity);
-        await _repository.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _repository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // A database constraint (for example a unique index) rejected the save.
+            // Surface it as a business rule so the API returns 409 without depending on EF Core.
+            throw new BusinessRuleException(UpdateConstraintConflictMessage);
+        }
+
         return DepartmentMapper.ToResponse(entity);
     }
 

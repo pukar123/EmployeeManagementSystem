@@ -3,7 +3,6 @@ using EMS.Application.Mapping;
 using Pukar.Shared;
 using EMS.Application.Services.Departments;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace EMS.API.Controllers;
 
@@ -62,10 +61,6 @@ public class DepartmentsController : ControllerBase
         catch (BusinessRuleException ex)
         {
             return Conflict(ex.Message);
-        }
-        catch (DbUpdateException)
-        {
-            return Conflict("Unable to update department due to a data constraint conflict.");
         }
     }
 
