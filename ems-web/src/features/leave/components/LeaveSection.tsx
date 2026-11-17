@@ -11,6 +11,7 @@ import { getErrorMessage } from "@/shared/api/http-client";
 import { Button } from "@/shared/components/Button";
 import { Spinner } from "@/shared/components/Spinner";
 import { useLeaveBalances, useLeaveMutations, useLeaveRequests, useLeaveTypes } from "../hooks";
+import { LeaveRequestStatus, leaveRequestStatusLabel, toLeaveRequestStatusValue } from "../types/leave.types";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -230,22 +231,42 @@ export function LeaveSection({
                 <th className="pb-2 pr-3">Date range</th>
                 <th className="pb-2 pr-3">Amount</th>
                 <th className="pb-2 pr-3">Status</th>
+                <th className="pb-2 pr-3">Decision</th>
                 <th className="pb-2 pr-3">Action</th>
               </tr>
             </thead>
             <tbody>
-              {(requestsQuery.data ?? []).map((row) => (
+              {(requestsQuery.data ?? []).map((row) => {
+                const statusValue = toLeaveRequestStatusValue(row.status);
+                const isDecided =
+                  statusValue === LeaveRequestStatus.Approved || statusValue === LeaveRequestStatus.Rejected;
+                return (
                 <tr key={row.id} className="border-t border-border">
                   <td className="py-2 pr-3">
                     {row.startDateUtc.slice(0, 10)} to {row.endDateUtc.slice(0, 10)}
                   </td>
                   <td className="py-2 pr-3">{row.requestedAmount}</td>
-                  <td className="py-2 pr-3">{row.status}</td>
+                  <td className="py-2 pr-3">{leaveRequestStatusLabel(row.status)}</td>
+                  <td className="py-2 pr-3 max-w-xs break-words">
+                    {isDecided && row.reviewedAtUtc ? (
+                      <div className="text-xs text-muted-foreground">Reviewed {row.reviewedAtUtc.slice(0, 10)}</div>
+                    ) : null}
+                    {statusValue === LeaveRequestStatus.Rejected && row.decisionComment ? (
+                      <div>Reason: {row.decisionComment}</div>
+                    ) : statusValue === LeaveRequestStatus.Approved && row.decisionComment ? (
+                      <div>{row.decisionComment}</div>
+                    ) : null}
+                    {!isDecided ? "—" : null}
+                  </td>
                   <td className="py-2 pr-3">
                     <Button
                       type="button"
                       variant="secondary"
-                      disabled={cancelRequest.isPending || row.status === "Cancelled"}
+                      disabled={
+                        cancelRequest.isPending ||
+                        statusValue === LeaveRequestStatus.Cancelled ||
+                        statusValue === LeaveRequestStatus.Rejected
+                      }
                       onClick={() =>
                         void cancelRequest.mutateAsync(row.id).catch((e) => toast.error(getErrorMessage(e)))
                       }
@@ -254,7 +275,8 @@ export function LeaveSection({
                     </Button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

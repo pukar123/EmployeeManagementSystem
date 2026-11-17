@@ -1,5 +1,10 @@
 import { emsHttpClient } from "@/shared/api/http-client";
-import type { ManagerTeamDashboard, ManagerTeamQuery } from "../types/manager-team.types";
+import type {
+  ManagerLeaveApprovalItem,
+  ManagerLeaveApprovalQuery,
+  ManagerTeamDashboard,
+  ManagerTeamQuery,
+} from "../types/manager-team.types";
 
 const PATH = "/api/Manager/team";
 
@@ -25,6 +30,13 @@ export const managerTeamService = {
     const { data } = await emsHttpClient.get<ManagerTeamDashboard>(PATH, {
       params: toQueryParams(query),
     });
+    return data;
+  },
+
+  getLeaveApprovals: async (query: ManagerLeaveApprovalQuery): Promise<ManagerLeaveApprovalItem[]> => {
+    const params: Record<string, number> = { organizationId: query.organizationId };
+    if (query.managerId != null) params.managerId = query.managerId;
+    const { data } = await emsHttpClient.get<ManagerLeaveApprovalItem[]>("/api/Manager/leave-approvals", { params });
     return data;
   },
 };

@@ -17,6 +17,7 @@ public class LeaveRequestResponseModel
     public DateTime SubmittedAtUtc { get; set; }
     public DateTime? ReviewedAtUtc { get; set; }
     public int? ReviewedByEmployeeId { get; set; }
+    public string? DecisionComment { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 }

@@ -102,7 +102,7 @@ public sealed class EmsNotificationProducer : IEmsNotificationProducer
                     TypeKey = EmsNotificationTypeKeys.LeaveSubmitted,
                     Title = "Leave request pending approval",
                     Body = $"{employeeName} submitted a leave request awaiting your review.",
-                    ActionUrl = "/leave",
+                    ActionUrl = "/manager/team",
                     Severity = NotificationSeverity.High,
                     DedupeKey = $"leave-submitted:{request.Id}",
                     MetadataJson = JsonSerializer.Serialize(new
@@ -127,7 +127,9 @@ public sealed class EmsNotificationProducer : IEmsNotificationProducer
             request,
             EmsNotificationTypeKeys.LeaveRejected,
             "Leave request rejected",
-            "Your leave request has been rejected.",
+            string.IsNullOrWhiteSpace(request.DecisionComment)
+                ? "Your leave request has been rejected."
+                : $"Your leave request has been rejected. Reason: {request.DecisionComment.Trim()}",
             NotificationSeverity.High,
             cancellationToken);
 

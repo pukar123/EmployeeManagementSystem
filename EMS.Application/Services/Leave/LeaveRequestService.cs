@@ -155,7 +155,7 @@ public sealed class LeaveRequestService : ILeaveRequestService
         entity.UpdatedAtUtc = DateTime.UtcNow;
 
         _leaveRequestRepository.Update(entity);
-        await _leaveRequestRepository.SaveChangesAsync(cancellationToken);
+        await SaveWithConcurrencyCheckAsync(cancellationToken);
         return LeaveMapper.ToResponse(entity);
     }
 
@@ -169,12 +169,43 @@ public sealed class LeaveRequestService : ILeaveRequestService
         if (entity.Status is LeaveRequestStatus.Cancelled or LeaveRequestStatus.Rejected)
             throw new BusinessRuleException("Leave request cannot be cancelled in its current state.");
 
-        entity.Status = LeaveRequestStatus.Cancelled;
-        entity.UpdatedAtUtc = DateTime.UtcNow;
+        var wasApproved = entity.Status == LeaveRequestStatus.Approved;
+        var now = DateTime.UtcNow;
 
+        entity.Status = LeaveRequestStatus.Cancelled;
+        entity.UpdatedAtUtc = now;
         _leaveRequestRepository.Update(entity);
-        await _leaveRequestRepository.SaveChangesAsync(cancellationToken);
+
+        // Approval consumed the leave (UsedAmount), so cancelling approved leave gives it back
+        // in the same save. Pending requests never consumed balance, so nothing to restore.
+        if (wasApproved)
+        {
+            var balance = await _leaveBalanceRepository.GetByEmployeeAndTypeAsync(
+                entity.EmployeeId,
+                entity.LeaveTypeId,
+                cancellationToken);
+            if (balance is not null)
+            {
+                balance.UsedAmount = Math.Max(0m, balance.UsedAmount - entity.RequestedAmount);
+                balance.UpdatedAtUtc = now;
+                _leaveBalanceRepository.Update(balance);
+            }
+        }
+
+        await SaveWithConcurrencyCheckAsync(cancellationToken);
         return LeaveMapper.ToResponse(entity);
+    }
+
+    private async Task SaveWithConcurrencyCheckAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _leaveRequestRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new BusinessRuleException(LeaveApprovalMessages.ConcurrencyConflict);
+        }
     }
 
     private async Task ValidateLeaveRequestRangeAsync(
