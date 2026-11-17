@@ -14,7 +14,8 @@ Source: `05-priorities.md` (High priority tier, plus the first competitiveness i
 ---
 
 ## B01 — Automatic build and test check, and tidy leftovers
-Status: Todo
+Status: Done
+Done-note: 2026-11-17 feature/b01-ci-build-check
 Risk: Medium
 Areas: backend, frontend, ci
 Depends-on: none
@@ -289,3 +290,29 @@ Acceptance:
 - Each check has a one-sentence explanation in plain English.
 - Counts are correct against seeded test data (unit tests per check).
 - Adding a new check needs only one new class plus its registration.
+
+## B21 — Upgrade from .NET 9 to .NET 10 (LTS)
+Status: Todo
+Risk: High
+Areas: backend, ci, docker
+Depends-on: B02
+Sources: Reviewer 2026-11-17 (B01 review)
+Goal: .NET 9 left Microsoft support on 10 November 2026, so EMS no longer gets security fixes. Move every project, the CI workflow and the Dockerfiles to .NET 10 (the current long-term-support release), update packages that must move with it (EF Core, ASP.NET Core), and keep every test green.
+Acceptance:
+- All projects target net10.0; CI uses the .NET 10 SDK and passes.
+- EF Core and ASP.NET Core packages are on matching 10.x versions; no pending model changes.
+- Dockerfiles use .NET 10 images.
+- Docs that name the .NET version are updated.
+
+## B22 — Move the frontend and CI from Node 20 to a supported Node version
+Status: Todo
+Risk: Low
+Areas: frontend, ci, docker
+Depends-on: B01
+Sources: Reviewer 2026-11-17 (B01 review)
+Goal: Node 20 reached end of life in April 2026. Move CI, the ems-web Dockerfile, the package.json engines field and CONTRIBUTING.md to Node 22 or 24 LTS, keeping lint, tests and build green.
+Acceptance:
+- CI runs the frontend on the new Node version and passes.
+- ems-web Dockerfile and `engines` match it.
+- CONTRIBUTING.md names the new version.
+
