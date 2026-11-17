@@ -69,4 +69,12 @@ Enforcement (“never touch” long-lived branches) is done on GitHub with **bra
 ## Optional tooling
 
 - Install [GitHub CLI](https://cli.github.com/) (`gh`) for PRs and API tasks from the terminal.
-- Add CI (e.g. GitHub Actions) to run `dotnet build` / tests on PRs into `development`.
+
+## Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and every pull request:
+
+- **Backend build and test**: `dotnet restore`, `dotnet build` and `dotnet test` for `EmployeeManagementSystem.sln` (.NET 9). Compile errors and failed tests show as annotations on the check run; the test result (`.trx`) files are kept as a workflow artifact for 7 days.
+- **Frontend lint, test and build**: `npm ci`, `npm run lint`, `npm test` and `npm run build` in `ems-web` (Node 20). Lint errors, failed tests and build errors show as annotations.
+
+Both checks must be green before a pull request is merged into `development`.
