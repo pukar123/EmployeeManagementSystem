@@ -20,7 +20,7 @@ public sealed class LeaveRequestConfiguration : IEntityTypeConfiguration<LeaveRe
             .HasDefaultValue(LeaveUnit.Days);
         builder.Property(x => x.RequestedAmount).HasPrecision(10, 2);
         builder.Property(x => x.Reason).HasMaxLength(1000);
-        builder.Property(x => x.DecisionComment).HasMaxLength(1000);
+        builder.Property(x => x.DecisionComment).HasMaxLength(500);
         builder.Property(x => x.RowVersion).IsRowVersion();
         builder.Property(x => x.Status)
             .HasConversion<int>()
