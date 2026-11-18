@@ -71,6 +71,172 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  migrations:
+    name: Database migrations check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Throwaway SQL Server that exists only for this job. The password below is
+    # a CI-only test value for this container, not a real credential.
+    env:
+      MSSQL_SA_PASSWORD: CiOnly-Throwaway-Pw1
+      CI_DATABASE: EMS_CI_Migrations
+      EF_ARGS: >-
+        --project ../EMS.Domain/EMS.Domain.csproj
+        --startup-project EMS.API.csproj
+        --context AppDbContext
+        --configuration Release
+        --no-build
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: CiOnly-Throwaway-Pw1
+        ports:
+          - 1433:1433
+    # AppDbContextFactory finds EMS.API relative to the current directory, so
+    # the EF commands run from the EMS.API folder.
+    defaults:
+      run:
+        working-directory: EMS.API
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+
+      # dotnet-ef is pinned to the EF Core version the projects use (9.0.4).
+      - name: Install dotnet-ef 9.0.4
+        run: |
+          set +e
+          dotnet tool install --global dotnet-ef --version 9.0.4 > "$RUNNER_TEMP/ef-install.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/ef-install.log"
+          if [ $status -ne 0 ]; then
+            bash ../.github/scripts/log-annotation.sh "dotnet-ef install failed" "$RUNNER_TEMP/ef-install.log"
+            exit $status
+          fi
+
+      # Compile errors are also annotated by the setup-dotnet problem matcher.
+      - name: Restore and build EMS.API (Release)
+        run: |
+          set +e
+          dotnet restore EMS.API.csproj > "$RUNNER_TEMP/api-build.log" 2>&1 \
+            && dotnet build EMS.API.csproj --configuration Release --no-restore >> "$RUNNER_TEMP/api-build.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/api-build.log"
+          if [ $status -ne 0 ]; then
+            grep -E "error [A-Z]+[0-9]+" "$RUNNER_TEMP/api-build.log" | sort -u > "$RUNNER_TEMP/api-build-errors.log"
+            [ -s "$RUNNER_TEMP/api-build-errors.log" ] || cp "$RUNNER_TEMP/api-build.log" "$RUNNER_TEMP/api-build-errors.log"
+            bash ../.github/scripts/log-annotation.sh "EMS.API build failed" "$RUNNER_TEMP/api-build-errors.log"
+            exit $status
+          fi
+
+      - name: Check for pending model changes
+        run: |
+          set +e
+          dotnet ef migrations has-pending-model-changes $EF_ARGS > "$RUNNER_TEMP/ef-pending.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/ef-pending.log"
+          if [ $status -ne 0 ]; then
+            bash ../.github/scripts/log-annotation.sh "Pending model changes" "$RUNNER_TEMP/ef-pending.log"
+            exit 1
+          fi
+          echo "::notice title=Pending model changes::$(tail -n 1 "$RUNNER_TEMP/ef-pending.log")"
+
+      - name: Wait for SQL Server
+        run: |
+          sqlcmd=""
+          for attempt in $(seq 1 40); do
+            for path in /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools/bin/sqlcmd; do
+              if docker exec "${{ job.services.mssql.id }}" "$path" -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" -b > /dev/null 2>&1; then
+                sqlcmd="$path"
+                break 2
+              fi
+            done
+            sleep 3
+          done
+          if [ -z "$sqlcmd" ]; then
+            docker logs "${{ job.services.mssql.id }}" > "$RUNNER_TEMP/mssql.log" 2>&1
+            bash ../.github/scripts/log-annotation.sh "SQL Server did not start" "$RUNNER_TEMP/mssql.log"
+            exit 1
+          fi
+          echo "SQLCMD_PATH=$sqlcmd" >> "$GITHUB_ENV"
+          echo "SQL Server is ready ($sqlcmd)."
+
+      # Applies every migration to a new, empty database. The connection is
+      # passed with --connection because AppDbContextFactory reads only the
+      # committed appsettings files. This job never creates the
+      # [emp].[_UmLegacyDropApproved] marker, so the legacy-table drop stays a no-op.
+      - name: Apply all migrations to an empty database
+        run: |
+          set +e
+          connection="Server=localhost,1433;Database=$CI_DATABASE;User Id=sa;Password=$MSSQL_SA_PASSWORD;TrustServerCertificate=True"
+          dotnet ef database update $EF_ARGS --connection "$connection" > "$RUNNER_TEMP/ef-update.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/ef-update.log"
+          if [ $status -ne 0 ]; then
+            bash ../.github/scripts/log-annotation.sh "Migrations failed to apply" "$RUNNER_TEMP/ef-update.log" 40
+            exit 1
+          fi
+          dotnet ef migrations list $EF_ARGS --connection "$connection" > "$RUNNER_TEMP/ef-list.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/ef-list.log"
+          if [ $status -ne 0 ]; then
+            bash ../.github/scripts/log-annotation.sh "Migrations list failed" "$RUNNER_TEMP/ef-list.log"
+            exit 1
+          fi
+          if grep -q "(Pending)" "$RUNNER_TEMP/ef-list.log"; then
+            grep "(Pending)" "$RUNNER_TEMP/ef-list.log" > "$RUNNER_TEMP/ef-pending-list.log"
+            bash ../.github/scripts/log-annotation.sh "Migrations still pending after update" "$RUNNER_TEMP/ef-pending-list.log"
+            exit 1
+          fi
+
+      - name: Verify database schema and history
+        run: |
+          failed=0
+          query() {
+            docker exec "${{ job.services.mssql.id }}" "$SQLCMD_PATH" -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" \
+              -d "$CI_DATABASE" -b -h -1 -W -s "|" -Q "SET NOCOUNT ON; $1"
+          }
+
+          # Leave request decision fields (and the reviewer fields they build on).
+          expected_columns=$'DecisionComment|nvarchar|1000|YES\nReviewedAtUtc|datetime2|-1|YES\nReviewedByEmployeeId|int|-1|YES\nRowVersion|timestamp|-1|NO'
+          actual_columns=$(query "SELECT COLUMN_NAME, DATA_TYPE, ISNULL(CHARACTER_MAXIMUM_LENGTH, -1), IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'org' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME IN ('DecisionComment', 'RowVersion', 'ReviewedByEmployeeId', 'ReviewedAtUtc') ORDER BY COLUMN_NAME;" | tr -d '\r')
+          if [ "$actual_columns" = "$expected_columns" ]; then
+            echo "::notice title=LeaveRequests columns::${actual_columns//$'\n'/'%0A'}"
+          else
+            echo "::error title=LeaveRequests columns do not match::Expected%0A${expected_columns//$'\n'/'%0A'}%0AActual%0A${actual_columns//$'\n'/'%0A'}"
+            failed=1
+          fi
+
+          # Migration history: one row per migration class, newest last.
+          migrations_dir="$GITHUB_WORKSPACE/EMS.Domain/Database/Migrations"
+          expected_count=$(grep -h -o '\[Migration("[^"]*")' "$migrations_dir"/*.cs | wc -l)
+          expected_last=$(grep -h -o '\[Migration("[^"]*")' "$migrations_dir"/*.cs | sed -E 's/.*"([^"]*)".*/\1/' | sort | tail -n 1)
+          actual_count=$(query "SELECT COUNT(*) FROM dbo.__EFMigrationsHistory;" | tr -d '\r ')
+          actual_last=$(query "SELECT TOP 1 MigrationId FROM dbo.__EFMigrationsHistory ORDER BY MigrationId DESC;" | tr -d '\r ')
+          if [ "$actual_count" = "$expected_count" ] && [ "$actual_last" = "$expected_last" ]; then
+            echo "::notice title=Migration history::$actual_count of $expected_count migrations applied; last is $actual_last"
+          else
+            echo "::error title=Migration history does not match::Expected $expected_count rows ending $expected_last; found $actual_count rows ending $actual_last"
+            failed=1
+          fi
+
+          # The legacy-table drop approval marker must never exist in CI.
+          marker=$(query "SELECT CASE WHEN OBJECT_ID(N'[emp].[_UmLegacyDropApproved]', N'U') IS NULL THEN 'absent' ELSE 'present' END;" | tr -d '\r ')
+          if [ "$marker" = "absent" ]; then
+            echo "::notice title=Legacy drop marker::[emp].[_UmLegacyDropApproved] is absent"
+          else
+            echo "::error title=Legacy drop marker check failed::Expected the marker table to be absent; query returned '$marker'"
+            failed=1
+          fi
+
+          exit $failed
+
   frontend:
     name: Frontend lint, test and build
     runs-on: ubuntu-latest

@@ -111,6 +111,12 @@ dotnet ef migrations add YourMigrationName --project EMS.Domain --startup-projec
 
 Design-time: `AppDbContextFactory` in `EMS.Domain` resolves `DefaultConnection` from `EMS.API` appsettings when the EF tools run.
 
+CI (**Database migrations check** job in `.github/workflows/ci.yml`) enforces two things on every push and pull request: there are **no pending model changes**, and **all EMS migrations apply cleanly to an empty SQL Server database**. If it fails:
+
+- **Pending model changes**: an entity or configuration changed without a migration. Run `dotnet ef migrations add YourMigrationName --project EMS.Domain --startup-project EMS.API` and commit the migration, its `.Designer.cs` and the updated `AppDbContextModelSnapshot.cs` together. Never hand-write a migration without its Designer file.
+- **Migrations failed to apply**: the annotation shows the failing migration and SQL error. Fix it in a new migration; do not edit migrations that have already been applied elsewhere.
+- **Schema, history or marker check**: the annotation lists expected and actual values. The legacy drop marker must never be created to make CI pass.
+
 ## Run the API
 
 From the repository root:

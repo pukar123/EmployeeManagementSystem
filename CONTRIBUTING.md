@@ -77,4 +77,6 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and every pull re
 - **Backend build and test**: `dotnet restore`, `dotnet build` and `dotnet test` for `EmployeeManagementSystem.sln` (.NET 9). Compile errors and failed tests show as annotations on the check run; the test result (`.trx`) files are kept as a workflow artifact for 7 days.
 - **Frontend lint, test and build**: `npm ci`, `npm run lint`, `npm test` and `npm run build` in `ems-web` (Node 20). Lint errors, failed tests and build errors show as annotations.
 
-Both checks must be green before a pull request is merged into `development`.
+- **Database migrations check**: builds `EMS.API` (Release), then with `dotnet-ef` 9.0.4 runs `dotnet ef migrations has-pending-model-changes` (the EF model must match the latest migration snapshot) and applies every EMS migration to a new, empty SQL Server 2022 database in a throwaway service container. It then checks the `org.LeaveRequests` decision columns, that `__EFMigrationsHistory` has one row per migration ending with the newest one, and that the `[emp].[_UmLegacyDropApproved]` marker does **not** exist. CI never creates that marker.
+
+All three checks must be green before a pull request is merged into `development`.

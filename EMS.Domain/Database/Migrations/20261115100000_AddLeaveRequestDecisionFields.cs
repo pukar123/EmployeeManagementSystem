@@ -1,5 +1,3 @@
-using EMS.Domain.Database;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -9,10 +7,7 @@ namespace EMS.Domain.Database.Migrations
     /// <summary>
     /// Adds the manager/HR decision comment and an optimistic concurrency token to leave requests.
     /// Both changes are additive: existing rows get a NULL comment and SQL Server populates the rowversion.
-    /// Hand-written (no Designer file); regenerate with <c>dotnet ef migrations add</c> locally if preferred.
     /// </summary>
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20261115100000_AddLeaveRequestDecisionFields")]
     public partial class AddLeaveRequestDecisionFields : Migration
     {
         /// <inheritdoc />

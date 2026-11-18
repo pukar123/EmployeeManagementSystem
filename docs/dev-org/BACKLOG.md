@@ -30,7 +30,8 @@ Acceptance:
 - If the repository is not on GitHub with Actions enabled, set Blocked and say so.
 
 ## B02 — Repair and verify the manager leave-approval migration
-Status: Todo
+Status: Done
+Done-note: 2026-11-18 feature/b02-leave-approval-migration
 Risk: High
 Areas: backend, migration
 Depends-on: B01
@@ -315,4 +316,26 @@ Acceptance:
 - CI runs the frontend on the new Node version and passes.
 - ems-web Dockerfile and `engines` match it.
 - CONTRIBUTING.md names the new version.
+
+## B23 — CI check that every migration has its Designer file
+Status: Todo
+Risk: Low
+Areas: ci, migration
+Depends-on: B02
+Sources: Reviewer 2026-11-18 (B02 review)
+Goal: EF Core silently skips a migration that has no Designer file or no `[Migration]` attribute, and the current migration-history check counts those same attributes, so CI would not catch the exact mistake B02 fixed. Add a CI step that fails, with a clear annotation, if any migration `.cs` file has no matching `.Designer.cs` with a `[Migration]` attribute.
+Acceptance:
+- CI fails with an annotation naming the file when a migration has no Designer or no attribute (proved on a throwaway branch).
+- CI passes on development as it stands.
+
+## B24 — Keep the EF tools version in one place
+Status: Todo
+Risk: Low
+Areas: ci, backend
+Depends-on: B02
+Sources: Reviewer 2026-11-18 (B02 review)
+Goal: The dotnet-ef version is set separately in the CI workflow from the SDK and about 20 EF package references, so the .NET 10 upgrade (B21) could leave them out of step. Add a local tool manifest (`.config/dotnet-tools.json`) used by CI and developers, and note in B21 that the SDK, EF packages and tool manifest move together.
+Acceptance:
+- CI restores dotnet-ef from the tool manifest, not a hard-coded global install, and stays green.
+- README explains `dotnet tool restore`.
 
