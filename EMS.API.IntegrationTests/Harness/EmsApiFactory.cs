@@ -90,6 +90,10 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("SeedAdmin:Enabled", "false");
         builder.UseSetting("Smtp:Host", string.Empty);
 
+        // Program.cs reads CORS origins as a plain list directly under "Cors" (Cors:0, Cors:1, ...),
+        // not from Cors:AllowedOrigins, and refuses to start outside Development without one.
+        builder.UseSetting("Cors:0", "http://localhost");
+
         builder.ConfigureTestServices(services =>
         {
             RemoveHostedServices(services);
