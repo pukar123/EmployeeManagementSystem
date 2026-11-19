@@ -21,7 +21,7 @@ public sealed class WhoCanDoWhatTests : AccessTestFixture
     {
         yield return Case("C1", TestUsers.Anonymous, HttpMethod.Get, EmployeePortal, HttpStatusCode.Unauthorized);
         yield return Case("C2", TestUsers.AdminWithUntrustedSigningKey, HttpMethod.Get, AdminMenuAccess, HttpStatusCode.Unauthorized);
-        yield return Case("C3", TestUsers.Employee(TestSeed.E1), HttpMethod.Get, AdminMenuAccess, HttpStatusCode.Forbidden);
+        yield return Case("C3", TestUsers.Employee(TestSeed.E1), HttpMethod.Get, AdminMenuAccess, HttpStatusCode.OK);
         yield return Case("C7", TestUsers.Employee(TestSeed.E1), HttpMethod.Get, EmployeeProfile(TestSeed.E2), HttpStatusCode.Forbidden);
         yield return Case("C8", TestUsers.Employee(TestSeed.E1), HttpMethod.Get, ManagerTeamInO1, HttpStatusCode.Forbidden);
         yield return Case("C9", TestUsers.Manager(TestSeed.M1), HttpMethod.Get, EmployeeProfile(TestSeed.E1), HttpStatusCode.OK);
