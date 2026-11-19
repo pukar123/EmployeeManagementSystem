@@ -44,7 +44,8 @@ Acceptance:
 - The decision fields (reviewer, reviewed time, rejection reason) are unchanged from the intended design.
 
 ## B03 — Integration test harness for "who can do what"
-Status: Todo
+Status: Done
+Done-note: 2026-11-19 feature/b03-access-test-harness
 Risk: Low
 Areas: backend
 Depends-on: B01
@@ -338,4 +339,39 @@ Goal: The dotnet-ef version is set separately in the CI workflow from the SDK an
 Acceptance:
 - CI restores dotnet-ef from the tool manifest, not a hard-coded global install, and stays green.
 - README explains `dotnet tool restore`.
+
+## B25 — Fix the web-access (CORS) settings so EMS starts outside Development
+Status: Todo
+Risk: High
+Areas: backend, docker
+Depends-on: B03
+Sources: Developer, Tester and Reviewer 2026-11-19 (B03)
+Goal: Program.cs reads the allowed web origins from the wrong setting name (`Cors` as a list) while appsettings and docker-compose use `Cors:AllowedOrigins`. Outside Development no origins are found and the API stops at start-up, so the Production Docker image cannot run, and docker-compose's `EMS_CORS_ORIGIN_*` values are ignored. Read the origins from `Cors:AllowedOrigins` (as the User Management host does), keep the "no origins outside Development = refuse to start" safety rule, and remove the test-only `Cors:0` workaround from the integration test host.
+Acceptance:
+- An integration test starts the API as Production with `Cors:AllowedOrigins` set and it starts; with none set it still refuses to start.
+- docker-compose origin variables are honoured.
+- The test-only `Cors:0` setting is gone and all tests stay green.
+
+## B26 — Test harness: request bodies and a temporary file area
+Status: Todo
+Risk: Low
+Areas: backend
+Depends-on: B03
+Sources: Reviewer 2026-11-19 (B03 review)
+Goal: The "who can do what" tests can only send requests without a body, and the test API writes into the source tree's `EMS.API/wwwroot`. Add support for JSON and file-upload bodies in access cases, and point the test API at a temporary folder that is cleaned up, before the document and upload tasks (B08–B10). If B04 already adds body support, only the file area remains.
+Acceptance:
+- An access case can send a JSON body and a file upload.
+- Tests never write inside the repository folders.
+
+## B27 — Optional SQL Server test database for checks InMemory can't make
+Status: Todo
+Risk: Low
+Areas: backend, ci
+Depends-on: B03
+Sources: Reviewer 2026-11-19 (B03 review)
+Goal: The in-memory test database ignores case-insensitive matching, foreign keys and the clash protection (row versions), so tests of sign-in lockout, accrual and balance protection could pass falsely. Add an opt-in fixture that runs selected integration tests against the SQL Server container in CI, and list the InMemory limits in the test README. Should be done before B12.
+Acceptance:
+- Tests marked for SQL Server run in CI against a real SQL Server and pass.
+- A test proves a concurrent update is rejected on SQL Server.
+- README lists the InMemory limits and when to use the SQL Server fixture.
 

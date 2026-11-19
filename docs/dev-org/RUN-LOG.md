@@ -32,3 +32,16 @@
 - PR: see the B02 pull request into development
 - Needs the CEO: delete the throwaway branches `probe/b01-ci-failure` and `probe/b02-pending-model` on GitHub (Branches page > bin icon); the team's session is not allowed to delete branches.
 
+## 2026-11-19 — B03 Integration test harness for "who can do what"
+- Outcome: Done
+- What changed:
+  - EMS now has real "who can do what" tests: each one starts the whole API in memory, signs in with a real token as a chosen kind of user (no role, employee, manager, admin, or a stranger with a fake token) and checks the answer.
+  - 11 starting cases cover endpoints that were already protected: anonymous and fake-token users are refused, only admins see role permissions, employees see their own portal but not other people's profiles, and managers can see their direct reports but not others.
+  - Every future security task can add its own case in one line; a short guide in the test project explains how.
+  - Failure messages say exactly who called what and what came back, e.g. "Employee linked to E1 -> GET /api/RoleKeyPermissions/ADMIN: expected 200, got 403".
+- Risk: Low (auto)
+- Tests: on GitHub, 162 of 162 .NET tests passed (11 new); frontend and database checks green. The Tester proved a deliberately wrong case produces a clear failure message.
+- Reviewer: strengths — tests use the real sign-in and permission checks, not a bypass; fast (11 tests in under a second); only one tiny production change. Cons — a real start-up bug found: outside Development EMS reads its web-access (CORS) settings from the wrong name and refuses to start, so the Production Docker image would not run (High, new task B25); tests can't send request bodies yet and write into the source folder (Medium, B26); the in-memory test database can give false confidence on concurrency and case rules (Medium, B27).
+- PR: see the B03 pull request into development
+- Needs the CEO: (1) consider moving B25 (start-up bug) up the order — it is small but blocks any non-Development deployment; (2) delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
+
