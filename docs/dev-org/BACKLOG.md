@@ -58,7 +58,8 @@ Acceptance:
 - A short note in the test project explains how to add a case.
 
 ## B04 — Lock role assignment and admin-only setup endpoints
-Status: Todo
+Status: Done
+Done-note: 2026-11-20 feature/b04-lock-admin-endpoints
 Risk: High
 Areas: backend
 Depends-on: B03
@@ -92,6 +93,7 @@ Depends-on: B03
 Sources: C5
 Goal: Having the ordinary Leave page currently lets staff view balances, create or cancel requests and download medical certificates for any employee. Change the check so only leave admins can act on other employees' leave, managers can see their direct reports' leave (reusing the existing approval scoping), and everyone else can act only on their own.
 Acceptance:
+- (Reviewer 2026-11-20) The leave approval service treats any role with the `leave.admin` menu as a leave admin while the `LeaveAdmin` policy is admin-only; make both use the same definition.
 - An employee with only the Leave page is denied another employee's balances, requests and attachments.
 - A leave admin is allowed.
 - A manager can view a direct report's requests and balances but not those of someone outside their team.
@@ -374,4 +376,49 @@ Acceptance:
 - Tests marked for SQL Server run in CI against a real SQL Server and pass.
 - A test proves a concurrent update is rejected on SQL Server.
 - README lists the InMemory limits and when to use the SQL Server fixture.
+
+## B28 — Only admins can grant roles (close the remaining self-promotion routes)
+Status: Todo
+Risk: High
+Areas: backend
+Depends-on: B04
+Sources: Reviewer 2026-11-20 (B04 review)
+Goal: B04 locked job-position roles, but a user with the ordinary `employees.access` capability can still give anyone, including themselves, the ADMIN role through `PUT employees/{id}/roles/direct-overrides` and `PUT employees/{id}/linked-user/roles`, and a user with `employees.manage` can transfer themselves into a position that grants ADMIN. Add an admin-only guard in the services that grant or change roles (direct overrides, linked-user roles, and position changes that would add ADMIN), so the rule holds however the request arrives.
+Acceptance:
+- A non-admin with `employees.access` gets 403 when granting ADMIN via direct overrides or linked-user roles; nothing changes.
+- A non-admin with `employees.manage` cannot move anyone (including themselves) into a position that grants ADMIN.
+- Admins can still do all three; "who can do what" tests cover each route.
+
+## B29 — Stop the site staff list leaking personal details
+Status: Todo
+Risk: High
+Areas: backend
+Depends-on: B04
+Sources: Reviewer 2026-11-20 (B04 review)
+Goal: `GET api/Sites/{id}/employees` returns date of birth, phone, email and archive reason to any signed-in user, without the `employees.view` check used elsewhere. Apply the same employee-visibility rules (or return only names and positions to users without `employees.view`).
+Acceptance:
+- A plain employee gets either 403 or a list without personal details; an admin or `employees.view` holder sees what they see today.
+- Integration tests cover both.
+
+## B30 — One definition of "admin" across EMS
+Status: Todo
+Risk: High
+Areas: backend
+Depends-on: B04
+Sources: Reviewer 2026-11-20 (B04 review)
+Goal: EMS decides "is this user an admin" in three ways: the new named policies, `[Authorize(Roles = Admin)]` attributes (case-sensitive) and a service-level ADMIN/ADMINISTRATOR list. A user with the "Administrator" role passes some checks and fails others. Make every check use the one shared admin rule and switch the remaining attributes to named policies.
+Acceptance:
+- A single shared admin check is used by every policy, attribute and service.
+- Tests show ADMIN and ADMINISTRATOR users get the same results everywhere.
+
+## B31 — Friendly "not allowed" messages and a safe /setup page
+Status: Todo
+Risk: Low
+Areas: frontend, backend
+Depends-on: B04
+Sources: Reviewer 2026-11-20 (B04 review)
+Goal: When the API refuses an action the web app shows "Request failed with status code 403", and `/setup` sends non-admins to a form that now always fails. Show a plain message ("You don't have permission to do this. Ask an administrator.") for 403 responses, and only show the setup flow to admins.
+Acceptance:
+- Any 403 shows the friendly message.
+- Non-admins never see the /setup form.
 
