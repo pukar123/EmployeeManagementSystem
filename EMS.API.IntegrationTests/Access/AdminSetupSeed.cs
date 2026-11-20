@@ -15,6 +15,8 @@ namespace EMS.API.IntegrationTests.Access;
 /// for the change and delete cases.</item>
 /// <item>O-B04, a second organisation for the denied update, logo and delete cases, and O-B04-Delete for the
 /// admin delete case (so no case depends on another having run first).</item>
+/// <item>O-B04-Leave, an organisation with one active leave policy rule and no employees, for the admin
+/// accrual run (see <see cref="AccrualOrganizationId"/>).</item>
 /// </list>
 /// </summary>
 public static class AdminSetupSeed
@@ -23,6 +25,13 @@ public static class AdminSetupSeed
     public const int RolePositionEmployeeId = 9001;  // E-B04
     public const int OrganizationId = 9001;          // O-B04
     public const int OrganizationToDeleteId = 9002;  // O-B04-Delete
+    /// <summary>
+    /// O-B04-Leave. The admin accrual case runs here, not in O1: for an employee with no balance the accrual
+    /// service adds a balance and then calls Update on it, which EF Core InMemory turns into an update of a
+    /// row that does not exist yet (SQL Server keeps it as an insert). With no employees the run still
+    /// passes the policy and runs the service, but creates no balances.
+    /// </summary>
+    public const int AccrualOrganizationId = 9003;
     public const int DepartmentId = 9001;
     public const int SiteId = 9001;
     public const int LocationId = 9001;
@@ -31,6 +40,8 @@ public static class AdminSetupSeed
     public const string MenuKey = "b04.test";
     public const int LeaveTypeId = 9001;
     public const int LeavePolicyRuleId = 9001;
+    public const int AccrualLeaveTypeId = 9002;
+    public const int AccrualLeavePolicyRuleId = 9002;
 
     internal static Task AddRowsAsync(AppDbContext db)
     {
@@ -39,6 +50,7 @@ public static class AdminSetupSeed
 
         db.Organizations.Add(new Organization { Id = OrganizationId, Name = "B04 Org", IsActive = true });
         db.Organizations.Add(new Organization { Id = OrganizationToDeleteId, Name = "B04 Org To Delete", IsActive = true });
+        db.Organizations.Add(new Organization { Id = AccrualOrganizationId, Name = "B04 Org Leave", IsActive = true });
 
         db.JobPositions.Add(new JobPosition { Id = RolePositionId, OrganizationId = o1, Title = "B04 Role Position", IsActive = true });
         db.JobPositions.Add(new JobPosition { Id = JobPositionId, OrganizationId = o1, Title = "B04 Setup Position", IsActive = true });
@@ -65,20 +77,29 @@ public static class AdminSetupSeed
         db.Locations.Add(new Location { Id = LocationId, OrganizationId = o1, Name = "B04 Setup Location", IsActive = true });
         db.Menus.Add(new Menu { Id = MenuId, Key = MenuKey, Label = "B04 Test", RoutePath = "/b04-test", SortOrder = 998 });
 
+        AddLeaveTypeWithRule(db, o1, LeaveTypeId, LeavePolicyRuleId, "B04 Setup Leave", now);
+        AddLeaveTypeWithRule(db, AccrualOrganizationId, AccrualLeaveTypeId, AccrualLeavePolicyRuleId, "B04 Accrual Leave", now);
+
+        return Task.CompletedTask;
+    }
+
+    private static void AddLeaveTypeWithRule(
+        AppDbContext db, int organizationId, int leaveTypeId, int ruleId, string name, DateTime now)
+    {
         db.LeaveTypes.Add(new LeaveType
         {
-            Id = LeaveTypeId,
-            OrganizationId = o1,
-            Name = "B04 Setup Leave",
+            Id = leaveTypeId,
+            OrganizationId = organizationId,
+            Name = name,
             IsActive = true,
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
         });
         db.LeavePolicyRules.Add(new LeavePolicyRule
         {
-            Id = LeavePolicyRuleId,
-            OrganizationId = o1,
-            LeaveTypeId = LeaveTypeId,
+            Id = ruleId,
+            OrganizationId = organizationId,
+            LeaveTypeId = leaveTypeId,
             AccrualRatePerPeriod = 1m,
             AccrualFrequency = AccrualFrequency.Monthly,
             IsActive = true,
@@ -86,7 +107,5 @@ public static class AdminSetupSeed
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
         });
-
-        return Task.CompletedTask;
     }
 }

@@ -145,8 +145,9 @@ public sealed class AdminSetupAccessTests : AccessTestFixture
         // Leave accrual and year-reset runs.
         yield return Case("B04-35", employee, HttpMethod.Post, LeaveAccrualRun, HttpStatusCode.Forbidden);
         yield return Case("B04-36", manager, HttpMethod.Post, LeaveYearResetRun, HttpStatusCode.Forbidden);
+        // Run in O-B04-Leave, not O1: see AdminSetupSeed.AccrualOrganizationId for the InMemory reason.
         yield return Case("B04-37", admin, HttpMethod.Post, LeaveAccrualRun, HttpStatusCode.OK,
-            new RunLeaveAccrualRequestModel { OrganizationId = O1, AsOfUtc = new DateTime(2026, 11, 20, 0, 0, 0, DateTimeKind.Utc) });
+            new RunLeaveAccrualRequestModel { OrganizationId = AdminSetupSeed.AccrualOrganizationId, AsOfUtc = new DateTime(2026, 11, 20, 0, 0, 0, DateTimeKind.Utc) });
         yield return Case("B04-38", admin, HttpMethod.Post, LeaveYearResetRun, HttpStatusCode.OK,
             new RunLeaveYearResetRequestModel { OrganizationId = O1, LeaveYearStartDateUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc) });
 
