@@ -1,7 +1,9 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.Department;
 using EMS.Application.Mapping;
 using Pukar.Shared;
 using EMS.Application.Services.Departments;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EMS.API.Controllers;
@@ -31,6 +33,7 @@ public class DepartmentsController : ControllerBase
         return item is null ? NotFound() : Ok(item);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPost]
     public async Task<ActionResult<DepartmentResponseModel>> Create(
         [FromBody] DepartmentDTO dto,
@@ -47,6 +50,7 @@ public class DepartmentsController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<DepartmentResponseModel>> Update(
         int id,
@@ -64,6 +68,7 @@ public class DepartmentsController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {

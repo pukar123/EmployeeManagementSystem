@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using EMS.API.Bootstrap;
+using EMS.Application.Services.Employees;
 using EMS.Domain.Database;
 using EMS.Infrastructure.Persistence.Auditing;
 using Microsoft.AspNetCore.Hosting;
@@ -24,6 +25,7 @@ namespace EMS.API.IntegrationTests.Harness;
 /// Sign-in, the global "must be signed in" rule, the AdminAccess policy and the EMS access services
 /// are the production registrations. Only these are swapped: both databases (EF Core InMemory),
 /// the background/seed hosted services, Mongo logging (turned off by setting) and the email sender.
+/// The real role sync service is wrapped (not replaced) by a recorder, see <see cref="RoleSyncRecorder"/>.
 /// </summary>
 public sealed class EmsApiFactory : WebApplicationFactory<Program>
 {
@@ -53,6 +55,26 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
     public async Task InitialiseAsync(CancellationToken cancellationToken = default)
     {
         await TestSeed.SeedAsync(Services, cancellationToken);
+    }
+
+    /// <summary>Every role sync the API has started in this host, oldest first.</summary>
+    public RoleSyncRecorder RoleSyncs => Services.GetRequiredService<RoleSyncRecorder>();
+
+    /// <summary>Runs <paramref name="query"/> against the EMS database in a new scope, e.g. to check that nothing changed.</summary>
+    public async Task<T> QueryDatabaseAsync<T>(Func<AppDbContext, Task<T>> query)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await query(db);
+    }
+
+    /// <summary>Runs <paramref name="change"/> against the EMS database in a new scope, then saves. Use it to add a fixture's own rows.</summary>
+    public async Task ChangeDatabaseAsync(Func<AppDbContext, Task> change)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await change(db);
+        await db.SaveChangesAsync();
     }
 
     /// <summary>A client that sends whatever token <paramref name="user"/> calls for.</summary>
@@ -101,6 +123,8 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender, NoOpEmailSender>();
+
+            RecordRoleSyncs(services);
         });
     }
 
@@ -115,6 +139,17 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
 
         foreach (var descriptor in toRemove)
             services.Remove(descriptor);
+    }
+
+    private static void RecordRoleSyncs(IServiceCollection services)
+    {
+        // The real service still does the work; the wrapper only notes each call first.
+        services.RemoveAll<IEmployeeRoleSyncService>();
+        services.AddSingleton<RoleSyncRecorder>();
+        services.AddScoped<EmployeeRoleSyncService>();
+        services.AddScoped<IEmployeeRoleSyncService>(sp => new RecordingEmployeeRoleSyncService(
+            sp.GetRequiredService<EmployeeRoleSyncService>(),
+            sp.GetRequiredService<RoleSyncRecorder>()));
     }
 
     private void UseInMemoryDatabases(IServiceCollection services)

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Pukar.Usermanagement.Application.Options;
-using Pukar.Usermanagement.Contracts.Roles;
 using Pukar.Usermanagement.Contracts.ServiceAuth;
 
 namespace EMS.API.Auth;
@@ -18,6 +17,15 @@ namespace EMS.API.Auth;
 /// </summary>
 public static class UserManagementJwtExtensions
 {
+    private static readonly string[] AdminPolicyNames =
+    [
+        AuthorizationPolicyNames.AdminAccess,
+        AuthorizationPolicyNames.RoleAdmin,
+        AuthorizationPolicyNames.OrganizationAdmin,
+        AuthorizationPolicyNames.MenuAdmin,
+        AuthorizationPolicyNames.LeaveAdmin,
+    ];
+
     public static IServiceCollection AddUserManagementJwtAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -70,14 +78,9 @@ public static class UserManagementJwtExtensions
 
         services.AddAuthorization(auth =>
         {
-            auth.AddPolicy("AdminAccess", policy =>
-                policy.RequireAssertion(context =>
-                    context.User.Claims.Any(c =>
-                        c.Type == ClaimTypes.Role
-                        && string.Equals(c.Value, WellKnownRoles.Admin, StringComparison.OrdinalIgnoreCase))
-                    || context.User.Claims.Any(c =>
-                        c.Type == "roles"
-                        && string.Equals(c.Value, WellKnownRoles.AdminNormalizedName, StringComparison.OrdinalIgnoreCase))));
+            // Every admin policy uses the same admin test. The separate names are seams for finer roles later.
+            foreach (var policyName in AdminPolicyNames)
+                auth.AddPolicy(policyName, policy => policy.RequireAssertion(context => AdminClaimCheck.IsAdmin(context.User)));
 
             auth.AddPolicy(ServiceScopes.UsersRead, p => RequireScope(p, ServiceScopes.UsersRead));
             auth.AddPolicy(ServiceScopes.UsersManage, p => RequireScope(p, ServiceScopes.UsersManage));

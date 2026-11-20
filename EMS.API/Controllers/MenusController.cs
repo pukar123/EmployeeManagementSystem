@@ -1,3 +1,4 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.Navigation;
 using EMS.Application.Services.Menus;
 using Microsoft.AspNetCore.Authorization;
@@ -36,6 +37,7 @@ public sealed class MenusController : ControllerBase
         return item is null ? NotFound() : Ok(item);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.MenuAdmin)]
     [HttpPost]
     [ProducesResponseType(typeof(MenuResponseModel), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -54,6 +56,7 @@ public sealed class MenusController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.MenuAdmin)]
     [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(MenuResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -74,6 +77,7 @@ public sealed class MenusController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.MenuAdmin)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

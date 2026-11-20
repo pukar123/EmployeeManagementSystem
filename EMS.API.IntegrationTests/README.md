@@ -6,14 +6,22 @@ EMS is a personal portfolio project.
 
 ## What is real and what is swapped
 
-Real (production registrations): token issuing (`IJwtTokenService`), bearer token validation, the global "must be signed in" rule, the `AdminAccess` policy, and every EMS access service (linked employee, menu and capability checks, manager scope).
+Real (production registrations): token issuing (`IJwtTokenService`), bearer token validation, the global "must be signed in" rule, the admin policies (`AdminAccess`, `RoleAdmin`, `OrganizationAdmin`, `MenuAdmin`, `LeaveAdmin`), and every EMS access service (linked employee, menu and capability checks, manager scope).
 
 Swapped for tests only (`Harness/EmsApiFactory.cs`):
 
 - both databases use EF Core InMemory, with a new database for each test fixture;
 - background and seed hosted services are removed (the harness runs the RBAC seed itself);
 - Mongo logging is turned off and email goes to a no-op sender;
-- the host runs in the `Testing` environment with a test-only signing key.
+- the host runs in the `Testing` environment with a test-only signing key;
+- the real role sync service (`IEmployeeRoleSyncService`) is wrapped, not replaced, by `RecordingEmployeeRoleSyncService`, which notes every call in `Factory.RoleSyncs` and then runs the real service.
+
+## Fixtures
+
+| Fixture | What it covers |
+|---|---|
+| `Access/WhoCanDoWhatTests.cs` | Read-only "who can do what" cases on the shared `TestSeed` (B03). |
+| `Access/AdminSetupAccessTests.cs` | B04: role assignment and setup writes are admin-only, their reads stay open. Adds its own rows (`Access/AdminSetupSeed.cs`), so its writes never touch the shared seed. |
 
 ## Running
 
@@ -23,7 +31,7 @@ dotnet test EMS.API.IntegrationTests
 
 ## Adding a case
 
-Most cases are one row in `Access/WhoCanDoWhatTests.cs`, inside `StatusCases()`.
+Most cases are one row in a fixture's `StatusCases()` (for example `Access/WhoCanDoWhatTests.cs`). The `Case(...)` helper lives on `AccessTestFixture`, so every fixture uses the same row shape.
 
 ### 1. Choose a user
 
@@ -68,7 +76,24 @@ Not signed in:
 yield return Case("B04-3", TestUsers.Anonymous, HttpMethod.Get, EmployeePortal, HttpStatusCode.Unauthorized);
 ```
 
+With a JSON body (an allowed create or update). Pass the API's own request model; it is sent as camelCase JSON, the same shape the web client sends:
+
+```csharp
+yield return Case("B04-14", TestUsers.Admin, HttpMethod.Post, "/api/Departments", HttpStatusCode.Created,
+    new DepartmentDTO { OrganizationId = TestSeed.O1.Id, Name = "B04 Dept", IsActive = true });
+```
+
+A denied case needs no body: authorisation runs before model binding, so the request is refused first.
+
+`ExpectStatusAsync(user, method, path, expected, body)` takes the same optional body in a normal `[Test]`.
+
 To check the response body as well, write a normal `[Test]` that calls `ExpectStatusAsync(...)` (it returns the body) and then `ParseJson(...)`. See the C4 to C6 tests for examples.
+
+### 4. Check what happened behind the response
+
+- `Factory.QueryDatabaseAsync(db => ...)` reads the EMS database in a fresh scope, for example to show a refused delete left the row in place.
+- `Factory.ChangeDatabaseAsync(db => ...)` adds a fixture's own rows in a fresh scope and saves them (use it from the fixture's `[OneTimeSetUp]`).
+- `Factory.RoleSyncs.Calls` lists every `SyncEmployeesForPositionAsync` and `SyncEmployeeAsync` call the API started. A "no sync ran" check is only meaningful next to an allowed case that shows a sync is recorded (see B04-01 to B04-03).
 
 A failed case reports the user, the method and path, the expected and actual status, and the start of the response body, so the CI annotation explains the failure on its own.
 

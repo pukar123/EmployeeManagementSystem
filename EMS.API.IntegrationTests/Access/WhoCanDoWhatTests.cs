@@ -30,9 +30,10 @@ public sealed class WhoCanDoWhatTests : AccessTestFixture
     }
 
     [TestCaseSource(nameof(StatusCases))]
-    public async Task Request_ReturnsExpectedStatus(TestUser user, HttpMethod method, string path, HttpStatusCode expected)
+    public async Task Request_ReturnsExpectedStatus(
+        TestUser user, HttpMethod method, string path, HttpStatusCode expected, object? body)
     {
-        await ExpectStatusAsync(user, method, path, expected);
+        await ExpectStatusAsync(user, method, path, expected, body);
     }
 
     [Test]
@@ -98,12 +99,4 @@ public sealed class WhoCanDoWhatTests : AccessTestFixture
                 BodyMessage(user, HttpMethod.Get, EmployeePortal, "employeeId", "to be missing or null", body));
         });
     }
-
-    private static TestCaseData Case(string id, TestUser user, HttpMethod method, string path, HttpStatusCode expected)
-        => new TestCaseData(user, method, path, expected)
-            .SetName($"{id} {TestName(user.Description)} {method} {TestName(path)} returns {(int)expected}");
-
-    // Test names avoid brackets and dots, which test runners read as parameters and namespaces.
-    private static string TestName(string text)
-        => text.Replace("(", string.Empty).Replace(")", string.Empty).Replace(".", "_");
 }

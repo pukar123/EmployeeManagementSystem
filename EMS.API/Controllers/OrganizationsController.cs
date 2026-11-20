@@ -1,8 +1,10 @@
+using EMS.API.Auth;
 using EMS.API.Services;
 using EMS.Application.DTOs.Organization;
 using EMS.Application.Mapping;
 using Pukar.Shared;
 using EMS.Application.Services.Organizations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EMS.API.Controllers;
@@ -36,6 +38,7 @@ public class OrganizationsController : ControllerBase
         return item is null ? NotFound() : Ok(item);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPost]
     public async Task<ActionResult<OrganizationResponseModel>> Create(
         [FromBody] OrganizationDTO dto,
@@ -52,6 +55,7 @@ public class OrganizationsController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<OrganizationResponseModel>> Update(
         int id,
@@ -63,6 +67,7 @@ public class OrganizationsController : ControllerBase
     }
 
     /// <summary>Upload a logo image; file is stored on disk under wwwroot/attachments/Organization. Only the relative URL path is saved in the database.</summary>
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPost("{id:int}/logo")]
     [RequestSizeLimit(6 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 6 * 1024 * 1024)]
@@ -91,6 +96,7 @@ public class OrganizationsController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
