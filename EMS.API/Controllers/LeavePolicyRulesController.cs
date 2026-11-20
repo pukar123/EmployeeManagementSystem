@@ -1,3 +1,4 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
 using Microsoft.AspNetCore.Authorization;
@@ -41,6 +42,7 @@ public class LeavePolicyRulesController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.LeaveAdmin)]
     [HttpPost]
     public async Task<ActionResult<LeavePolicyRuleResponseModel>> Create(
         [FromBody] CreateLeavePolicyRuleRequestModel request,
@@ -57,6 +59,7 @@ public class LeavePolicyRulesController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.LeaveAdmin)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<LeavePolicyRuleResponseModel>> Update(
         int id,
@@ -74,6 +77,7 @@ public class LeavePolicyRulesController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.LeaveAdmin)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {

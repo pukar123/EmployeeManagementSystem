@@ -1,3 +1,4 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
 using Microsoft.AspNetCore.Authorization;
@@ -6,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EMS.API.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = AuthorizationPolicyNames.LeaveAdmin)]
 [Route("api/[controller]")]
 public class LeaveImportsController : ControllerBase
 {

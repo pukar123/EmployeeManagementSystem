@@ -45,3 +45,18 @@
 - PR: see the B03 pull request into development
 - Needs the CEO: (1) consider moving B25 (start-up bug) up the order — it is small but blocks any non-Development deployment; (2) delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
 
+## 2026-11-20 — B04 Lock role assignment and admin-only setup endpoints
+- Outcome: Done
+- What changed:
+  - Only admins can now change which roles a job position grants, so an ordinary user can no longer hand ADMIN to everyone in a position.
+  - Only admins can create, change or delete organisations (including the logo), departments, sites (and who works there), locations, job positions and menus.
+  - Only admins can manage leave types and leave rules, run leave accrual or the year reset, or import leave in bulk.
+  - Everyone signed in can still read these lists, so dropdowns and forms keep working. No screens or database changed.
+  - Four named access rules (roles, organisation setup, menus, leave admin) all use one shared "is an admin" check, so finer roles can be added later.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 218 of 218 .NET tests passed (56 new). Every one of the 11 controllers has an "ordinary user refused" and an "admin allowed" test; the role tests also prove no roles were passed on to employees when refused. Frontend and database checks green.
+- Reviewer: strengths — sound admin check that can't be forged; every write covered; strong tests. Cons — two older problems found that undercut this work: users with the ordinary `employees.access` permission can still make anyone (including themselves) an admin through two other routes (High, new task B28); the site staff list shows date of birth, phone and email to any signed-in user (High, B29); "admin" is defined three different ways across EMS (Medium, B30); the web app shows a raw "403" message and the /setup page misleads non-admins (Medium, B31); leave-admin rule mismatch added to B06.
+- Release note: custom (non-admin) roles that were given setup menus can still open those screens but can no longer save.
+- PR: see the B04 pull request into development
+- Needs the CEO: (1) strongly consider moving B28 (self-promotion to admin) and B29 (personal-details leak) up to run next — they are small and serious; (2) delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
+

@@ -1,7 +1,9 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.Site;
 using EMS.Application.DTOs.Employee;
 using EMS.Application.Services.EmployeeSites;
 using EMS.Application.Services.Sites;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
@@ -34,6 +36,7 @@ public class SitesController : ControllerBase
         return item is null ? NotFound() : Ok(item);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPost]
     public async Task<ActionResult<SiteResponseModel>> Create(
         [FromBody] CreateSiteRequestModel request,
@@ -43,6 +46,7 @@ public class SitesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = created.SiteId }, created);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<SiteResponseModel>> Update(
         int id,
@@ -53,6 +57,7 @@ public class SitesController : ControllerBase
         return updated is null ? NotFound() : Ok(updated);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
@@ -69,6 +74,7 @@ public class SitesController : ControllerBase
         return items is null ? NotFound() : Ok(items);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPost("{siteId:int}/employees")]
     public async Task<IActionResult> LinkEmployee(
         int siteId,
@@ -86,6 +92,7 @@ public class SitesController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpDelete("{siteId:int}/employees/{employeeId:int}")]
     public async Task<IActionResult> UnlinkEmployee(int siteId, int employeeId, CancellationToken cancellationToken)
     {

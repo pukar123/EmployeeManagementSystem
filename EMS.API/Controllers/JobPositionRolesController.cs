@@ -1,6 +1,8 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.JobPosition;
 using EMS.Application.Services.Integrations;
 using EMS.Application.Services.JobPositions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
@@ -26,6 +28,7 @@ public sealed class JobPositionRolesController : ControllerBase
         return items is null ? NotFound() : Ok(items);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.RoleAdmin)]
     [HttpPut]
     public async Task<IActionResult> SetPositionRoles(
         int jobPositionId,

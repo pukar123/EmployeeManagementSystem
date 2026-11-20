@@ -1,6 +1,8 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.JobPosition;
 using Pukar.Shared;
 using EMS.Application.Services.JobPositions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EMS.API.Controllers;
@@ -32,6 +34,7 @@ public class JobPositionsController : ControllerBase
         return item is null ? NotFound() : Ok(item);
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPost]
     public async Task<ActionResult<JobPositionResponseModel>> Create(
         [FromBody] CreateJobPositionRequestModel request,
@@ -48,6 +51,7 @@ public class JobPositionsController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<JobPositionResponseModel>> Update(
         int id,
@@ -65,6 +69,7 @@ public class JobPositionsController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
