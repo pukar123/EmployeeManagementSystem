@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -88,8 +87,9 @@ public abstract class AuthEndpointTestFixture : AccessTestFixture
         string? origin = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, path);
+        // Serialised up front so the request carries a Content-Length, as a browser's JSON POST does.
         if (body is not null)
-            request.Content = JsonContent.Create(body, body.GetType(), options: ApiJson);
+            request.Content = new StringContent(JsonSerializer.Serialize(body, body.GetType(), ApiJson), Encoding.UTF8, "application/json");
         return SendAsync(description, request, clientIp, origin, user: null);
     }
 

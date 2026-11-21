@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Pukar.Usermanagement.API\Pukar.Usermanagement.API.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement.Application\Pukar.Usermanagement.Application.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement.Contracts\Pukar.Usermanagement.Contracts.csproj" />
     <ProjectReference Include="..\Pukar.Usermanagement.Domain\Pukar.Usermanagement.Domain.csproj" />

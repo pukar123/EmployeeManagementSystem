@@ -74,7 +74,7 @@ dotnet run --project tools/GenRsaKey -- Pukar.Usermanagement.Host/dev-rsa-key.pe
 
 ### Self-registration
 
-`Registration:AllowSelfRegistration` (default `false`). When false, `POST /api/auth/register` returns **404** with `{ "code": "registration_disabled", "message": "Self-registration is not available. Ask your administrator for an invitation." }` for any body, creates nothing and issues no tokens. The check is the first thing `AuthService.RegisterAsync` does, so the answer is the same whether or not the email exists. Set it to `true` only for a standalone deployment that really wants open sign-up. In EMS, accounts come from employee invitations and the `SeedAdmin` account.
+`Registration:AllowSelfRegistration` (default `false`). When false, `POST /api/auth/register` returns **404** with `{ "code": "registration_disabled", "message": "Self-registration is not available. Ask your administrator for an invitation." }` for an empty body or any well-formed JSON body, creates nothing and issues no tokens. Malformed JSON, or JSON with the wrong value types, is rejected by the framework with its normal **400** before the action runs; nothing is created then either. A body over 16 KB gets **413** (see below). The check is the first thing `AuthService.RegisterAsync` does, so the answer is the same whether or not the email exists. Set it to `true` only for a standalone deployment that really wants open sign-up. In EMS, accounts come from employee invitations and the `SeedAdmin` account.
 
 ### Rate limiting
 
@@ -92,6 +92,10 @@ Both hosts (EMS.API in-process and `Pukar.Usermanagement.Host`) call `AddPukarUs
 | `AuthRateLimiting:ResetPasswordPerIp:PermitLimit` / `:WindowSeconds` | `10` / `900` | `POST /api/auth/reset-password` and `POST /api/invitations/accept`, per client IP (separate counters, same settings) |
 
 Every limit and window must be at least 1; anything else stops the host at startup with a message naming the setting.
+
+**Per-email counters and memory.** The per-email key is the SHA-256 hex of the trimmed, lower-cased email (64 characters), never the raw text. An email that is blank or longer than 320 characters gets no per-email counter; the per-IP limit and the normal validation still apply, so the caller gets the same answer as without the limiter. Counters live in the built-in partitioned fixed-window limiter, which removes a counter once its window has refilled and it has been idle briefly, so the store cannot grow without bound.
+
+**Request size.** Sign-in, register, refresh, forgot-password, reset-password and invitation acceptance accept at most **16 KB** of body (`AuthRequestSizeLimitAttribute`). A larger declared `Content-Length` gets **413** with `{ "code": "request_too_large", "message": "The request is too large." }` before the body is read; a chunked body is cut off by the server at the same size.
 
 When a limit is reached the API answers **429** with a whole-second `Retry-After` header and `{ "code": "rate_limited", "message": "Too many attempts. Please wait a moment and try again.", "retryAfterSeconds": <same number> }`. The password is not checked and the database is not touched. The answer is the same whether or not the account exists. CORS policies expose `Retry-After` so the web app can read it; the body carries the same number in case a proxy drops the header. Rejections are logged as warnings with the policy name and path only, never the email or password.
 

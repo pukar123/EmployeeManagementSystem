@@ -26,15 +26,18 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// Self-registration. Off by default (<c>Registration:AllowSelfRegistration</c>): returns 404 with
-    /// code <c>registration_disabled</c> for any body, including an empty one.
+    /// code <c>registration_disabled</c> for an empty body or any well-formed JSON body. Malformed or
+    /// wrong-type JSON is rejected by the framework with 400 before this action runs; nothing is created.
     /// </summary>
     [HttpPost("register")]
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.Register)]
+    [AuthRequestSizeLimit]
     [ProducesResponseType(typeof(AuthResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponseModel>> Register(
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RegisterRequestModel? request,
@@ -62,9 +65,11 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.SignIn)]
+    [AuthRequestSizeLimit]
     [EmailRateLimit(AuthRateLimitPolicies.SignInEmail)]
     [ProducesResponseType(typeof(AuthResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponseModel>> Login(
         [FromBody] LoginRequestModel request,
@@ -84,8 +89,10 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
+    [AuthRequestSizeLimit]
     [ProducesResponseType(typeof(AuthResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponseModel>> Refresh(
         [FromBody] RefreshTokenRequestModel request,
@@ -116,8 +123,10 @@ public class AuthController : ControllerBase
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.ForgotPassword)]
+    [AuthRequestSizeLimit]
     [EmailRateLimit(AuthRateLimitPolicies.ForgotPasswordEmail)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ForgotPassword(
         [FromBody] ForgotPasswordRequestModel request,
@@ -130,8 +139,10 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.ResetPassword)]
+    [AuthRequestSizeLimit]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ResetPassword(
         [FromBody] ResetPasswordRequestModel request,

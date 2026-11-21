@@ -27,9 +27,10 @@ The auth rate limits (`AuthRateLimiting`) are on, with production defaults, in e
 | `Access/AdminSetupAccessTests.cs` | B04: role assignment and setup writes are admin-only, their reads stay open. Adds its own rows (`Access/AdminSetupSeed.cs`), so its writes never touch the shared seed. |
 | `Auth/RegistrationClosedTests.cs` | B05: default settings. Self-registration returns 404 and creates nothing; invitation acceptance and sign-in still work. |
 | `Auth/SignInPerIpLimitTests.cs` | B05: sign-in per-IP limit (3 in this host), the shared 429 shape, CORS headers on a 429, other endpoints unaffected. |
-| `Auth/PerEmailLimitTests.cs` | B05: per-email limits for sign-in and forgot-password (2 in this host), across IPs and with email normalisation. |
+| `Auth/PerEmailLimitTests.cs` | B05: per-email limits for sign-in and forgot-password (2 in this host), across IPs, with email normalisation, and no counter for an email over 320 characters. |
 | `Auth/OtherAuthEndpointLimitTests.cs` | B05: per-IP limits for forgot-password, refresh, reset-password and invitation acceptance (2 each in this host). |
 | `Auth/RateLimitingDisabledTests.cs` | B05: `AuthRateLimiting:Enabled = false` turns every limit off. |
+| `Auth/AuthRequestSizeTests.cs` | B05 review: a body over 16 KB on any anonymous auth action gets 413; normal bodies are unaffected. |
 
 ## Running
 

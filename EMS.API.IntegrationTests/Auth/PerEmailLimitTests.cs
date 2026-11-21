@@ -86,6 +86,30 @@ public sealed class PerEmailLimitTests : AuthEndpointTestFixture
         AssertRateLimited(third);
     }
 
+    [Test]
+    public async Task B05_17_OverLongEmail_GetsNoPerEmailCounter_AndTheNormalAnswer()
+    {
+        // 321 characters: over the 320 cap, so it is never counted (or stored) per email. The per-IP
+        // limit (high in this host) still applies, and every attempt gets the normal sign-in failure.
+        var longEmail = new string('a', 321 - "@ems-tests.invalid".Length) + "@ems-tests.invalid";
+        var body = new LoginRequestModel { Email = longEmail, Password = "Wrong-password-1" };
+        var normal = await PostAsync("sign-in for an unknown normal email", SignInPath,
+            new LoginRequestModel { Email = "b05-17-normal@ems-tests.invalid", Password = "Wrong-password-1" }, "10.17.0.2");
+
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            var result = await PostAsync($"sign-in #{attempt} with a 321-character email", SignInPath, body, "10.17.0.1");
+            AssertStatus(result, HttpStatusCode.BadRequest);
+            Assert.That(result.Body, Is.EqualTo(normal.Body),
+                $"{result.Description}: must get the same answer as any unknown email.");
+        }
+
+        var forgot = new ForgotPasswordRequestModel { Email = longEmail };
+        for (var attempt = 1; attempt <= 3; attempt++)
+            AssertStatus(await PostAsync($"forgot-password #{attempt} with a 321-character email", ForgotPasswordPath, forgot, "10.17.0.1"),
+                HttpStatusCode.NoContent);
+    }
+
     private Task<int> CountResetTokensAsync(int userId)
         => Factory.QueryUserManagementDatabaseAsync(db =>
             Task.FromResult(db.PasswordResetTokens.Count(t => t.UserId == userId)));

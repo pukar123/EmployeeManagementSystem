@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Pukar.Shared;
 using Pukar.Usermanagement.API.RateLimiting;
 using Pukar.Usermanagement.Application.Options;
 using Pukar.Usermanagement.Contracts.Auth;
@@ -11,9 +10,10 @@ namespace Pukar.Usermanagement.API.Filters;
 
 /// <summary>
 /// Per-email rate limit for sign-in and forgot-password. Runs after model binding (the rate limiter
-/// middleware cannot read the body), normalises the bound <c>Email</c> and takes a permit from
-/// <see cref="AuthEmailRateLimiter"/>. A blank email is not counted here (the per-IP limit still
-/// applies and the service returns its normal answer). A rejection writes the shared 429 response.
+/// middleware cannot read the body), turns the bound <c>Email</c> into a hashed counter key and takes a
+/// permit from <see cref="AuthEmailRateLimiter"/>. A blank or over-long email gets no counter (the
+/// per-IP limit still applies and the service returns its normal answer). A rejection writes the
+/// shared 429 response.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class EmailRateLimitAttribute : Attribute, IAsyncActionFilter
@@ -29,16 +29,16 @@ public sealed class EmailRateLimitAttribute : Attribute, IAsyncActionFilter
     {
         var services = context.HttpContext.RequestServices;
         var settings = services.GetRequiredService<IOptions<AuthRateLimitingOptions>>().Value;
-        var email = FindEmail(context.ActionArguments.Values);
+        var partitionKey = AuthEmailRateLimiter.PartitionKeyFor(FindEmail(context.ActionArguments.Values));
 
-        if (!settings.Enabled || string.IsNullOrWhiteSpace(email))
+        if (!settings.Enabled || partitionKey is null)
         {
             await next();
             return;
         }
 
         var limiter = services.GetRequiredService<AuthEmailRateLimiter>();
-        using var lease = limiter.AttemptAcquire(PolicyName, EmailNormalizer.Normalize(email));
+        using var lease = limiter.AttemptAcquire(PolicyName, partitionKey);
         if (!lease.IsAcquired)
         {
             await AuthRateLimitRejectionWriter.WriteAsync(
