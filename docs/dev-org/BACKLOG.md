@@ -72,7 +72,8 @@ Acceptance:
 - Integration tests cover each controller listed (at least one denied and one allowed case each).
 
 ## B05 — Close public self-registration and slow down password guessing
-Status: Todo
+Status: Done
+Done-note: 2026-11-21 feature/b05-close-registration
 Risk: High
 Areas: backend, frontend
 Depends-on: B03
@@ -191,6 +192,8 @@ Depends-on: B05
 Sources: C7
 Goal: Add progressive lockout in User Management: after a set number of failed sign-ins, the account is locked for a short, growing period. A successful sign-in or password reset clears the count. The login screen explains the lockout without revealing whether the email exists.
 Acceptance:
+- (Reviewer 2026-11-21) Per-email sign-in and forgot-password limits count only failed attempts, keyed per email and address, so nobody can keep a known user (e.g. the admin) locked out by spamming their email.
+- (Reviewer 2026-11-21) Sign-in and forgot-password take the same time whether or not the email exists (dummy password check for unknown users; reset email sent in the background).
 - After the configured number of failures, sign-in is refused for the lockout period even with the right password.
 - The counter resets after a successful sign-in or password reset.
 - The message is the same whether or not the email exists.
@@ -421,4 +424,16 @@ Goal: When the API refuses an action the web app shows "Request failed with stat
 Acceptance:
 - Any 403 shows the friendly message.
 - Non-admins never see the /setup form.
+
+## B32 — Correct client addresses behind a proxy, and IPv6-aware limits
+Status: Todo
+Risk: High
+Areas: backend, docker
+Depends-on: B05
+Sources: Reviewer 2026-11-21 (B05 review)
+Goal: The sign-in rate limits key on the connection address. Behind Docker Desktop, the Next.js proxy or a reverse proxy, every user looks like the same address (or "unknown"), so one attacker could block sign-in for everyone with about 21 requests a minute. Separately, each IPv6 address gets its own bucket, so an attacker with a /64 range can bypass per-address limits. Add trusted forwarded-header handling with known proxies/networks from configuration (never trust forwarded headers by default), group IPv6 addresses by /64 and map IPv4-mapped addresses, and log a warning when the address is unknown. Do with or before B14.
+Acceptance:
+- With a configured trusted proxy, limits key on the real client address; without one, forwarded headers are ignored.
+- Two IPv6 addresses in the same /64 share a bucket.
+- Integration tests cover both, and the Docker/compose setup documents the proxy setting.
 
