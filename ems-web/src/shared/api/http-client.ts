@@ -4,7 +4,10 @@ import { clearAuth, getAccessToken, getRefreshToken, saveAuthResponse } from "@/
 import {
   type ApiAvailabilityKind,
   classifyApiError,
+  getRetryAfterSeconds,
   messageForAvailabilityKind,
+  messageForRateLimit,
+  rateLimitActionForUrl,
 } from "@/shared/api/api-errors";
 
 /** Prefer IPv4 loopback so Windows does not resolve `localhost` to `::1` while Kestrel listens on IPv4 only. */
@@ -70,7 +73,10 @@ export const userManagementHttpClient: AxiosInstance = axios.create({
 
 type ConfigWithRetry = InternalAxiosRequestConfig & { _retry?: boolean };
 
-let refreshInFlight: Promise<string | null> | null = null;
+/** Result of one refresh attempt. `rateLimitError` is set when the refresh itself got a 429. */
+type RefreshOutcome = { accessToken: string | null; rateLimitError?: unknown };
+
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
 
 function isAuthRequestUrl(url: string | undefined): boolean {
   if (!url) return false;
@@ -86,18 +92,14 @@ function isAuthRequestUrl(url: string | undefined): boolean {
   );
 }
 
-/**
- * Renews the access token against the single EMS.API host.
- * Uses bare axios so refresh is not intercepted by either client.
- */
-export async function refreshAccessToken(): Promise<string | null> {
+function runRefresh(): Promise<RefreshOutcome> {
   if (refreshInFlight) return refreshInFlight;
   const rt = getRefreshToken();
-  if (!rt) return null;
+  if (!rt) return Promise.resolve({ accessToken: null });
   const base = emsApiBaseUrl.replace(/\/$/, "");
-  if (!base) return null;
+  if (!base) return Promise.resolve({ accessToken: null });
 
-  refreshInFlight = (async () => {
+  refreshInFlight = (async (): Promise<RefreshOutcome> => {
     try {
       const { data } = await axios.post<AuthResponse>(
         `${base}/api/auth/refresh`,
@@ -105,18 +107,33 @@ export async function refreshAccessToken(): Promise<string | null> {
         { headers: { "Content-Type": "application/json" } },
       );
       saveAuthResponse(data);
-      return data.accessToken;
-    } catch {
+      return { accessToken: data.accessToken };
+    } catch (error) {
+      // Too many refreshes is temporary: keep the session so the next action can retry,
+      // instead of signing the user out.
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
+        return { accessToken: null, rateLimitError: error };
+      }
       clearAuth();
       if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
         window.location.assign("/login?reason=expired");
       }
-      return null;
+      return { accessToken: null };
     } finally {
       refreshInFlight = null;
     }
   })();
   return refreshInFlight;
+}
+
+/**
+ * Renews the access token against the single EMS.API host.
+ * Uses bare axios so refresh is not intercepted by either client.
+ * Returns null when the refresh fails. A rate-limited (429) refresh keeps the stored session;
+ * any other failure clears it and sends the user to sign in again.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  return (await runRefresh()).accessToken;
 }
 
 /**
@@ -144,9 +161,10 @@ function attachAuthInterceptors(client: AxiosInstance) {
         return Promise.reject(error);
       }
       config._retry = true;
-      const newToken = await refreshAccessToken();
-      if (!newToken) return Promise.reject(error);
-      config.headers.Authorization = `Bearer ${newToken}`;
+      const outcome = await runRefresh();
+      // A rate-limited refresh fails the request with the 429, so the page shows "Too many attempts".
+      if (!outcome.accessToken) return Promise.reject(outcome.rateLimitError ?? error);
+      config.headers.Authorization = `Bearer ${outcome.accessToken}`;
       return client(config);
     },
   );
@@ -211,6 +229,10 @@ export function getApiAvailabilityKind(error: unknown): ApiAvailabilityKind {
 
 export function getErrorMessage(error: unknown): string {
   const kind = getApiAvailabilityKind(error);
+  if (kind === "rate_limited") {
+    const url = axios.isAxiosError(error) ? error.config?.url : undefined;
+    return messageForRateLimit(getRetryAfterSeconds(error), rateLimitActionForUrl(url));
+  }
   if (kind !== "unknown") {
     return messageForAvailabilityKind(kind);
   }

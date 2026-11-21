@@ -59,6 +59,8 @@ Full cutover sequence: [docs/ems-um-db-split-cutover.md](../docs/ems-um-db-split
 | `SeedAdmin` | Optional default admin user on startup |
 | `Smtp` | Invitation and password-reset email delivery; use Gmail SMTP with an app password for local development |
 | `PasswordReset` | Password-reset token lifetime and request cooldown |
+| `Registration` | Public self-registration switch (off by default), see below |
+| `AuthRateLimiting` | Limits for the anonymous sign-in and password-recovery endpoints, see below |
 | `ServiceClients:Ems` | EMS client-credentials (`client_id` + secret) |
 | `Cors:AllowedOrigins` | Browser clients |
 
@@ -68,17 +70,45 @@ Generate a dev RSA key:
 dotnet run --project tools/GenRsaKey -- Pukar.Usermanagement.Host/dev-rsa-key.pem
 ```
 
+## Sign-in and registration protection
+
+### Self-registration
+
+`Registration:AllowSelfRegistration` (default `false`). When false, `POST /api/auth/register` returns **404** with `{ "code": "registration_disabled", "message": "Self-registration is not available. Ask your administrator for an invitation." }` for any body, creates nothing and issues no tokens. The check is the first thing `AuthService.RegisterAsync` does, so the answer is the same whether or not the email exists. Set it to `true` only for a standalone deployment that really wants open sign-up. In EMS, accounts come from employee invitations and the `SeedAdmin` account.
+
+### Rate limiting
+
+Both hosts (EMS.API in-process and `Pukar.Usermanagement.Host`) call `AddPukarUserManagementRateLimiting(configuration)` and `UsePukarUserManagementRateLimiting()` (after `UseCors`, before `UseAuthentication`). Limits are fixed windows held in memory per process (counters reset on restart; a multi-instance deployment would need a distributed limiter). Only the endpoints below are limited; there is no global limiter, and CORS preflight requests are not counted.
+
+| Setting | Default | Applies to |
+|---------|---------|------------|
+| `AuthRateLimiting:Enabled` | `true` | Master switch. `false` turns every limit below off (local troubleshooting only). |
+| `AuthRateLimiting:SignInPerIp:PermitLimit` / `:WindowSeconds` | `20` / `60` | `POST /api/auth/login`, per client IP |
+| `AuthRateLimiting:SignInPerEmail:PermitLimit` / `:WindowSeconds` | `5` / `300` | `POST /api/auth/login`, per normalised email across all IPs (every attempt counts) |
+| `AuthRateLimiting:RegisterPerIp:PermitLimit` / `:WindowSeconds` | `5` / `3600` | `POST /api/auth/register`, per client IP |
+| `AuthRateLimiting:RefreshPerIp:PermitLimit` / `:WindowSeconds` | `60` / `60` | `POST /api/auth/refresh`, per client IP |
+| `AuthRateLimiting:ForgotPasswordPerIp:PermitLimit` / `:WindowSeconds` | `10` / `900` | `POST /api/auth/forgot-password`, per client IP |
+| `AuthRateLimiting:ForgotPasswordPerEmail:PermitLimit` / `:WindowSeconds` | `3` / `3600` | `POST /api/auth/forgot-password`, per normalised email across all IPs (on top of the `PasswordReset:RequestCooldownSeconds` cooldown) |
+| `AuthRateLimiting:ResetPasswordPerIp:PermitLimit` / `:WindowSeconds` | `10` / `900` | `POST /api/auth/reset-password` and `POST /api/invitations/accept`, per client IP (separate counters, same settings) |
+
+Every limit and window must be at least 1; anything else stops the host at startup with a message naming the setting.
+
+When a limit is reached the API answers **429** with a whole-second `Retry-After` header and `{ "code": "rate_limited", "message": "Too many attempts. Please wait a moment and try again.", "retryAfterSeconds": <same number> }`. The password is not checked and the database is not touched. The answer is the same whether or not the account exists. CORS policies expose `Retry-After` so the web app can read it; the body carries the same number in case a proxy drops the header. Rejections are logged as warnings with the policy name and path only, never the email or password.
+
+**Client IP.** The per-IP key is the connection's remote address (`"unknown"` when the host gives none). `X-Forwarded-For` and similar headers are **not** trusted: without a known reverse proxy they are chosen by the caller and would let anyone bypass the limit. Behind a shared IP (office NAT, Docker Desktop port forwarding, the Next.js dev rewrite proxy) many users count as one client, so the per-IP defaults are generous and the per-email limits do the account-specific work. Adding a reverse proxy needs `UseForwardedHeaders` with explicit `KnownProxies` first (a later task). Account lockout after failed attempts is a separate later task (B13).
+
 ## Endpoints
 
 ### Public
 
 | Route | Auth |
 |-------|------|
-| `POST /api/auth/login`, `register`, `refresh`, `revoke` | Anonymous |
-| `POST /api/auth/forgot-password`, `reset-password` | Anonymous |
+| `POST /api/auth/login`, `refresh`, `revoke` | Anonymous (login and refresh rate limited) |
+| `POST /api/auth/register` | Anonymous, **off by default** (404 `registration_disabled`); rate limited when on |
+| `POST /api/auth/forgot-password`, `reset-password` | Anonymous, rate limited |
 | `POST /api/auth/change-password` | User JWT |
 | `GET/POST/PUT /api/users`, `api/roles` | Admin user JWT |
-| `POST /api/invitations/accept` | Anonymous |
+| `POST /api/invitations/accept` | Anonymous, rate limited |
 | `GET /.well-known/jwks.json` | Anonymous |
 | `GET /health` | Anonymous |
 

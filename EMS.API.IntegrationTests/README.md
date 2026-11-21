@@ -14,7 +14,10 @@ Swapped for tests only (`Harness/EmsApiFactory.cs`):
 - background and seed hosted services are removed (the harness runs the RBAC seed itself);
 - Mongo logging is turned off and email goes to a no-op sender;
 - the host runs in the `Testing` environment with a test-only signing key;
-- the real role sync service (`IEmployeeRoleSyncService`) is wrapped, not replaced, by `RecordingEmployeeRoleSyncService`, which notes every call in `Factory.RoleSyncs` and then runs the real service.
+- the real role sync service (`IEmployeeRoleSyncService`) is wrapped, not replaced, by `RecordingEmployeeRoleSyncService`, which notes every call in `Factory.RoleSyncs` and then runs the real service;
+- a test-only startup filter (`Harness/TestClientIpStartupFilter.cs`) sets the client IP from the `X-Test-Client-Ip` request header, so rate-limit tests can act as several clients. TestServer otherwise gives every request no IP (one shared `"unknown"` bucket). Production code never reads this header, nor `X-Forwarded-For`.
+
+The auth rate limits (`AuthRateLimiting`) are on, with production defaults, in every fixture. The access fixtures mint tokens in-process and never call `/api/auth/*`, so they never reach a limit.
 
 ## Fixtures
 
@@ -22,6 +25,11 @@ Swapped for tests only (`Harness/EmsApiFactory.cs`):
 |---|---|
 | `Access/WhoCanDoWhatTests.cs` | Read-only "who can do what" cases on the shared `TestSeed` (B03). |
 | `Access/AdminSetupAccessTests.cs` | B04: role assignment and setup writes are admin-only, their reads stay open. Adds its own rows (`Access/AdminSetupSeed.cs`), so its writes never touch the shared seed. |
+| `Auth/RegistrationClosedTests.cs` | B05: default settings. Self-registration returns 404 and creates nothing; invitation acceptance and sign-in still work. |
+| `Auth/SignInPerIpLimitTests.cs` | B05: sign-in per-IP limit (3 in this host), the shared 429 shape, CORS headers on a 429, other endpoints unaffected. |
+| `Auth/PerEmailLimitTests.cs` | B05: per-email limits for sign-in and forgot-password (2 in this host), across IPs and with email normalisation. |
+| `Auth/OtherAuthEndpointLimitTests.cs` | B05: per-IP limits for forgot-password, refresh, reset-password and invitation acceptance (2 each in this host). |
+| `Auth/RateLimitingDisabledTests.cs` | B05: `AuthRateLimiting:Enabled = false` turns every limit off. |
 
 ## Running
 
@@ -96,6 +104,18 @@ To check the response body as well, write a normal `[Test]` that calls `ExpectSt
 - `Factory.RoleSyncs.Calls` lists every `SyncEmployeesForPositionAsync` and `SyncEmployeeAsync` call the API started. A "no sync ran" check is only meaningful next to an allowed case that shows a sync is recorded (see B04-01 to B04-03).
 
 A failed case reports the user, the method and path, the expected and actual status, and the start of the response body, so the CI annotation explains the failure on its own.
+
+## Auth endpoint and rate-limit tests
+
+Fixtures that call the anonymous auth endpoints derive from `Harness/AuthEndpointTestFixture.cs` (itself an `AccessTestFixture`):
+
+- **Settings per fixture.** Override `HostSettings` to give the fixture's host its own settings, for example low limits: `["AuthRateLimiting:SignInPerIp:PermitLimit"] = "3"`. They are applied after the harness defaults. Each fixture has its own host, so its limiter counters start at zero.
+- **One counter per test.** Tests in a fixture share the host, so every test uses its own client IPs (the `clientIp` argument, sent as `X-Test-Client-Ip`) and its own email addresses. Use long windows (minutes) and never wait for a window to end, so a slow CI run cannot reset a counter mid-test.
+- **Calling.** `PostAsync(description, path, body, clientIp, origin)` sends JSON anonymously; `PostEmptyJsonAsync` sends an empty JSON body; `GetAsAsync` calls as a `TestUser`. Each returns an `AuthCallResult` (status, body, headers).
+- **Checking.** `AssertStatus`, `AssertNotRateLimited`, and `AssertRateLimited`, which checks the whole 429 contract: `Retry-After` in whole seconds (at least 1), JSON `code = rate_limited`, the fixed message, and `retryAfterSeconds` equal to the header.
+- **Seeding User Management.** `SeedUserAsync(email, password)` adds a user hashed by the API's own `IPasswordHasher`; `SeedInvitationAsync(email)` adds an inactive user with a pending invitation and returns the raw token; `FindUserAsync(email)` reads one back. Underneath they use `Factory.ChangeUserManagementDatabaseAsync((db, services) => ...)` and `Factory.QueryUserManagementDatabaseAsync(db => ...)`, which mirror the EMS database helpers.
+
+Self-registration is off by default, so never create test users through `/api/auth/register`; seed them.
 
 ## Rules
 

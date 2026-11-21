@@ -51,7 +51,7 @@ try
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("UmWeb", policy =>
-            policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod());
+            policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("Retry-After"));
     });
 
     var useRsaSigning = !builder.Environment.IsEnvironment("Testing");
@@ -64,6 +64,7 @@ try
         useRsaSigning: useRsaSigning,
         registerDbContext: !builder.Environment.IsEnvironment("Testing"));
     builder.Services.AddPukarUserManagementAuthentication(builder.Configuration, useRsaSigning: useRsaSigning);
+    builder.Services.AddPukarUserManagementRateLimiting(builder.Configuration);
 
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<UserManagementDbContext>(name: "database");
@@ -82,6 +83,7 @@ try
     app.UseSerilogRequestLogging();
     app.UseHttpsRedirection();
     app.UseCors("UmWeb");
+    app.UsePukarUserManagementRateLimiting();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapHealthChecks("/health").AllowAnonymous();

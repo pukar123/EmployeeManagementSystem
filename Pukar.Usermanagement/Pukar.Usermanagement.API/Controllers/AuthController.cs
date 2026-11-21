@@ -3,6 +3,10 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.RateLimiting;
+using Pukar.Usermanagement.API.Filters;
+using Pukar.Usermanagement.API.RateLimiting;
 using Pukar.Usermanagement.Contracts.Auth;
 using Pukar.Usermanagement.Application.Services.Auth;
 using Pukar.Shared;
@@ -20,19 +24,30 @@ public class AuthController : ControllerBase
         _auth = auth;
     }
 
+    /// <summary>
+    /// Self-registration. Off by default (<c>Registration:AllowSelfRegistration</c>): returns 404 with
+    /// code <c>registration_disabled</c> for any body, including an empty one.
+    /// </summary>
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Register)]
     [ProducesResponseType(typeof(AuthResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponseModel>> Register(
-        [FromBody] RegisterRequestModel request,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RegisterRequestModel? request,
         CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _auth.RegisterAsync(request, ClientInfo(), cancellationToken);
+            var result = await _auth.RegisterAsync(request ?? new RegisterRequestModel(), ClientInfo(), cancellationToken);
             return Ok(result);
+        }
+        catch (FeatureDisabledException ex)
+        {
+            return NotFound(new { code = ex.Code, message = ex.Message });
         }
         catch (DuplicateEmailException ex)
         {
@@ -46,8 +61,11 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.SignIn)]
+    [EmailRateLimit(AuthRateLimitPolicies.SignInEmail)]
     [ProducesResponseType(typeof(AuthResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponseModel>> Login(
         [FromBody] LoginRequestModel request,
         CancellationToken cancellationToken)
@@ -65,8 +83,10 @@ public class AuthController : ControllerBase
 
     [HttpPost("refresh")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
     [ProducesResponseType(typeof(AuthResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponseModel>> Refresh(
         [FromBody] RefreshTokenRequestModel request,
         CancellationToken cancellationToken)
@@ -95,7 +115,10 @@ public class AuthController : ControllerBase
 
     [HttpPost("forgot-password")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.ForgotPassword)]
+    [EmailRateLimit(AuthRateLimitPolicies.ForgotPasswordEmail)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ForgotPassword(
         [FromBody] ForgotPasswordRequestModel request,
         CancellationToken cancellationToken)
@@ -106,8 +129,10 @@ public class AuthController : ControllerBase
 
     [HttpPost("reset-password")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.ResetPassword)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ResetPassword(
         [FromBody] ResetPasswordRequestModel request,
         CancellationToken cancellationToken)

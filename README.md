@@ -39,7 +39,9 @@ flowchart LR
 
 ## Authentication
 
-The single host **issues** user JWTs at **`/api/auth/login`** and **validates** those same tokens in-process for protected EMS endpoints (no remote JWKS fetch). EMS endpoints require an `Authorization: Bearer <token>` header except **`/api/auth/*`** (login, register, refresh, revoke, forgot/reset password), invitation acceptance, `/.well-known/jwks.json`, and **`/health`**. OpenAPI (`/openapi/v1.json`) is anonymous in Development only.
+The single host **issues** user JWTs at **`/api/auth/login`** and **validates** those same tokens in-process for protected EMS endpoints (no remote JWKS fetch). EMS endpoints require an `Authorization: Bearer <token>` header except **`/api/auth/*`** (login, refresh, revoke, forgot/reset password), invitation acceptance, `/.well-known/jwks.json`, and **`/health`**. OpenAPI (`/openapi/v1.json`) is anonymous in Development only.
+
+**Public self-registration is off by default:** `POST /api/auth/register` returns 404 (`registration_disabled`) unless `Registration:AllowSelfRegistration` is `true`. People join through employee invitations; the first admin comes from `SeedAdmin`. **Sign-in, refresh, forgot/reset password, registration and invitation acceptance are rate limited** per client IP (sign-in and forgot-password also per email) and answer `429` with `Retry-After` when a limit is reached. The limits are settings (`AuthRateLimiting`); see [Pukar.Usermanagement/README.md](Pukar.Usermanagement/README.md#sign-in-and-registration-protection).
 
 User accounts and roles are owned by the User Management bounded context and seeded from `EMS.API` (composition root) via the opt-in `SeedAdmin` configuration. EMS stores employee data and links employees to User Management accounts through `ExternalIdentityKey`. Every successfully created employee is automatically provisioned an inactive UM account + invitation through the `ProvisionEmployeeIdentity` outbox message.
 
@@ -65,6 +67,8 @@ Connection strings and other settings live under `EMS.API` (`appsettings.json`, 
 | `Jwt:SigningKey` | Symmetric signing key (32+ chars) used to both issue and validate tokens; keep in User Secrets/env |
 | `Smtp:*` | Invitation / password-reset email delivery |
 | `SeedAdmin:*` | Opt-in admin seed (`Enabled=false` and `ResetExistingPassword=false` by default) |
+| `Registration:AllowSelfRegistration` | Public self-registration (`false` by default; invitations are the way in) |
+| `AuthRateLimiting:*` | Sign-in and password-recovery rate limits (on by default; settings listed in [Pukar.Usermanagement/README.md](Pukar.Usermanagement/README.md#sign-in-and-registration-protection)) |
 | `ConnectionStrings:MongoLogs` | Optional; enables Serilog MongoDB sink and MongoDB health check when set |
 
 For local development, prefer [User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) so credentials are not committed:
