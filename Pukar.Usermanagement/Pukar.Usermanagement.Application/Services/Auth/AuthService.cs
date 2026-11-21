@@ -26,6 +26,7 @@ public sealed class AuthService : IAuthService
     private readonly JwtTokenOptions _jwtOptions;
     private readonly SmtpOptions _smtpOptions;
     private readonly PasswordResetOptions _passwordResetOptions;
+    private readonly RegistrationOptions _registrationOptions;
 
     public AuthService(
         IUserRepository users,
@@ -38,7 +39,8 @@ public sealed class AuthService : IAuthService
         IJwtTokenService jwt,
         IOptions<JwtTokenOptions> jwtOptions,
         IOptions<SmtpOptions> smtpOptions,
-        IOptions<PasswordResetOptions> passwordResetOptions)
+        IOptions<PasswordResetOptions> passwordResetOptions,
+        IOptions<RegistrationOptions> registrationOptions)
     {
         _users = users;
         _refreshTokens = refreshTokens;
@@ -51,6 +53,7 @@ public sealed class AuthService : IAuthService
         _jwtOptions = jwtOptions.Value;
         _smtpOptions = smtpOptions.Value;
         _passwordResetOptions = passwordResetOptions.Value;
+        _registrationOptions = registrationOptions.Value;
     }
 
     public async Task<AuthResponseModel> RegisterAsync(
@@ -58,6 +61,11 @@ public sealed class AuthService : IAuthService
         string? clientInfo,
         CancellationToken cancellationToken = default)
     {
+        // Checked first, before validation or any lookup, so a closed registration gives the same
+        // answer whether or not the email exists. Accounts come from invitations or an administrator.
+        if (!_registrationOptions.AllowSelfRegistration)
+            throw new FeatureDisabledException(RegistrationOptions.DisabledCode, RegistrationOptions.DisabledMessage);
+
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             throw new BusinessRuleException("Email and password are required.");
 

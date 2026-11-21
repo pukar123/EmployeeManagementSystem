@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Pukar.Usermanagement.API.Filters;
+using Pukar.Usermanagement.API.RateLimiting;
 using Pukar.Shared;
 using Pukar.Usermanagement.Application.Services.Invitations;
 using Pukar.Usermanagement.Contracts.Invitations;
@@ -20,8 +23,12 @@ public sealed class InvitationsController : ControllerBase
 
     [HttpPost("accept")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.AcceptInvitation)]
+    [AuthRequestSizeLimit]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Accept(
         [FromBody] AcceptInvitationRequestModel request,
         CancellationToken cancellationToken)

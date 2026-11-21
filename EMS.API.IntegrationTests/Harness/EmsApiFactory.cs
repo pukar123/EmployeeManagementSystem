@@ -26,6 +26,8 @@ namespace EMS.API.IntegrationTests.Harness;
 /// are the production registrations. Only these are swapped: both databases (EF Core InMemory),
 /// the background/seed hosted services, Mongo logging (turned off by setting) and the email sender.
 /// The real role sync service is wrapped (not replaced) by a recorder, see <see cref="RoleSyncRecorder"/>.
+/// A test-only startup filter lets a request choose its client IP (<see cref="TestClientIpStartupFilter"/>),
+/// so rate-limit tests can act as several clients; production code never reads that header.
 /// </summary>
 public sealed class EmsApiFactory : WebApplicationFactory<Program>
 {
@@ -50,6 +52,16 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
 
     private readonly string _appDatabaseName = $"ems-access-tests-{Guid.NewGuid():N}";
     private readonly string _userManagementDatabaseName = $"um-access-tests-{Guid.NewGuid():N}";
+    private readonly IReadOnlyDictionary<string, string?> _settings;
+
+    /// <param name="settings">
+    /// Extra host settings for this host only, applied after the harness defaults
+    /// (for example low <c>AuthRateLimiting</c> limits for a rate-limit fixture).
+    /// </param>
+    public EmsApiFactory(IReadOnlyDictionary<string, string?>? settings = null)
+    {
+        _settings = settings ?? new Dictionary<string, string?>();
+    }
 
     /// <summary>Starts the host and seeds <see cref="TestSeed"/>. Call once per fixture.</summary>
     public async Task InitialiseAsync(CancellationToken cancellationToken = default)
@@ -74,6 +86,26 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await change(db);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>Runs <paramref name="query"/> against the User Management database in a new scope.</summary>
+    public async Task<T> QueryUserManagementDatabaseAsync<T>(Func<UserManagementDbContext, Task<T>> query)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
+        return await query(db);
+    }
+
+    /// <summary>
+    /// Runs <paramref name="change"/> against the User Management database in a new scope, then saves.
+    /// The service provider is the same scope's, e.g. to hash a password with the registered <c>IPasswordHasher</c>.
+    /// </summary>
+    public async Task ChangeUserManagementDatabaseAsync(Func<UserManagementDbContext, IServiceProvider, Task> change)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
+        await change(db, scope.ServiceProvider);
         await db.SaveChangesAsync();
     }
 
@@ -116,6 +148,9 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
         // not from Cors:AllowedOrigins, and refuses to start outside Development without one.
         builder.UseSetting("Cors:0", "http://localhost");
 
+        foreach (var (key, value) in _settings)
+            builder.UseSetting(key, value);
+
         builder.ConfigureTestServices(services =>
         {
             RemoveHostedServices(services);
@@ -125,6 +160,8 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IEmailSender, NoOpEmailSender>();
 
             RecordRoleSyncs(services);
+
+            services.AddSingleton<IStartupFilter, TestClientIpStartupFilter>();
         });
     }
 

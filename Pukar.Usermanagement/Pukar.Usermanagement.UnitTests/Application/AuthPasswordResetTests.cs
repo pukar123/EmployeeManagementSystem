@@ -144,7 +144,8 @@ public sealed class AuthPasswordResetTests
             Mock.Of<IJwtTokenService>(),
             Options.Create(new JwtTokenOptions()),
             Options.Create(new SmtpOptions { WebAppBaseUrl = "http://localhost:3000" }),
-            Options.Create(new PasswordResetOptions { TokenExpirationMinutes = 30, RequestCooldownSeconds = 0 }));
+            Options.Create(new PasswordResetOptions { TokenExpirationMinutes = 30, RequestCooldownSeconds = 0 }),
+            Options.Create(new RegistrationOptions()));
     }
 
     private sealed class CapturingEmailSender : IEmailSender

@@ -34,6 +34,7 @@ public static class UserManagementServiceCollectionExtensions
         services.Configure<ServiceClientsOptions>(configuration.GetSection(ServiceClientsOptions.SectionName));
         services.Configure<PasswordPolicyOptions>(configuration.GetSection(PasswordPolicyOptions.SectionName));
         services.Configure<PasswordResetOptions>(configuration.GetSection(PasswordResetOptions.SectionName));
+        services.Configure<RegistrationOptions>(configuration.GetSection(RegistrationOptions.SectionName));
 
         if (registerDbContext)
         {

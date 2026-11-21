@@ -8,6 +8,7 @@ const TITLES: Record<Exclude<ApiAvailabilityKind, "unknown">, string> = {
   user_management_unavailable: "User Management unavailable",
   authentication_expired: "Authentication expired",
   identity_operation_pending: "Identity operation pending",
+  rate_limited: "Too many attempts",
 };
 
 type Props = {

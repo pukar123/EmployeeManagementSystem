@@ -247,6 +247,82 @@ public sealed class UserManagementIntegrationTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    [Test]
+    public async Task B05_UM_01_Register_IsOffByDefault_Returns404AndCreatesNoUser()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequestModel
+        {
+            Email = "self-register@example.com",
+            Password = "Password123!@",
+            UserName = "Self Register",
+        });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(body.RootElement.GetProperty("code").GetString(), Is.EqualTo("registration_disabled"));
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
+        Assert.That(db.Users.Any(u => u.NormalizedEmail == "SELF-REGISTER@EXAMPLE.COM"), Is.False);
+    }
+
+    [Test]
+    public async Task B05_UM_02_Register_WhenTurnedOn_ReturnsTokens()
+    {
+        RestartWithSettings(new Dictionary<string, string?>
+        {
+            ["Registration:AllowSelfRegistration"] = "true",
+        });
+
+        var response = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequestModel
+        {
+            Email = "allowed@example.com",
+            Password = "Password123!@",
+            UserName = "Allowed User",
+        });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var auth = await response.Content.ReadFromJsonAsync<AuthResponseModel>();
+        Assert.That(auth!.AccessToken, Is.Not.Empty);
+        Assert.That(auth.RefreshToken, Is.Not.Empty);
+    }
+
+    [Test]
+    public async Task B05_UM_03_Login_PerIpLimit_ThirdAttemptReturns429WithRetryAfter()
+    {
+        RestartWithSettings(new Dictionary<string, string?>
+        {
+            ["AuthRateLimiting:SignInPerIp:PermitLimit"] = "2",
+            ["AuthRateLimiting:SignInPerIp:WindowSeconds"] = "300",
+        });
+        var body = new LoginRequestModel { Email = "nobody@example.com", Password = "Wrong-password-1" };
+
+        var first = await _client.PostAsJsonAsync("/api/auth/login", body);
+        var second = await _client.PostAsJsonAsync("/api/auth/login", body);
+        var third = await _client.PostAsJsonAsync("/api/auth/login", body);
+
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(third.StatusCode, Is.EqualTo((HttpStatusCode)429));
+        Assert.That(third.Headers.RetryAfter?.Delta, Is.Not.Null, "429 must carry Retry-After in seconds.");
+        Assert.That(third.Headers.RetryAfter!.Delta!.Value.TotalSeconds, Is.GreaterThanOrEqualTo(1));
+        using var json = JsonDocument.Parse(await third.Content.ReadAsStringAsync());
+        Assert.That(json.RootElement.GetProperty("code").GetString(), Is.EqualTo("rate_limited"));
+    }
+
+    /// <summary>
+    /// Replaces this test's host with one that has extra settings (one host at a time, so the static
+    /// Serilog logger is never set up by two hosts at once). TearDown disposes the replacement.
+    /// </summary>
+    private void RestartWithSettings(IReadOnlyDictionary<string, string?> settings)
+    {
+        _client.Dispose();
+        _factory.Dispose();
+        _factory = new UmWebApplicationFactory(settings);
+        _client = _factory.CreateClient();
+        SeedRolesAndServiceClient();
+    }
+
     private void SeedRolesAndServiceClient()
     {
         using var scope = _factory.Services.CreateScope();
@@ -280,15 +356,26 @@ public sealed class UserManagementIntegrationTests
         }
     }
 
+    /// <summary>
+    /// Creates an active user directly in the database. Self-registration is off by default (B05),
+    /// so tests no longer depend on <c>/api/auth/register</c> to get a user.
+    /// </summary>
     private async Task RegisterUserAsync(string email, string password, string userName)
     {
-        var response = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequestModel
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        db.Users.Add(new User
         {
             Email = email,
-            Password = password,
+            NormalizedEmail = Pukar.Shared.EmailNormalizer.Normalize(email),
+            PasswordHash = hasher.HashPassword(password),
             UserName = userName,
+            IsActive = true,
+            MustChangePassword = false,
+            CreatedAtUtc = DateTime.UtcNow,
         });
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        await db.SaveChangesAsync();
     }
 
     private async Task<AuthResponseModel> LoginAsync(string email, string password)

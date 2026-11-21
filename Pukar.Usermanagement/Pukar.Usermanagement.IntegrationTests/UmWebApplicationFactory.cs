@@ -12,6 +12,16 @@ namespace Pukar.Usermanagement.IntegrationTests;
 public sealed class UmWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"um-tests-{Guid.NewGuid()}";
+    private readonly IReadOnlyDictionary<string, string?> _settings;
+
+    /// <param name="settings">
+    /// Extra configuration for this host only, applied after the defaults below
+    /// (e.g. <c>Registration:AllowSelfRegistration</c> or low <c>AuthRateLimiting</c> limits).
+    /// </param>
+    public UmWebApplicationFactory(IReadOnlyDictionary<string, string?>? settings = null)
+    {
+        _settings = settings ?? new Dictionary<string, string?>();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -32,6 +42,7 @@ public sealed class UmWebApplicationFactory : WebApplicationFactory<Program>
                 ["SeedAdmin:Enabled"] = "false",
                 ["Smtp:Host"] = "",
             });
+            config.AddInMemoryCollection(_settings);
         });
 
         builder.ConfigureServices(services =>

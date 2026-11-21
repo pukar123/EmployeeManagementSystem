@@ -20,10 +20,16 @@ public abstract class AccessTestFixture
     protected EmsApiFactory Factory
         => _factory ?? throw new InvalidOperationException("The API has not been started for this fixture.");
 
+    /// <summary>
+    /// Extra host settings for this fixture's API, applied after the harness defaults.
+    /// Override in a fixture that needs different settings (for example low rate limits).
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, string?>? HostSettings => null;
+
     [OneTimeSetUp]
     public async Task StartApiAsync()
     {
-        _factory = new EmsApiFactory();
+        _factory = new EmsApiFactory(HostSettings);
         await _factory.InitialiseAsync();
     }
 

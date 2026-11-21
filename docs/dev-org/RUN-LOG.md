@@ -60,3 +60,16 @@
 - PR: see the B04 pull request into development
 - Needs the CEO: (1) strongly consider moving B28 (self-promotion to admin) and B29 (personal-details leak) up to run next — they are small and serious; (2) delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
 
+## 2026-11-21 — B05 Close public self-registration and slow down password guessing
+- Outcome: Done (2 build rounds)
+- What changed:
+  - Anyone could previously create an account through the API. Public sign-up is now off by default (a setting can turn it back on); staff join through invitations, which still work, and first-time setup is unaffected.
+  - Sign-in, token refresh, forgot-password, reset-password, invitation acceptance and registration are now rate-limited per address, and sign-in and forgot-password also per email, so password guessing and inbox flooding are slowed down. All limits are settings with sensible defaults.
+  - When a limit is hit, the app shows a friendly "Too many attempts — try again in N seconds" message, and a blocked token refresh no longer signs people out.
+  - Oversized sign-in requests are refused, and the email-based limits store only a fixed-size fingerprint of each email, so they can't be used to fill the server's memory.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 263 of 263 .NET tests passed (45 new across EMS and User Management); 48 of 48 frontend tests passed (13 new) and the frontend lint and build passed in the team workspace.
+- Reviewer: strengths — limits in the right place, configurable, no personal details in errors or logs; no other anonymous route creates users; test-only parts can't reach production. Cons — one High problem introduced by this change (the email-based limiter could be used to exhaust memory) was found and fixed before merge (round 2). Remaining: behind a proxy or Docker every user may share one address, so one attacker could block sign-in for everyone, and IPv6 ranges can dodge the limits (High once proxied, new task B32); email-based limits count every attempt, so someone could keep a known user from signing in, and response times still hint whether an email exists (Medium, added to B13).
+- PR: see the B05 pull request into development
+- Needs the CEO: delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub. Consider moving B28/B29 (self-promotion to admin; personal-details leak) up the order.
+

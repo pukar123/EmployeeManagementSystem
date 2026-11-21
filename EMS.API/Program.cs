@@ -30,6 +30,7 @@ using EMS.Infrastructure.Integrations.UserManagement;
 using EMS.Infrastructure.Persistence.Auditing;
 using Pukar.Notifications.Application.Services;
 using Pukar.Notifications.Domain.Repositories;
+using Pukar.Usermanagement.API.Extensions;
 using Pukar.Usermanagement.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -81,7 +82,9 @@ try
                     "Cors:AllowedOrigins must contain at least one origin outside Development.");
             }
 
-            policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod();
+            // Retry-After is not a CORS-safelisted response header; expose it so the web app can read
+            // how long to wait after a 429 from the auth endpoints.
+            policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("Retry-After");
         });
     });
 
@@ -117,6 +120,10 @@ try
     builder.Services.AddPukarUserManagement(builder.Configuration, connectionStringName: "UserManagementDb", useRsaSigning: false);
 
     builder.Services.AddUserManagementJwtAuthentication(builder.Configuration);
+
+    // Sign-in, registration and password-recovery limits (AuthRateLimiting section). Per-IP limits use
+    // the connection address only; forwarded headers are not trusted (no reverse proxy is configured).
+    builder.Services.AddPukarUserManagementRateLimiting(builder.Configuration);
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
@@ -268,6 +275,9 @@ try
     app.UseStaticFiles();
 
     app.UseCors("EmsWeb");
+
+    // After CORS so 429 responses carry CORS headers and preflights are never counted.
+    app.UsePukarUserManagementRateLimiting();
 
     app.UseAuthentication();
     app.UseAuthorization();
