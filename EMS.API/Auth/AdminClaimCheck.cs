@@ -4,7 +4,8 @@ using Pukar.Usermanagement.Contracts.Roles;
 namespace EMS.API.Auth;
 
 /// <summary>
-/// The one test for "this signed-in user is an admin", shared by every admin policy so they cannot drift apart:
+/// The one test for "this signed-in user is an admin", shared by the admin policies so they cannot drift apart
+/// (all except <see cref="AuthorizationPolicyNames.LeaveAdmin"/>, which uses the Application leave admin check since B06):
 /// a <see cref="ClaimTypes.Role"/> claim equal to <c>Admin</c>, or a <c>roles</c> claim equal to <c>ADMIN</c>
 /// (both compared case-insensitively).
 /// </summary>

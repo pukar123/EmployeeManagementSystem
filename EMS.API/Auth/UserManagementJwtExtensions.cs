@@ -23,7 +23,6 @@ public static class UserManagementJwtExtensions
         AuthorizationPolicyNames.RoleAdmin,
         AuthorizationPolicyNames.OrganizationAdmin,
         AuthorizationPolicyNames.MenuAdmin,
-        AuthorizationPolicyNames.LeaveAdmin,
     ];
 
     public static IServiceCollection AddUserManagementJwtAuthentication(
@@ -78,9 +77,15 @@ public static class UserManagementJwtExtensions
 
         services.AddAuthorization(auth =>
         {
-            // Every admin policy uses the same admin test. The separate names are seams for finer roles later.
+            // These admin policies use the same admin test. The separate names are seams for finer roles later.
+            // LeaveAdmin is not in this list: since B06 it means "admin or leave.admin menu" (see below).
             foreach (var policyName in AdminPolicyNames)
                 auth.AddPolicy(policyName, policy => policy.RequireAssertion(context => AdminClaimCheck.IsAdmin(context.User)));
+
+            // LeaveAdmin follows the Application layer's single leave admin check (ILeaveAdminAccessService).
+            auth.AddPolicy(AuthorizationPolicyNames.LeaveAdmin, policy => policy
+                .RequireAuthenticatedUser()
+                .AddRequirements(new LeaveAdminRequirement()));
 
             auth.AddPolicy(ServiceScopes.UsersRead, p => RequireScope(p, ServiceScopes.UsersRead));
             auth.AddPolicy(ServiceScopes.UsersManage, p => RequireScope(p, ServiceScopes.UsersManage));
@@ -88,6 +93,9 @@ public static class UserManagementJwtExtensions
             auth.AddPolicy(ServiceScopes.RolesManage, p => RequireScope(p, ServiceScopes.RolesManage));
             auth.AddPolicy(ServiceScopes.InvitationsManage, p => RequireScope(p, ServiceScopes.InvitationsManage));
         });
+
+        // Scoped: the handler uses the request's identity and the EMS database through the Application check.
+        services.AddScoped<IAuthorizationHandler, LeaveAdminAuthorizationHandler>();
 
         return services;
     }

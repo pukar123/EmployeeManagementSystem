@@ -30,7 +30,7 @@ public class LeaveRequestServiceTests
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
         var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
         leaveEmployeeAccess
-            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.EnsureCanManageEmployeeLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var existing = new List<LeaveRequest>
@@ -84,7 +84,7 @@ public class LeaveRequestServiceTests
         var employeeRepo = new Mock<IBaseRepository<Employee>>();
         var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
         leaveEmployeeAccess
-            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.EnsureCanManageEmployeeLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         requestRepo.Setup(x => x.GetQueryable()).Returns(new List<LeaveRequest>().BuildMock());
@@ -264,7 +264,7 @@ public class LeaveRequestServiceTests
 
         var leaveEmployeeAccess = new Mock<ILeaveEmployeeAccessService>();
         leaveEmployeeAccess
-            .Setup(x => x.EnsureCanAccessEmployeeForLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.EnsureCanManageEmployeeLeaveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var sut = new LeaveRequestService(

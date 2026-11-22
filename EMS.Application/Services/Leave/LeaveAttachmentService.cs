@@ -28,10 +28,18 @@ public sealed class LeaveAttachmentService : ILeaveAttachmentService
         var leaveRequest = await _leaveRequestRepository.GetByIdAsync(leaveRequestId, cancellationToken)
             ?? throw new BusinessRuleException("Leave request was not found.");
 
-        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(leaveRequest.EmployeeId, cancellationToken);
+        await _leaveEmployeeAccess.EnsureCanAccessLeaveAttachmentsAsync(leaveRequest.EmployeeId, cancellationToken);
 
         var rows = await _attachmentRepository.GetByRequestIdAsync(leaveRequestId, cancellationToken);
         return rows.Select(ToResponse).ToList();
+    }
+
+    public async Task EnsureCanAttachToRequestAsync(int leaveRequestId, CancellationToken cancellationToken = default)
+    {
+        var request = await _leaveRequestRepository.GetByIdAsync(leaveRequestId, cancellationToken)
+            ?? throw new BusinessRuleException("Leave request was not found.");
+
+        await _leaveEmployeeAccess.EnsureCanAccessLeaveAttachmentsAsync(request.EmployeeId, cancellationToken);
     }
 
     public async Task<LeaveRequestAttachmentResponseModel> AddAsync(
@@ -45,7 +53,8 @@ public sealed class LeaveAttachmentService : ILeaveAttachmentService
         var request = await _leaveRequestRepository.GetByIdAsync(leaveRequestId, cancellationToken)
             ?? throw new BusinessRuleException("Leave request was not found.");
 
-        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(request.EmployeeId, cancellationToken);
+        // Checked again here so the service stays safe for any caller, not only the upload endpoint.
+        await _leaveEmployeeAccess.EnsureCanAccessLeaveAttachmentsAsync(request.EmployeeId, cancellationToken);
 
         var entity = new LeaveRequestAttachment
         {
@@ -71,7 +80,7 @@ public sealed class LeaveAttachmentService : ILeaveAttachmentService
         var leaveRequest = await _leaveRequestRepository.GetByIdAsync(entity.LeaveRequestId, cancellationToken)
             ?? throw new BusinessRuleException("Leave request was not found.");
 
-        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(leaveRequest.EmployeeId, cancellationToken);
+        await _leaveEmployeeAccess.EnsureCanAccessLeaveAttachmentsAsync(leaveRequest.EmployeeId, cancellationToken);
 
         return ToResponse(entity);
     }
@@ -86,7 +95,7 @@ public sealed class LeaveAttachmentService : ILeaveAttachmentService
         if (leaveRequest is null)
             return false;
 
-        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(leaveRequest.EmployeeId, cancellationToken);
+        await _leaveEmployeeAccess.EnsureCanAccessLeaveAttachmentsAsync(leaveRequest.EmployeeId, cancellationToken);
 
         _attachmentRepository.Remove(entity);
         await _attachmentRepository.SaveChangesAsync(cancellationToken);

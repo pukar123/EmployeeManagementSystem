@@ -184,6 +184,7 @@ try
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
     builder.Services.AddScoped<ILinkedEmployeeService, LinkedEmployeeService>();
+    builder.Services.AddScoped<ILeaveAdminAccessService, LeaveAdminAccessService>();
     builder.Services.AddScoped<ILeaveEmployeeAccessService, LeaveEmployeeAccessService>();
     builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
     builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();

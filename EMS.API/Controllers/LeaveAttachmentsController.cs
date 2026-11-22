@@ -55,6 +55,9 @@ public class LeaveAttachmentsController : ControllerBase
         string? relativePath = null;
         try
         {
+            // Access is checked before anything is written, so a refused caller never puts a file on disk.
+            await _attachmentService.EnsureCanAttachToRequestAsync(request.LeaveRequestId, cancellationToken);
+
             var file = await _storage.SaveAsync(request.LeaveRequestId, request.File, cancellationToken);
             relativePath = file.RelativePath;
             var created = await _attachmentService.AddAsync(
