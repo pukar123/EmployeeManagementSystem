@@ -73,3 +73,17 @@
 - PR: see the B05 pull request into development
 - Needs the CEO: delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub. Consider moving B28/B29 (self-promotion to admin; personal-details leak) up the order.
 
+## 2026-11-22 — B06 Fix the Leave permission leak
+- Outcome: Done
+- What changed:
+  - Before, anyone who could open the ordinary Leave page could view and change any employee's leave, and download their medical certificates. Now staff see and manage only their own leave.
+  - A direct manager can see their team's leave requests and balances (and approve or reject, as before), but cannot create, change or cancel them, and cannot open attachments, which are usually medical certificates.
+  - "Leave admin" now means one thing everywhere: an admin, or a role an admin has given the Leave Admin menu. By default only ADMIN has that menu, so nothing changes until an admin grants it to, say, an HR role, which can then run leave admin tasks.
+  - The leave summary, which had no access check at all, is now leave-admin only, and uploads are checked before the file is saved.
+  - The Leave Admin page no longer fires one request per employee when it is refused.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 363 of 363 .NET tests passed (100 new, including 56 "who can do what" rows for leave). Frontend lint, 48 tests and build passed in the team workspace.
+- Reviewer: strengths — every leave endpoint uses the right check, one leave-admin rule, no new route to other people's data, tests barely slower. Cons — leave admins aren't yet limited to their own organisation (Medium, new task B33); B28 must also stop people granting themselves a leave-admin role (added to B28); employees can cancel leave they've already taken and get the days back without approval (Medium, B34); a few test gaps (Low, B35). Attachment storage is still public until B08.
+- PR: see the B06 pull request into development
+- Needs the CEO: (1) confirm you're happy that roles you give the Leave Admin menu can run leave admin tasks (accrual, year reset, leave types) — by default only ADMIN has it; (2) delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
+

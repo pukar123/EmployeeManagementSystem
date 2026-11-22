@@ -1,16 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useEmployees } from "@/features/employees/hooks";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { getErrorMessage } from "@/shared/api/http-client";
 import { Button } from "@/shared/components/Button";
 import { useLeaveAdminSummary, useLeaveMutations, useLeaveTypes } from "../hooks";
-import { leaveService } from "../services/leaveService";
-import { leaveKeys } from "../services/query-keys";
-import type { LeaveAdminSummary, LeaveRequest } from "../types/leave.types";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -18,30 +14,6 @@ function todayIso(): string {
 
 function leaveUnitLabel(unit: 1 | 2): string {
   return unit === 2 ? "Hours" : "Days";
-}
-
-function buildFallbackSummary(organizationId: number | null, requests: LeaveRequest[]): LeaveAdminSummary {
-  const today = new Date().toISOString().slice(0, 10);
-  const appliedCount = requests.filter((x) => x.status === "Pending" || x.status === "ModifiedPending").length;
-  const approvedCount = requests.filter((x) => x.status === "Approved").length;
-  const rejectedCount = requests.filter((x) => x.status === "Rejected").length;
-  const cancelledCount = requests.filter((x) => x.status === "Cancelled").length;
-  const currentlyOnLeaveCount = requests.filter((x) => {
-    if (x.status !== "Approved" && x.status !== "Pending" && x.status !== "ModifiedPending") return false;
-    const start = x.startDateUtc.slice(0, 10);
-    const end = x.endDateUtc.slice(0, 10);
-    return start <= today && end >= today;
-  }).length;
-
-  return {
-    organizationId: organizationId ?? 0,
-    asOfDateUtc: `${today}T00:00:00Z`,
-    appliedCount,
-    approvedCount,
-    rejectedCount,
-    cancelledCount,
-    currentlyOnLeaveCount,
-  };
 }
 
 export function LeaveAdminSection() {
@@ -85,25 +57,11 @@ export function LeaveAdminSection() {
       });
   }, [importText, leaveTypeUnitById]);
 
-  const employeeIds = useMemo(() => (employeesQuery.data ?? []).map((x) => x.id), [employeesQuery.data]);
-  const fallbackRequestsQueries = useQueries({
-    queries: employeeIds.map((employeeId) => ({
-      queryKey: leaveKeys.requests(employeeId),
-      queryFn: () => leaveService.getLeaveRequests(employeeId),
-      enabled: organizationId != null && adminSummaryQuery.isError,
-      staleTime: 30_000,
-    })),
-  });
-  const fallbackSummary = useMemo(() => {
-    if (!adminSummaryQuery.isError || organizationId == null) return null;
-    if (fallbackRequestsQueries.some((q) => q.isLoading)) return null;
-    if (fallbackRequestsQueries.some((q) => q.isError)) return null;
-    const allRequests = fallbackRequestsQueries.flatMap((q) => q.data ?? []);
-    return buildFallbackSummary(organizationId, allRequests);
-  }, [adminSummaryQuery.isError, fallbackRequestsQueries, organizationId]);
-
-  const summary = adminSummaryQuery.data ?? fallbackSummary;
-  const usingFallback = !adminSummaryQuery.data && fallbackSummary != null;
+  // The summary endpoint is protected by the LeaveAdmin policy. If it fails (for example 403 for
+  // someone who is not a leave admin), show the error instead of rebuilding the counts from
+  // per-employee calls, which would only fail one by one as well.
+  const summary = adminSummaryQuery.data ?? null;
+  const summaryError = adminSummaryQuery.isError ? getErrorMessage(adminSummaryQuery.error) : null;
 
   const runImport = async () => {
     if (!organizationId) return;
@@ -163,9 +121,12 @@ export function LeaveAdminSection() {
         </div>
       </div>
 
-      {usingFallback ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
-          Summary API is unavailable, so these metrics are calculated from employee leave requests and may be delayed.
+      {summaryError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          Leave summary could not be loaded: {summaryError}
         </div>
       ) : null}
 

@@ -87,7 +87,8 @@ Acceptance:
 - Integration tests cover registration off, and the rate limit triggering.
 
 ## B06 — Fix the Leave permission leak
-Status: Todo
+Status: Done
+Done-note: 2026-11-22 feature/b06-leave-permission-leak
 Risk: High
 Areas: backend
 Depends-on: B03
@@ -388,6 +389,7 @@ Depends-on: B04
 Sources: Reviewer 2026-11-20 (B04 review)
 Goal: B04 locked job-position roles, but a user with the ordinary `employees.access` capability can still give anyone, including themselves, the ADMIN role through `PUT employees/{id}/roles/direct-overrides` and `PUT employees/{id}/linked-user/roles`, and a user with `employees.manage` can transfer themselves into a position that grants ADMIN. Add an admin-only guard in the services that grant or change roles (direct overrides, linked-user roles, and position changes that would add ADMIN), so the rule holds however the request arrives.
 Acceptance:
+- (Reviewer 2026-11-22) A non-admin cannot grant any role that carries the `leave.admin` menu (or other admin-level menus) through these routes either — since B06 such a role unlocks all leave, medical certificates, accrual and year reset.
 - A non-admin with `employees.access` gets 403 when granting ADMIN via direct overrides or linked-user roles; nothing changes.
 - A non-admin with `employees.manage` cannot move anyone (including themselves) into a position that grants ADMIN.
 - Admins can still do all three; "who can do what" tests cover each route.
@@ -436,4 +438,38 @@ Acceptance:
 - With a configured trusted proxy, limits key on the real client address; without one, forwarded headers are ignored.
 - Two IPv6 addresses in the same /64 share a bucket.
 - Integration tests cover both, and the Docker/compose setup documents the proxy setting.
+
+## B33 — Keep leave admins inside their own organisation
+Status: Todo
+Risk: High
+Areas: backend
+Depends-on: B06
+Sources: Reviewer 2026-11-22 (B06 review)
+Goal: Since B06 a role given the `leave.admin` menu counts as a leave admin, but nothing limits that person to their own organisation: they can run accrual or year reset, edit leave types and see the summary and any employee's leave across organisations. Scope leave-admin actions to the caller's linked employee's organisation (full admins keep cross-organisation access).
+Acceptance:
+- A non-admin leave admin gets 403 for another organisation's leave operations, types, summary and employees' leave.
+- Within their own organisation everything works as today; admins are unaffected.
+- Integration tests cover both.
+
+## B34 — Cancelling leave already taken needs approval
+Status: Todo
+Risk: High
+Areas: backend, frontend
+Depends-on: B06
+Sources: Reviewer 2026-11-22 (B06 review)
+Goal: An employee can cancel approved leave after it has started or finished and get the days back without anyone approving it. Only allow self-cancellation of approved leave before it starts; after that, cancellation must be done or approved by a leave admin or the manager, with a reason. Fits alongside the leave ledger (B17, B19).
+Acceptance:
+- An employee cancelling approved leave that has started gets a clear refusal; before the start date it still works.
+- A leave admin can cancel with a reason and the balance is restored once.
+- Tests cover before, during and after the leave dates.
+
+## B35 — Fill leave access test gaps
+Status: Todo
+Risk: Low
+Areas: backend
+Depends-on: B06
+Sources: Tester 2026-11-22 (B06 test report)
+Goal: Add the missing end-to-end tests: a manager of an archived employee is denied; the manager approvals queue shows only direct reports; a leave admin can reject, run accrual and year reset; a user with no role is refused the admin summary.
+Acceptance:
+- Each case above has an integration test that passes in CI.
 

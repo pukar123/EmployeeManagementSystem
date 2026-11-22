@@ -1,3 +1,4 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
 using Microsoft.AspNetCore.Authorization;
@@ -39,6 +40,7 @@ public class LeaveRequestsController : ControllerBase
     }
 
     [HttpGet("admin/summary")]
+    [Authorize(Policy = AuthorizationPolicyNames.LeaveAdmin)]
     public async Task<ActionResult<LeaveAdminSummaryResponseModel>> GetAdminSummary(
         [FromQuery] int organizationId,
         [FromQuery] DateTime? asOfDateUtc,

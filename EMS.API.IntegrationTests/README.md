@@ -6,7 +6,7 @@ EMS is a personal portfolio project.
 
 ## What is real and what is swapped
 
-Real (production registrations): token issuing (`IJwtTokenService`), bearer token validation, the global "must be signed in" rule, the admin policies (`AdminAccess`, `RoleAdmin`, `OrganizationAdmin`, `MenuAdmin`, `LeaveAdmin`), and every EMS access service (linked employee, menu and capability checks, manager scope).
+Real (production registrations): token issuing (`IJwtTokenService`), bearer token validation, the global "must be signed in" rule, the admin policies (`AdminAccess`, `RoleAdmin`, `OrganizationAdmin` and `MenuAdmin` mean "is an admin"; `LeaveAdmin` means "admin or `leave.admin` menu" since B06), and every EMS access service (linked employee, leave admin, menu and capability checks, manager scope).
 
 Swapped for tests only (`Harness/EmsApiFactory.cs`):
 
@@ -25,6 +25,7 @@ The auth rate limits (`AuthRateLimiting`) are on, with production defaults, in e
 |---|---|
 | `Access/WhoCanDoWhatTests.cs` | Read-only "who can do what" cases on the shared `TestSeed` (B03). |
 | `Access/AdminSetupAccessTests.cs` | B04: role assignment and setup writes are admin-only, their reads stay open. Adds its own rows (`Access/AdminSetupSeed.cs`), so its writes never touch the shared seed. |
+| `Access/LeaveAccessTests.cs` | B06: leave requests, balances and attachments are reachable only by the employee, their current direct manager (read and approve only, no attachments) and leave admins (admin or `leave.admin` menu); the `LeaveAdmin` policy and the admin summary follow the same rule. Adds its own rows and attachment files (`Access/LeaveAccessSeed.cs`) and removes the files afterwards. |
 | `Auth/RegistrationClosedTests.cs` | B05: default settings. Self-registration returns 404 and creates nothing; invitation acceptance and sign-in still work. |
 | `Auth/SignInPerIpLimitTests.cs` | B05: sign-in per-IP limit (3 in this host), the shared 429 shape, CORS headers on a 429, other endpoints unaffected. |
 | `Auth/PerEmailLimitTests.cs` | B05: per-email limits for sign-in and forgot-password (2 in this host), across IPs, with email normalisation, and no counter for an email over 320 characters. |
@@ -122,4 +123,5 @@ Self-registration is off by default, so never create test users through `/api/au
 
 - **Cases that change data create their own rows.** All tests in a fixture share one database, and the starting cases only read. If a case creates, updates or deletes something, it adds the rows it needs first (or lives in its own fixture class deriving from `AccessTestFixture`, which gets its own database). Never change the shared seed rows.
 - **Do not run fixtures in parallel.** `Program.cs` sets the static Serilog logger.
-- **Know what InMemory cannot do.** It has no real transactions, no filtered unique indexes, no generated `rowversion`, and no raw SQL (for example employee number allocation). Cases that depend on those are outside this harness; note them rather than forcing them through.
+- **Files written by a fixture are removed by it.** Leave attachments live under the API's web root (or `ContentRoot/wwwroot` when the test host has none), the same place the upload and download actions use. `LeaveAccessTests` writes its seed files there and deletes its request folders in `[OneTimeTearDown]`.
+- **Know what InMemory cannot do.** It has no real transactions, no filtered unique indexes, no generated `rowversion`, and no raw SQL (for example employee number allocation). Cases that depend on those are outside this harness; note them rather than forcing them through. For leave: `LeaveRequest.RowVersion` is never generated, so there are no 409 concurrency cases; a refused upload's "no file left" check relies on the API checking access before it stores the file, not on a rollback.

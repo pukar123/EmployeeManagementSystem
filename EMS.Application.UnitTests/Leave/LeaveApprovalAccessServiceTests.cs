@@ -92,6 +92,28 @@ public class LeaveApprovalAccessServiceTests
     }
 
     [Test]
+    public void EnsureCanDecideAsync_Denies_LeaveMenuOnlyNonManager_AndNeverAsksAboutLeaveMenu()
+    {
+        // U15 (B06): a role with only the "leave" menu, not a manager of the employee, is denied, and the
+        // shared leave admin check asks about the leave.admin menu, never the "leave" menu.
+        var sut = CreateSut(
+            out var permissions,
+            linked: new Employee { Id = 10, OrganizationId = OrganizationId },
+            employees: [new Employee { Id = 20, OrganizationId = OrganizationId, ManagerId = null }],
+            roleKeys: ["LEAVEUSER"],
+            managerTeamAllowed: false,
+            leaveAdminAllowed: false);
+
+        var ex = Assert.ThrowsAsync<BusinessRuleException>(() =>
+            sut.EnsureCanDecideAsync(Request(employeeId: 20), CancellationToken.None));
+
+        Assert.That(ex!.Message, Is.EqualTo(LeaveApprovalMessages.Denied));
+        permissions.Verify(
+            x => x.IsMenuAllowedAsync(It.IsAny<IReadOnlyList<string>>(), SelfServiceLeaveMenuId, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
     public async Task EnsureCanDecideAsync_Allows_LeaveAdminMenuForNonReport()
     {
         var sut = CreateSut(
@@ -174,6 +196,15 @@ public class LeaveApprovalAccessServiceTests
         string[]? roleKeys = null,
         bool managerTeamAllowed = false,
         bool leaveAdminAllowed = false)
+        => CreateSut(out _, linked, employees, roleKeys, managerTeamAllowed, leaveAdminAllowed);
+
+    private static LeaveApprovalAccessService CreateSut(
+        out Mock<IPermissionEvaluator> permissionsMock,
+        Employee? linked,
+        List<Employee>? employees = null,
+        string[]? roleKeys = null,
+        bool managerTeamAllowed = false,
+        bool leaveAdminAllowed = false)
     {
         var identity = new Mock<IIdentityContext>();
         identity.Setup(x => x.GetCurrent()).Returns(new UserIdentitySnapshot
@@ -215,11 +246,13 @@ public class LeaveApprovalAccessServiceTests
             menus.Object,
             employeeRepo.Object);
 
+        // The real shared leave admin check (B06), so these cases also prove the approval rule uses it.
+        var leaveAdminAccess = new LeaveAdminAccessService(identity.Object, permissions.Object, menus.Object);
+
+        permissionsMock = permissions;
         return new LeaveApprovalAccessService(
-            identity.Object,
             linkedService.Object,
-            permissions.Object,
-            menus.Object,
-            managerTeamAccess);
+            managerTeamAccess,
+            leaveAdminAccess);
     }
 }

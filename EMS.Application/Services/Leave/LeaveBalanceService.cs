@@ -24,7 +24,7 @@ public sealed class LeaveBalanceService : ILeaveBalanceService
         int employeeId,
         CancellationToken cancellationToken = default)
     {
-        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(employeeId, cancellationToken);
+        await _leaveEmployeeAccess.EnsureCanViewEmployeeLeaveAsync(employeeId, cancellationToken);
 
         var rows = await _leaveBalanceRepository.GetQueryable()
             .AsNoTracking()
@@ -40,7 +40,7 @@ public sealed class LeaveBalanceService : ILeaveBalanceService
         int leaveTypeId,
         CancellationToken cancellationToken = default)
     {
-        await _leaveEmployeeAccess.EnsureCanAccessEmployeeForLeaveAsync(employeeId, cancellationToken);
+        await _leaveEmployeeAccess.EnsureCanViewEmployeeLeaveAsync(employeeId, cancellationToken);
 
         var entity = await _leaveBalanceRepository.GetByEmployeeAndTypeAsync(
                 employeeId,

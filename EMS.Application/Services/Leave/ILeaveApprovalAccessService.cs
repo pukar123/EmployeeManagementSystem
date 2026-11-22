@@ -4,8 +4,9 @@ namespace EMS.Application.Services.Leave;
 
 /// <summary>
 /// Decides whether the current user may approve or reject a specific leave request.
-/// Allowed: the employee's current direct manager (manager.team permission) or a leave administrator
-/// (ADMIN/ADMINISTRATOR role or leave.admin menu permission). Never the employee themselves.
+/// Allowed: the employee's current direct manager (manager.team permission) or a leave admin as defined by
+/// <see cref="ILeaveAdminAccessService"/> (an admin, or a role granted the leave.admin menu).
+/// The reviewer must be linked to an employee in the request's organisation, and is never the employee themselves.
 /// </summary>
 public interface ILeaveApprovalAccessService
 {
