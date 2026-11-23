@@ -40,26 +40,30 @@ export type AttendanceSummary = {
 };
 
 export type CheckInRequest = {
-  employeeId: number;
+  /** Leave out to act for your own linked employee. Only attendance admins may send someone else's id. */
+  employeeId?: number;
   checkInAtUtc?: string;
   latitude?: number;
   longitude?: number;
 };
 
 export type CheckOutRequest = {
-  employeeId: number;
+  /** Leave out to act for your own linked employee. Only attendance admins may send someone else's id. */
+  employeeId?: number;
   checkOutAtUtc?: string;
   latitude?: number;
   longitude?: number;
 };
 
 export type StartBreakRequest = {
-  employeeId: number;
+  /** Leave out to act for your own linked employee. Only attendance admins may send someone else's id. */
+  employeeId?: number;
   startAtUtc?: string;
 };
 
 export type EndBreakRequest = {
-  employeeId: number;
+  /** Leave out to act for your own linked employee. Only attendance admins may send someone else's id. */
+  employeeId?: number;
   endAtUtc?: string;
 };
 

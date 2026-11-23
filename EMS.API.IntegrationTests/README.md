@@ -6,7 +6,7 @@ EMS is a personal portfolio project.
 
 ## What is real and what is swapped
 
-Real (production registrations): token issuing (`IJwtTokenService`), bearer token validation, the global "must be signed in" rule, the admin policies (`AdminAccess`, `RoleAdmin`, `OrganizationAdmin` and `MenuAdmin` mean "is an admin"; `LeaveAdmin` means "admin or `leave.admin` menu" since B06), and every EMS access service (linked employee, leave admin, menu and capability checks, manager scope).
+Real (production registrations): token issuing (`IJwtTokenService`), bearer token validation, the global "must be signed in" rule, the admin policies (`AdminAccess`, `RoleAdmin`, `OrganizationAdmin` and `MenuAdmin` mean "is an admin"; `LeaveAdmin` means "admin or `leave.admin` menu" since B06; `AttendanceAdmin` means "admin or `attendance.admin` menu" since B07), and every EMS access service (linked employee, leave admin, attendance admin, menu and capability checks, manager scope).
 
 Swapped for tests only (`Harness/EmsApiFactory.cs`):
 
@@ -26,6 +26,7 @@ The auth rate limits (`AuthRateLimiting`) are on, with production defaults, in e
 | `Access/WhoCanDoWhatTests.cs` | Read-only "who can do what" cases on the shared `TestSeed` (B03). |
 | `Access/AdminSetupAccessTests.cs` | B04: role assignment and setup writes are admin-only, their reads stay open. Adds its own rows (`Access/AdminSetupSeed.cs`), so its writes never touch the shared seed. |
 | `Access/LeaveAccessTests.cs` | B06: leave requests, balances and attachments are reachable only by the employee, their current direct manager (read and approve only, no attachments) and leave admins (admin or `leave.admin` menu); the `LeaveAdmin` policy and the admin summary follow the same rule. Adds its own rows and attachment files (`Access/LeaveAccessSeed.cs`) and removes the files afterwards. |
+| `Access/AttendanceAccessTests.cs` | B07: check-in, check-out and breaks are for the caller's own linked employee (server times) unless the caller is an attendance admin (admin or `attendance.admin` menu); manual entries need the `AttendanceAdmin` policy; records and summaries are for self, attendance admins and the current direct manager; reports, analytics and exports are scoped on the server (self, self plus direct reports, or everyone for attendance admins), with content checks on the counts, the absenteeism head count and the CSV rows. Adds its own rows (`Access/AttendanceAccessSeed.cs`, ids 98xx); each state-changing case uses its own employee or open session. |
 | `Auth/RegistrationClosedTests.cs` | B05: default settings. Self-registration returns 404 and creates nothing; invitation acceptance and sign-in still work. |
 | `Auth/SignInPerIpLimitTests.cs` | B05: sign-in per-IP limit (3 in this host), the shared 429 shape, CORS headers on a 429, other endpoints unaffected. |
 | `Auth/PerEmailLimitTests.cs` | B05: per-email limits for sign-in and forgot-password (2 in this host), across IPs, with email normalisation, and no counter for an email over 320 characters. |

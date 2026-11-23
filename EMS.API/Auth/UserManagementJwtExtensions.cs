@@ -78,7 +78,8 @@ public static class UserManagementJwtExtensions
         services.AddAuthorization(auth =>
         {
             // These admin policies use the same admin test. The separate names are seams for finer roles later.
-            // LeaveAdmin is not in this list: since B06 it means "admin or leave.admin menu" (see below).
+            // LeaveAdmin and AttendanceAdmin are not in this list: since B06 and B07 they mean "admin or leave.admin menu"
+            // and "admin or attendance.admin menu" (see below).
             foreach (var policyName in AdminPolicyNames)
                 auth.AddPolicy(policyName, policy => policy.RequireAssertion(context => AdminClaimCheck.IsAdmin(context.User)));
 
@@ -86,6 +87,11 @@ public static class UserManagementJwtExtensions
             auth.AddPolicy(AuthorizationPolicyNames.LeaveAdmin, policy => policy
                 .RequireAuthenticatedUser()
                 .AddRequirements(new LeaveAdminRequirement()));
+
+            // AttendanceAdmin follows the Application layer's single attendance admin check (IAttendanceAdminAccessService).
+            auth.AddPolicy(AuthorizationPolicyNames.AttendanceAdmin, policy => policy
+                .RequireAuthenticatedUser()
+                .AddRequirements(new AttendanceAdminRequirement()));
 
             auth.AddPolicy(ServiceScopes.UsersRead, p => RequireScope(p, ServiceScopes.UsersRead));
             auth.AddPolicy(ServiceScopes.UsersManage, p => RequireScope(p, ServiceScopes.UsersManage));
@@ -96,6 +102,7 @@ public static class UserManagementJwtExtensions
 
         // Scoped: the handler uses the request's identity and the EMS database through the Application check.
         services.AddScoped<IAuthorizationHandler, LeaveAdminAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, AttendanceAdminAuthorizationHandler>();
 
         return services;
     }

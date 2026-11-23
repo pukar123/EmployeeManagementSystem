@@ -7,11 +7,13 @@ import { useEmployees } from "@/features/employees/hooks";
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { getErrorMessage } from "@/shared/api/http-client";
 import { Spinner } from "@/shared/components/Spinner";
+import { useAttendanceAccess } from "../hooks/useAttendanceAccess";
 import { useAttendanceExport } from "../hooks/useAttendanceExport";
 import { useAttendanceDailyReport, useAttendancePeriodReport } from "../hooks/useAttendanceReport";
 import type { AttendanceExportFormat } from "../types/attendance-analytics.types";
 import type { AttendanceReportFilter } from "../types/attendance-report.types";
 import { AttendanceExportMenu } from "./AttendanceExportMenu";
+import { AttendanceNotLinkedNotice } from "./AttendanceNotLinkedNotice";
 import { AttendanceReportFilters } from "./AttendanceReportFilters";
 import { AttendanceReportTable } from "./AttendanceReportTable";
 import { AttendanceTrendChart } from "./AttendanceTrendChart";
@@ -30,9 +32,14 @@ function triggerDownload(blob: Blob, fileName: string): void {
 }
 
 export function AttendanceReportsPage() {
-  const { organizationId } = useOrganizationContext();
-  const { data: employees = [] } = useEmployees();
-  const { data: departments = [] } = useDepartments();
+  const { organizationId: currentOrganizationId } = useOrganizationContext();
+  const access = useAttendanceAccess();
+  const canManageOthers = access.canManageOthers;
+  // Employee and department pickers are for attendance admins only; other staff are scoped by the server.
+  const { data: employees = [] } = useEmployees(canManageOthers);
+  const { data: departments = [] } = useDepartments(canManageOthers);
+  // Non-admins may only report on their own organisation (the server refuses any other).
+  const organizationId = canManageOthers ? currentOrganizationId : access.linkedOrganizationId;
 
   const [employeeId, setEmployeeId] = useState<number | null>(null);
   const [departmentId, setDepartmentId] = useState<number | null>(null);
@@ -40,13 +47,13 @@ export function AttendanceReportsPage() {
   const [fromDate, setFromDate] = useState(toIsoDate(new Date(new Date().setDate(new Date().getDate() - 30))));
   const [toDate, setToDate] = useState(toIsoDate(new Date()));
 
-  const filter: AttendanceReportFilter | null = organizationId
+  const filter: AttendanceReportFilter | null = organizationId && !access.isLoading
     ? {
         organizationId,
         fromDate,
         toDate,
-        employeeId: employeeId ?? undefined,
-        departmentId: departmentId ?? undefined,
+        employeeId: canManageOthers ? (employeeId ?? undefined) : undefined,
+        departmentId: canManageOthers ? (departmentId ?? undefined) : undefined,
         groupBy,
       }
     : null;
@@ -72,7 +79,19 @@ export function AttendanceReportsPage() {
     }
   };
 
-  if (!organizationId) {
+  if (access.isError) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
+        {getErrorMessage(access.error)}
+      </div>
+    );
+  }
+
+  if (!access.isLoading && !canManageOthers && access.linkedEmployeeId == null) {
+    return <AttendanceNotLinkedNotice />;
+  }
+
+  if (!organizationId || access.isLoading) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
@@ -111,7 +130,14 @@ export function AttendanceReportsPage() {
         onFromDateChange={setFromDate}
         onToDateChange={setToDate}
         onGroupByChange={setGroupBy}
+        showPeopleFilters={canManageOthers}
       />
+
+      {canManageOthers ? null : (
+        <p className="text-sm text-muted-foreground">
+          Showing your own attendance, and your direct reports&apos; if you manage a team.
+        </p>
+      )}
 
       {dailyQuery.isLoading || periodQuery.isLoading ? (
         <div className="flex justify-center py-16">

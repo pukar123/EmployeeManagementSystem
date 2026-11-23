@@ -24,6 +24,7 @@ public sealed class AttendanceRepository : BaseRepository<AttendanceRecord>, IAt
         DateTime toDate,
         int? employeeId,
         int? departmentId,
+        IReadOnlyCollection<int>? allowedEmployeeIds,
         CancellationToken cancellationToken = default)
     {
         var query = Context.Set<AttendanceRecord>()
@@ -34,6 +35,9 @@ public sealed class AttendanceRepository : BaseRepository<AttendanceRecord>, IAt
                 x.OrganizationId == organizationId &&
                 x.WorkDate >= fromDate.Date &&
                 x.WorkDate <= toDate.Date);
+
+        if (allowedEmployeeIds is not null)
+            query = query.Where(x => allowedEmployeeIds.Contains(x.EmployeeId));
 
         if (employeeId.HasValue)
             query = query.Where(x => x.EmployeeId == employeeId.Value);

@@ -5,7 +5,8 @@ namespace EMS.API.Auth;
 /// Controllers use these constants with <c>[Authorize(Policy = ...)]</c> instead of string literals.
 /// Each admin-area policy is its own name so that a finer role can be given one area later
 /// without touching the controllers. All of them mean "is an admin" except <see cref="LeaveAdmin"/>,
-/// which since B06 means "is a leave admin".
+/// which since B06 means "is a leave admin", and <see cref="AttendanceAdmin"/>, which since B07 means
+/// "is an attendance admin".
 /// </summary>
 public static class AuthorizationPolicyNames
 {
@@ -27,4 +28,11 @@ public static class AuthorizationPolicyNames
     /// layer's <c>ILeaveAdminAccessService</c> through <see cref="LeaveAdminAuthorizationHandler"/>.
     /// </summary>
     public const string LeaveAdmin = "LeaveAdmin";
+
+    /// <summary>
+    /// Manual attendance entries. Means "is an attendance admin": an admin, or a role granted the
+    /// <c>attendance.admin</c> menu, decided by the Application layer's <c>IAttendanceAdminAccessService</c> through
+    /// <see cref="AttendanceAdminAuthorizationHandler"/>.
+    /// </summary>
+    public const string AttendanceAdmin = "AttendanceAdmin";
 }

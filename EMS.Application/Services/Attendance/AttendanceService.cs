@@ -20,27 +20,31 @@ public sealed class AttendanceService : IAttendanceService
     private readonly IAttendanceBreakRepository _breakRepository;
     private readonly IBaseRepository<Employee> _employeeRepository;
     private readonly IBaseRepository<AttendancePolicy> _policyRepository;
+    private readonly IAttendanceEmployeeAccessService _access;
 
     public AttendanceService(
         IAttendanceRepository attendanceRepository,
         IAttendanceBreakRepository breakRepository,
         IBaseRepository<Employee> employeeRepository,
-        IBaseRepository<AttendancePolicy> policyRepository)
+        IBaseRepository<AttendancePolicy> policyRepository,
+        IAttendanceEmployeeAccessService access)
     {
         _attendanceRepository = attendanceRepository;
         _breakRepository = breakRepository;
         _employeeRepository = employeeRepository;
         _policyRepository = policyRepository;
+        _access = access;
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
     public async Task<AttendanceRecordResponseModel> CheckInAsync(CheckInRequestModel request, CancellationToken cancellationToken = default)
     {
-        var employee = await _employeeRepository.GetByIdAsync(request.EmployeeId, cancellationToken)
+        var target = await _access.ResolveActionTargetAsync(request.EmployeeId, cancellationToken);
+        var employee = await _employeeRepository.GetByIdAsync(target.EmployeeId, cancellationToken)
             ?? throw new BusinessRuleException("Employee was not found.");
-        var at = request.CheckInAtUtc ?? DateTime.UtcNow;
+        var at = ActionTime(target, request.CheckInAtUtc);
 
-        var open = await _attendanceRepository.GetOpenForEmployeeAsync(request.EmployeeId, cancellationToken);
+        var open = await _attendanceRepository.GetOpenForEmployeeAsync(target.EmployeeId, cancellationToken);
         if (open is not null)
             throw new BusinessRuleException("Employee already has an active attendance session.");
 
@@ -65,8 +69,9 @@ public sealed class AttendanceService : IAttendanceService
 
     public async Task<AttendanceRecordResponseModel> CheckOutAsync(CheckOutRequestModel request, CancellationToken cancellationToken = default)
     {
-        var at = request.CheckOutAtUtc ?? DateTime.UtcNow;
-        var open = await _attendanceRepository.GetOpenForEmployeeAsync(request.EmployeeId, cancellationToken)
+        var target = await _access.ResolveActionTargetAsync(request.EmployeeId, cancellationToken);
+        var at = ActionTime(target, request.CheckOutAtUtc);
+        var open = await _attendanceRepository.GetOpenForEmployeeAsync(target.EmployeeId, cancellationToken)
             ?? throw new BusinessRuleException("No active attendance session found.");
 
         var openBreak = await _breakRepository.GetOpenForAttendanceAsync(open.Id, cancellationToken);
@@ -90,8 +95,9 @@ public sealed class AttendanceService : IAttendanceService
 
     public async Task<AttendanceBreakResponseModel> StartBreakAsync(StartBreakRequestModel request, CancellationToken cancellationToken = default)
     {
-        var at = request.StartAtUtc ?? DateTime.UtcNow;
-        var open = await _attendanceRepository.GetOpenForEmployeeAsync(request.EmployeeId, cancellationToken)
+        var target = await _access.ResolveActionTargetAsync(request.EmployeeId, cancellationToken);
+        var at = ActionTime(target, request.StartAtUtc);
+        var open = await _attendanceRepository.GetOpenForEmployeeAsync(target.EmployeeId, cancellationToken)
             ?? throw new BusinessRuleException("No active attendance session found.");
 
         var currentBreak = await _breakRepository.GetOpenForAttendanceAsync(open.Id, cancellationToken);
@@ -114,8 +120,9 @@ public sealed class AttendanceService : IAttendanceService
 
     public async Task<AttendanceBreakResponseModel> EndBreakAsync(EndBreakRequestModel request, CancellationToken cancellationToken = default)
     {
-        var at = request.EndAtUtc ?? DateTime.UtcNow;
-        var open = await _attendanceRepository.GetOpenForEmployeeAsync(request.EmployeeId, cancellationToken)
+        var target = await _access.ResolveActionTargetAsync(request.EmployeeId, cancellationToken);
+        var at = ActionTime(target, request.EndAtUtc);
+        var open = await _attendanceRepository.GetOpenForEmployeeAsync(target.EmployeeId, cancellationToken)
             ?? throw new BusinessRuleException("No active attendance session found.");
 
         var currentBreak = await _breakRepository.GetOpenForAttendanceAsync(open.Id, cancellationToken)
@@ -133,6 +140,9 @@ public sealed class AttendanceService : IAttendanceService
 
     public async Task<AttendanceRecordResponseModel> CreateManualEntryAsync(ManualAttendanceEntryRequestModel request, CancellationToken cancellationToken = default)
     {
+        // Also guarded by the AttendanceAdmin policy; checked again here as defence in depth.
+        await _access.EnsureIsAttendanceAdminAsync(cancellationToken);
+
         if (request.CheckOutAtUtc <= request.CheckInAtUtc)
             throw new BusinessRuleException("Check-out must be later than check-in.");
 
@@ -167,6 +177,8 @@ public sealed class AttendanceService : IAttendanceService
         DateTime? toDate,
         CancellationToken cancellationToken = default)
     {
+        await _access.EnsureCanViewEmployeeAttendanceAsync(employeeId, cancellationToken);
+
         var query = _attendanceRepository.GetQueryable()
             .Include(x => x.Breaks)
             .Where(x => x.EmployeeId == employeeId);
@@ -190,6 +202,8 @@ public sealed class AttendanceService : IAttendanceService
         DateTime toDate,
         CancellationToken cancellationToken = default)
     {
+        await _access.EnsureCanViewEmployeeAttendanceAsync(employeeId, cancellationToken);
+
         var rows = await _attendanceRepository.GetQueryable()
             .Include(x => x.Breaks)
             .Where(x =>
@@ -216,6 +230,7 @@ public sealed class AttendanceService : IAttendanceService
         CancellationToken cancellationToken = default)
     {
         ValidateReportRange(request.FromDate, request.ToDate);
+        var scope = await _access.ResolveReportScopeAsync(request.OrganizationId, request.EmployeeId, cancellationToken);
 
         var rows = await _attendanceRepository.GetRecordsForReportAsync(
             request.OrganizationId,
@@ -223,6 +238,7 @@ public sealed class AttendanceService : IAttendanceService
             request.ToDate,
             request.EmployeeId,
             request.DepartmentId,
+            scope.EmployeeIds,
             cancellationToken);
 
         return rows
@@ -252,6 +268,7 @@ public sealed class AttendanceService : IAttendanceService
         CancellationToken cancellationToken = default)
     {
         ValidateReportRange(request.FromDate, request.ToDate);
+        var scope = await _access.ResolveReportScopeAsync(request.OrganizationId, request.EmployeeId, cancellationToken);
         var mode = NormalizeGrouping(request.GroupBy);
 
         var rows = await _attendanceRepository.GetRecordsForReportAsync(
@@ -260,6 +277,7 @@ public sealed class AttendanceService : IAttendanceService
             request.ToDate,
             request.EmployeeId,
             request.DepartmentId,
+            scope.EmployeeIds,
             cancellationToken);
 
         return rows
@@ -298,6 +316,7 @@ public sealed class AttendanceService : IAttendanceService
         CancellationToken cancellationToken = default)
     {
         ValidateReportRange(request.FromDate, request.ToDate);
+        var scope = await _access.ResolveReportScopeAsync(request.OrganizationId, request.EmployeeId, cancellationToken);
 
         var policy = await GetPolicyAsync(request.OrganizationId, cancellationToken);
         var rows = await _attendanceRepository.GetRecordsForReportAsync(
@@ -306,6 +325,7 @@ public sealed class AttendanceService : IAttendanceService
             request.ToDate,
             request.EmployeeId,
             request.DepartmentId,
+            scope.EmployeeIds,
             cancellationToken);
         var mapped = rows.Select(AttendanceMapper.ToResponse).ToList();
 
@@ -333,16 +353,18 @@ public sealed class AttendanceService : IAttendanceService
         CancellationToken cancellationToken = default)
     {
         ValidateReportRange(request.FromDate, request.ToDate);
+        var scope = await _access.ResolveReportScopeAsync(request.OrganizationId, request.EmployeeId, cancellationToken);
         var rows = await _attendanceRepository.GetRecordsForReportAsync(
             request.OrganizationId,
             request.FromDate,
             request.ToDate,
             request.EmployeeId,
             request.DepartmentId,
+            scope.EmployeeIds,
             cancellationToken);
 
         var workingDays = GetWeekdayCount(request.FromDate.Date, request.ToDate.Date);
-        var headCount = await GetHeadCountAsync(request, cancellationToken);
+        var headCount = await GetHeadCountAsync(request, scope, cancellationToken);
         var expectedWorkDays = workingDays * headCount;
         var presentDays = rows.Select(x => (x.EmployeeId, x.WorkDate.Date)).Distinct().Count();
         var absentDays = Math.Max(0, expectedWorkDays - presentDays);
@@ -366,12 +388,14 @@ public sealed class AttendanceService : IAttendanceService
         CancellationToken cancellationToken = default)
     {
         ValidateReportRange(request.FromDate, request.ToDate);
+        var scope = await _access.ResolveReportScopeAsync(request.OrganizationId, request.EmployeeId, cancellationToken);
         var records = await _attendanceRepository.GetRecordsForReportAsync(
             request.OrganizationId,
             request.FromDate,
             request.ToDate,
             request.EmployeeId,
             request.DepartmentId,
+            scope.EmployeeIds,
             cancellationToken);
         var rows = records.Select(AttendanceMapper.ToResponse).ToList();
         var format = request.Format.Trim().ToLowerInvariant();
@@ -384,6 +408,10 @@ public sealed class AttendanceService : IAttendanceService
             _ => throw new BusinessRuleException("Invalid export format. Allowed values are csv, xlsx, and pdf."),
         };
     }
+
+    /// <summary>Attendance admins may record a given time; everyone else gets the server's current UTC time.</summary>
+    private static DateTime ActionTime(AttendanceActionTarget target, DateTime? requestedAtUtc)
+        => target.MayUseClientTime && requestedAtUtc.HasValue ? requestedAtUtc.Value : DateTime.UtcNow;
 
     private async Task LoadBreaksAsync(AttendanceRecord record, CancellationToken cancellationToken)
     {
@@ -434,7 +462,14 @@ public sealed class AttendanceService : IAttendanceService
         };
     }
 
-    private async Task<int> GetHeadCountAsync(AttendanceReportFilterRequestModel request, CancellationToken cancellationToken)
+    /// <summary>
+    /// The number of employees the absenteeism rate is measured against. It follows the report scope, so a scoped
+    /// caller's rate is about their own people and never reveals the organisation's head count.
+    /// </summary>
+    private async Task<int> GetHeadCountAsync(
+        AttendanceReportFilterRequestModel request,
+        AttendanceReportScope scope,
+        CancellationToken cancellationToken)
     {
         if (request.EmployeeId.HasValue)
             return 1;
@@ -442,6 +477,9 @@ public sealed class AttendanceService : IAttendanceService
         var query = _employeeRepository.GetQueryable()
             .AsNoTracking()
             .Where(x => x.OrganizationId == request.OrganizationId && !x.IsArchived);
+
+        if (scope.EmployeeIds is { } allowedEmployeeIds)
+            query = query.Where(x => allowedEmployeeIds.Contains(x.Id));
 
         if (request.DepartmentId.HasValue)
             query = query.Where(x => x.DepartmentId == request.DepartmentId.Value);

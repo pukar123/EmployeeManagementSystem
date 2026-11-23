@@ -34,6 +34,9 @@ public sealed class EmsRbacSeedHostedService : IHostedService
                 new MenuSeedRow("manager.team", "My team", "/manager/team", null, 12, "users"),
                 new MenuSeedRow("departments", "Departments", "/departments", null, 20, "building2"),
                 new MenuSeedRow("attendance", "Attendance", "/attendance", null, 30, "clock3"),
+                // B07: grants "attendance admin" (record and read anyone's attendance). Also the sidebar link to the
+                // admin attendance page, because a menu with children shows as a group, not a link.
+                new MenuSeedRow("attendance.admin", "Attendance admin", "/attendance", "attendance", 0, "clock3"),
                 new MenuSeedRow("attendance.reports", "Reports", "/attendance/reports", "attendance", 10, "layout-list"),
                 new MenuSeedRow("attendance.analytics", "Analytics", "/attendance/analytics", "attendance", 20, "layout-list"),
                 new MenuSeedRow("leave", "Leave", "/leave", null, 32, "calendar-days"),

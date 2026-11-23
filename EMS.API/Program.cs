@@ -181,6 +181,8 @@ try
     builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
     builder.Services.AddScoped<ILeaveRequestAttachmentRepository, LeaveRequestAttachmentRepository>();
     builder.Services.AddScoped<ILeavePolicyRuleRepository, LeavePolicyRuleRepository>();
+    builder.Services.AddScoped<IAttendanceAdminAccessService, AttendanceAdminAccessService>();
+    builder.Services.AddScoped<IAttendanceEmployeeAccessService, AttendanceEmployeeAccessService>();
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
     builder.Services.AddScoped<ILinkedEmployeeService, LinkedEmployeeService>();

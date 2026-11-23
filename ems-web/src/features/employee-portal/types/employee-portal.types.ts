@@ -35,6 +35,8 @@ export type EmployeePortalEligibility = {
   linkedEmployeeId: number | null;
   linkedOrganizationId: number | null;
   canManageOtherEmployeesLeave: boolean;
+  /** True for attendance admins (admin, or the attendance.admin menu): they may record and read anyone's attendance. */
+  canManageOtherEmployeesAttendance: boolean;
 };
 
 export type EmployeePortalSummary = {

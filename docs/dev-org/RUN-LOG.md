@@ -87,3 +87,16 @@
 - PR: see the B06 pull request into development
 - Needs the CEO: (1) confirm you're happy that roles you give the Leave Admin menu can run leave admin tasks (accrual, year reset, leave types) — by default only ADMIN has it; (2) delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
 
+## 2026-11-23 — B07 Make attendance safe
+- Outcome: Done
+- What changed:
+  - Before, anyone signed in could clock in, clock out, take breaks or enter manual time for anyone. Now staff can only do these for themselves; sending someone else's employee is refused and nothing is recorded, and the server always uses the real time for ordinary staff.
+  - Manual time entry and acting for someone else are for attendance admins only: admins, or a role an admin gives the new "Attendance admin" menu (given to ADMIN automatically; nobody else by default).
+  - Reports, summaries and exports now show your own records, or your direct reports' too if you are a manager, or everyone for attendance admins. The limit is applied in the database, so changing the request can't widen it.
+  - The attendance, reports and analytics pages hide the employee picker and manual entry for everyone except attendance admins.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 495 of 495 .NET tests passed (132 new, including 40 "who can do what" cases for attendance). Frontend lint, 48 tests and build passed in the team workspace.
+- Reviewer: strengths — every attendance action now checked on the server; same clear pattern as leave; limits applied in the database; managers lose access immediately when a report moves. Cons — attendance admins aren't limited to their own organisation (added to B33); attendance uses UTC, so a morning check-in in Sydney lands on the previous day and nobody is ever counted late (new task B36, High); two check-ins at the same moment can open two sessions (B37); managers see precise GPS locations and admin actions save the admin's location against the person (B38); no record of who set an admin time (B39); exports show raw IDs instead of names (B40).
+- PR: see the B07 pull request into development
+- Needs the CEO: delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub; consider moving B28/B29 (self-promotion to admin; personal-details leak) and B36 (time zone) up the order.
+
