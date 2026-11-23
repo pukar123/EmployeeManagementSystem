@@ -1,10 +1,16 @@
+using EMS.API.Auth;
 using EMS.Application.DTOs.Attendance;
 using EMS.Application.Services.Attendance;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pukar.Shared;
 
 namespace EMS.API.Controllers;
 
+/// <summary>
+/// Attendance actions, reads and reports. Who may do what is decided in the Application layer (B07); this controller
+/// only maps access denials to 403 before its usual status codes.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class AttendanceController : ControllerBase
@@ -28,7 +34,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return Conflict(new { message = ex.Message });
+            return HandleActionError(ex);
         }
     }
 
@@ -44,7 +50,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return Conflict(new { message = ex.Message });
+            return HandleActionError(ex);
         }
     }
 
@@ -60,7 +66,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return Conflict(new { message = ex.Message });
+            return HandleActionError(ex);
         }
     }
 
@@ -76,11 +82,12 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return Conflict(new { message = ex.Message });
+            return HandleActionError(ex);
         }
     }
 
     [HttpPost("manual-entry")]
+    [Authorize(Policy = AuthorizationPolicyNames.AttendanceAdmin)]
     public async Task<ActionResult<AttendanceRecordResponseModel>> ManualEntry(
         [FromBody] ManualAttendanceEntryRequestModel request,
         CancellationToken cancellationToken)
@@ -92,7 +99,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return Conflict(new { message = ex.Message });
+            return HandleActionError(ex);
         }
     }
 
@@ -103,8 +110,15 @@ public class AttendanceController : ControllerBase
         [FromQuery] DateTime? toDate,
         CancellationToken cancellationToken)
     {
-        var result = await _attendanceService.GetEmployeeAttendanceAsync(employeeId, fromDate, toDate, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _attendanceService.GetEmployeeAttendanceAsync(employeeId, fromDate, toDate, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex) when (IsAccessDenied(ex))
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("summary")]
@@ -114,8 +128,15 @@ public class AttendanceController : ControllerBase
         [FromQuery] DateTime toDate,
         CancellationToken cancellationToken)
     {
-        var result = await _attendanceService.GetSummaryAsync(employeeId, fromDate, toDate, cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _attendanceService.GetSummaryAsync(employeeId, fromDate, toDate, cancellationToken);
+            return Ok(result);
+        }
+        catch (BusinessRuleException ex) when (IsAccessDenied(ex))
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("reports/daily")]
@@ -130,7 +151,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return HandleReportError(ex);
         }
     }
 
@@ -146,7 +167,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return HandleReportError(ex);
         }
     }
 
@@ -162,7 +183,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return HandleReportError(ex);
         }
     }
 
@@ -178,7 +199,7 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return HandleReportError(ex);
         }
     }
 
@@ -194,7 +215,31 @@ public class AttendanceController : ControllerBase
         }
         catch (BusinessRuleException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return HandleReportError(ex);
         }
     }
+
+    /// <summary>Self actions and manual entries: 403 for an access denial, 400 for "choose an employee", otherwise 409.</summary>
+    private ActionResult HandleActionError(BusinessRuleException ex)
+    {
+        if (IsAccessDenied(ex))
+            return Forbid();
+
+        if (string.Equals(ex.Message, AttendanceAccessMessages.ChooseEmployee, StringComparison.Ordinal))
+            return BadRequest(new { message = ex.Message });
+
+        return Conflict(new { message = ex.Message });
+    }
+
+    /// <summary>Reports, analytics and exports: 403 for an access denial, otherwise 400.</summary>
+    private ActionResult HandleReportError(BusinessRuleException ex)
+    {
+        if (IsAccessDenied(ex))
+            return Forbid();
+
+        return BadRequest(new { message = ex.Message });
+    }
+
+    private static bool IsAccessDenied(BusinessRuleException ex)
+        => string.Equals(ex.Message, AttendanceAccessMessages.Denied, StringComparison.Ordinal);
 }

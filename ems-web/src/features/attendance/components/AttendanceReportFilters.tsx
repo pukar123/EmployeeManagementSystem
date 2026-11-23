@@ -15,6 +15,11 @@ type AttendanceReportFiltersProps = {
   onFromDateChange: (value: string) => void;
   onToDateChange: (value: string) => void;
   onGroupByChange: (value: "week" | "month") => void;
+  /**
+   * Show the employee and department filters. Only attendance admins get them; for everyone else the server
+   * already limits reports to their own attendance and, for managers, their direct reports.
+   */
+  showPeopleFilters?: boolean;
 };
 
 export function AttendanceReportFilters({
@@ -30,40 +35,45 @@ export function AttendanceReportFilters({
   onFromDateChange,
   onToDateChange,
   onGroupByChange,
+  showPeopleFilters = true,
 }: AttendanceReportFiltersProps) {
   return (
     <div className="grid gap-4 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-6 dark:bg-card">
-      <label className="block">
-        <span className="text-xs font-medium text-muted-foreground">Employee</span>
-        <select
-          value={employeeId ?? ""}
-          onChange={(e) => onEmployeeChange(e.target.value ? Number(e.target.value) : null)}
-          className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
-        >
-          <option value="">All</option>
-          {employees.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {showPeopleFilters ? (
+        <>
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">Employee</span>
+            <select
+              value={employeeId ?? ""}
+              onChange={(e) => onEmployeeChange(e.target.value ? Number(e.target.value) : null)}
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
+            >
+              <option value="">All</option>
+              {employees.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      <label className="block">
-        <span className="text-xs font-medium text-muted-foreground">Department</span>
-        <select
-          value={departmentId ?? ""}
-          onChange={(e) => onDepartmentChange(e.target.value ? Number(e.target.value) : null)}
-          className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
-        >
-          <option value="">All</option>
-          {departments.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">Department</span>
+            <select
+              value={departmentId ?? ""}
+              onChange={(e) => onDepartmentChange(e.target.value ? Number(e.target.value) : null)}
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
+            >
+              <option value="">All</option>
+              {departments.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : null}
 
       <label className="block">
         <span className="text-xs font-medium text-muted-foreground">From</span>

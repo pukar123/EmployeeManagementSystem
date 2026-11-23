@@ -4,3 +4,5 @@ export { useAttendanceMutations } from "./useAttendanceMutations";
 export { useAttendanceDailyReport, useAttendancePeriodReport } from "./useAttendanceReport";
 export { useAttendancePunctuality, useAttendanceAbsenteeism } from "./useAttendanceAnalytics";
 export { useAttendanceExport } from "./useAttendanceExport";
+export { useAttendanceAccess } from "./useAttendanceAccess";
+export type { AttendanceAccess } from "./useAttendanceAccess";

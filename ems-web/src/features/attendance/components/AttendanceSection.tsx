@@ -8,8 +8,9 @@ import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { Button } from "@/shared/components/Button";
 import { Spinner } from "@/shared/components/Spinner";
 import { getErrorMessage } from "@/shared/api/http-client";
-import { useAttendanceMutations, useAttendanceSummary, useEmployeeAttendance } from "../hooks";
+import { useAttendanceAccess, useAttendanceMutations, useAttendanceSummary, useEmployeeAttendance } from "../hooks";
 import { AttendanceHistoryTable } from "./AttendanceHistoryTable";
+import { AttendanceNotLinkedNotice } from "./AttendanceNotLinkedNotice";
 import { BreakTrackerCard } from "./BreakTrackerCard";
 import { CheckInOutCard } from "./CheckInOutCard";
 import { ManualEntryModal } from "./ManualEntryModal";
@@ -31,13 +32,22 @@ function toIsoDate(date: Date): string {
 
 export function AttendanceSection() {
   const { organizationId } = useOrganizationContext();
-  const { data: employees = [], isLoading: employeesLoading } = useEmployees();
+  const access = useAttendanceAccess();
+  const canManageOthers = access.canManageOthers;
+  // Only attendance admins pick an employee. Everyone else sees their own attendance, so the employee list
+  // (which needs employees.view) is never requested for them.
+  const { data: employees = [], isLoading: employeesLoading } = useEmployees(canManageOthers);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [fromDate, setFromDate] = useState(toIsoDate(new Date(new Date().setDate(new Date().getDate() - 7))));
   const [toDate, setToDate] = useState(toIsoDate(new Date()));
 
-  const employeeId = selectedEmployeeId ?? employees[0]?.id ?? null;
+  const employeeId = canManageOthers
+    ? (selectedEmployeeId ?? employees[0]?.id ?? null)
+    : access.linkedEmployeeId;
+  // Self actions send no employee id; the server uses the caller's linked employee. Attendance admins send the
+  // selected employee.
+  const actionTarget = canManageOthers && employeeId != null ? { employeeId } : {};
 
   const attendanceQuery = useEmployeeAttendance(employeeId, fromDate, toDate);
   const summaryQuery = useAttendanceSummary(employeeId, fromDate, toDate);
@@ -61,7 +71,7 @@ export function AttendanceSection() {
     if (!employeeId) return;
     try {
       const gps = await getGpsCoords();
-      await checkIn.mutateAsync({ employeeId, latitude: gps?.latitude, longitude: gps?.longitude });
+      await checkIn.mutateAsync({ ...actionTarget, latitude: gps?.latitude, longitude: gps?.longitude });
       toast.success("Checked in.");
     } catch (e) {
       toast.error(getErrorMessage(e));
@@ -72,7 +82,7 @@ export function AttendanceSection() {
     if (!employeeId) return;
     try {
       const gps = await getGpsCoords();
-      await checkOut.mutateAsync({ employeeId, latitude: gps?.latitude, longitude: gps?.longitude });
+      await checkOut.mutateAsync({ ...actionTarget, latitude: gps?.latitude, longitude: gps?.longitude });
       toast.success("Checked out.");
     } catch (e) {
       toast.error(getErrorMessage(e));
@@ -82,7 +92,7 @@ export function AttendanceSection() {
   const doStartBreak = async () => {
     if (!employeeId) return;
     try {
-      await startBreak.mutateAsync({ employeeId });
+      await startBreak.mutateAsync({ ...actionTarget });
       toast.success("Break started.");
     } catch (e) {
       toast.error(getErrorMessage(e));
@@ -92,19 +102,31 @@ export function AttendanceSection() {
   const doEndBreak = async () => {
     if (!employeeId) return;
     try {
-      await endBreak.mutateAsync({ employeeId });
+      await endBreak.mutateAsync({ ...actionTarget });
       toast.success("Break ended.");
     } catch (e) {
       toast.error(getErrorMessage(e));
     }
   };
 
-  if (employeesLoading) {
+  if (access.isLoading || (canManageOthers && employeesLoading)) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
       </div>
     );
+  }
+
+  if (access.isError) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
+        {getErrorMessage(access.error)}
+      </div>
+    );
+  }
+
+  if (!canManageOthers && access.linkedEmployeeId == null) {
+    return <AttendanceNotLinkedNotice />;
   }
 
   return (
@@ -127,27 +149,31 @@ export function AttendanceSection() {
           >
             Analytics
           </Link>
-          <Button type="button" variant="secondary" onClick={() => setManualOpen(true)} disabled={!employeeId}>
-            Add manual entry
-          </Button>
+          {canManageOthers ? (
+            <Button type="button" variant="secondary" onClick={() => setManualOpen(true)} disabled={!employeeId}>
+              Add manual entry
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <label className="block">
-          <span className="text-xs font-medium text-muted-foreground">Employee</span>
-          <select
-            className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
-            value={employeeId ?? ""}
-            onChange={(e) => setSelectedEmployeeId(e.target.value ? Number(e.target.value) : null)}
-          >
-            {employees.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.firstName} {e.lastName}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className={`grid gap-4 ${canManageOthers ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {canManageOthers ? (
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">Employee</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm dark:bg-card"
+              value={employeeId ?? ""}
+              onChange={(e) => setSelectedEmployeeId(e.target.value ? Number(e.target.value) : null)}
+            >
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.firstName} {e.lastName}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="block">
           <span className="text-xs font-medium text-muted-foreground">From</span>
           <input
@@ -208,7 +234,7 @@ export function AttendanceSection() {
         <AttendanceHistoryTable rows={rows} />
       )}
 
-      {employeeId != null && organizationId != null ? (
+      {canManageOthers && employeeId != null && organizationId != null ? (
         <ManualEntryModal
           open={manualOpen}
           organizationId={organizationId}
