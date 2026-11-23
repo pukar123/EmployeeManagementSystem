@@ -103,7 +103,8 @@ Acceptance:
 - Unit and integration tests cover all four cases.
 
 ## B07 — Make attendance safe
-Status: Todo
+Status: Done
+Done-note: 2026-11-23 feature/b07-safe-attendance
 Risk: High
 Areas: backend, frontend
 Depends-on: B03
@@ -447,6 +448,7 @@ Depends-on: B06
 Sources: Reviewer 2026-11-22 (B06 review)
 Goal: Since B06 a role given the `leave.admin` menu counts as a leave admin, but nothing limits that person to their own organisation: they can run accrual or year reset, edit leave types and see the summary and any employee's leave across organisations. Scope leave-admin actions to the caller's linked employee's organisation (full admins keep cross-organisation access).
 Acceptance:
+- (Reviewer 2026-11-23) The same organisation limit applies to attendance admins (roles given the `attendance.admin` menu): manual entries, acting for others, reports and exports stay within their own organisation.
 - A non-admin leave admin gets 403 for another organisation's leave operations, types, summary and employees' leave.
 - Within their own organisation everything works as today; admins are unaffected.
 - Integration tests cover both.
@@ -473,3 +475,60 @@ Goal: Add the missing end-to-end tests: a manager of an archived employee is den
 Acceptance:
 - Each case above has an integration test that passes in CI.
 
+## B36 — Attendance dates and lateness in the organisation's time zone
+Status: Todo
+Risk: High
+Areas: backend, frontend
+Depends-on: B07
+Sources: Reviewer 2026-11-23 (B07 review)
+Goal: Attendance work dates and the 'late' rule use UTC, so a morning check-in in Sydney is recorded on the previous day and 'late after 09:15' is measured in UTC, so effectively nobody is ever late. Store an organisation time zone (default Australia/Sydney), compute work dates, lateness and daily/period summaries in that zone, and show local times in the app.
+Acceptance:
+- A 08:30 Sydney check-in is dated that Sydney day and is on time; 09:30 is late.
+- Summaries and exports group by local date.
+- Daylight-saving changes are handled (tests on both sides of the change).
+
+## B37 — Only one open attendance session per person
+Status: Todo
+Risk: Medium
+Areas: backend, migration
+Depends-on: B27
+Sources: Reviewer 2026-11-23 (B07 review)
+Goal: Two check-ins sent at the same moment can create two open sessions for one person. Add a database rule (filtered unique index on employee + open session) and turn the clash into a clear 'already checked in' response.
+Acceptance:
+- Two simultaneous check-ins create exactly one open session (proved on the SQL Server test database from B27).
+- The second caller gets a clear 409 message.
+
+## B38 — Protect check-in location data
+Status: Todo
+Risk: Medium
+Areas: backend, frontend
+Depends-on: B07
+Sources: Reviewer 2026-11-23 (B07 review)
+Goal: Managers currently see the precise GPS position of their reports' check-ins, and when an admin clocks someone in, the admin's own location is saved against that person. Do not record a location for actions done on someone else's behalf, and show managers only whether a location was captured (or a coarse area), keeping precise coordinates for attendance admins.
+Acceptance:
+- Admin-on-behalf actions store no location.
+- Managers' views and exports contain no precise coordinates; attendance admins still see them.
+- Tests cover each role.
+
+## B39 — Record who changed attendance times
+Status: Todo
+Risk: Medium
+Areas: backend, frontend
+Depends-on: B07
+Sources: Reviewer 2026-11-23 (B07 review)
+Goal: When an attendance admin sets or corrects a time (manual entry or clocking someone in or out), there is no visible record of who did it or why, and no sensible limits. Require a reason for admin-set times, record the admin and reason on the record, limit how far back or forward a time can be set, and show 'entered by' in the admin views.
+Acceptance:
+- Admin-set times require a reason and store who set them.
+- Times outside the allowed window are rejected with a clear message.
+- Admin views and exports show who entered the time.
+
+## B40 — Attendance exports show names, not raw IDs
+Status: Todo
+Risk: Low
+Areas: backend
+Depends-on: B07
+Sources: Reviewer 2026-11-23 (B07 review)
+Goal: PDF and Excel attendance exports show an EmployeeId column and no names, which goes against the project rule of never showing raw database IDs to people. Show employee number and name instead.
+Acceptance:
+- Exports show employee number and name; no raw database ID column.
+- Export tests updated.
