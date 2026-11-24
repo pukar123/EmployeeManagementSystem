@@ -24,8 +24,11 @@ public class DocumentResponseModel
 
     public string ContentType { get; set; } = string.Empty;
 
-    /// <summary>Relative URL path for download (same host as API).</summary>
-    public string StoredRelativePath { get; set; } = string.Empty;
+    /// <summary>
+    /// Authorised download endpoint relative to the API origin (<c>/api/Documents/{id}/file</c>). The storage path is
+    /// never returned: clients download through this endpoint with a signed-in request.
+    /// </summary>
+    public string DownloadUrl { get; set; } = string.Empty;
 
     public DateTime CreatedAtUtc { get; set; }
 

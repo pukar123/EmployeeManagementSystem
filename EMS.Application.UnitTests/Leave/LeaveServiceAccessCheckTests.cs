@@ -103,8 +103,9 @@ public class LeaveServiceAccessCheckTests
         {
             () => sut.GetByRequestIdAsync(RequestId, CancellationToken.None),
             () => sut.EnsureCanAttachToRequestAsync(RequestId, CancellationToken.None),
-            () => sut.AddAsync(RequestId, "note.pdf", "application/pdf", 10, "/attachments/Leave/77/x.pdf", CancellationToken.None),
+            () => sut.AddAsync(RequestId, "note.pdf", "application/pdf", 10, "Leave/77/x.pdf", CancellationToken.None),
             () => sut.GetByIdAsync(AttachmentId, CancellationToken.None),
+            () => sut.GetStoredFileAsync(AttachmentId, CancellationToken.None),
             () => sut.DeleteAsync(AttachmentId, CancellationToken.None),
         };
 

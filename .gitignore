@@ -153,6 +153,7 @@ Pukar.Usermanagement/Pukar.Usermanagement.IntegrationTests/test-rsa-key.pem
 # Uploaded attachments (do not commit user files)
 EMS.API/wwwroot/attachments/
 EMS.API/wwwroot/uploads/
+EMS.API/App_Data/
 
 # Local build/publish output folders (for example artifacts/tmp-api-build). Never commit binaries.
 artifacts/

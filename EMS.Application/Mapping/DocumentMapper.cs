@@ -1,3 +1,4 @@
+using System.Globalization;
 using EMS.Application.DTOs.Document;
 using EMS.Domain.DbModels;
 
@@ -22,9 +23,13 @@ internal static class DocumentMapper
             FileKind = entity.FileKind,
             OriginalFileName = entity.OriginalFileName,
             ContentType = entity.ContentType,
-            StoredRelativePath = entity.StoredRelativePath,
+            DownloadUrl = DownloadUrlFor(entity.Id),
             CreatedAtUtc = entity.CreatedAtUtc,
             UpdatedAtUtc = entity.UpdatedAtUtc,
         };
     }
+
+    /// <summary>The authorised download endpoint for a document, relative to the API origin.</summary>
+    public static string DownloadUrlFor(int documentId)
+        => $"/api/Documents/{documentId.ToString(CultureInfo.InvariantCulture)}/file";
 }

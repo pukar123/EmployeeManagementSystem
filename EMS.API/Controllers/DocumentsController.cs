@@ -12,16 +12,16 @@ public class DocumentsController : ControllerBase
 {
     private readonly IDocumentService _documents;
     private readonly LocalDocumentFileStorage _storage;
-    private readonly IWebHostEnvironment _env;
+    private readonly PrivateFileStore _store;
 
     public DocumentsController(
         IDocumentService documents,
         LocalDocumentFileStorage storage,
-        IWebHostEnvironment env)
+        PrivateFileStore store)
     {
         _documents = documents;
         _storage = storage;
-        _env = env;
+        _store = store;
     }
 
     [HttpGet("types")]
@@ -66,7 +66,7 @@ public class DocumentsController : ControllerBase
         {
             LocalDocumentFileStorage.ValidateContentOrThrow(form.File);
             var savedFile = await _storage.SaveAsync(form.EmployeeId, form.File, cancellationToken);
-            relativePath = savedFile.RelativePath;
+            relativePath = savedFile.StorageKey;
             var contentType = savedFile.ContentType;
             var kind = savedFile.Kind;
 
@@ -120,11 +120,12 @@ public class DocumentsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var existing = await _documents.GetByIdAsync(id, cancellationToken);
-        if (existing is null)
+        var stored = await _documents.GetStoredFileAsync(id, cancellationToken);
+        if (stored is null)
             return NotFound();
 
-        _storage.TryDelete(existing.StoredRelativePath);
+        // An unsafe or legacy path deletes nothing on disk; the row is still removed.
+        _storage.TryDelete(stored.StoragePath);
         var deleted = await _documents.DeleteAsync(id, cancellationToken);
         return deleted ? NoContent() : NotFound();
     }
@@ -132,18 +133,11 @@ public class DocumentsController : ControllerBase
     [HttpGet("{id:int}/file")]
     public async Task<IActionResult> Download(int id, CancellationToken cancellationToken)
     {
-        var doc = await _documents.GetByIdAsync(id, cancellationToken);
-        if (doc is null)
+        var stored = await _documents.GetStoredFileAsync(id, cancellationToken);
+        if (stored is null || !_store.TryResolve(stored.StoragePath, out var full) || !System.IO.File.Exists(full))
             return NotFound();
 
-        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-        var relative = doc.StoredRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var full = Path.GetFullPath(Path.Combine(webRoot, relative));
-        var root = Path.GetFullPath(webRoot);
-        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(full))
-            return NotFound();
-
-        return PhysicalFile(full, doc.ContentType, doc.OriginalFileName);
+        return PhysicalFile(full, FileDownloadHeaders.SafeContentType(stored.ContentType), FileDownloadHeaders.SafeFileName(stored.FileName));
     }
 
     private static DateTime? ParseOptionalDate(string? value)

@@ -14,8 +14,9 @@ namespace EMS.API.IntegrationTests.Access;
 /// <c>LEAVESETTINGSONLY</c> only <c>leave.admin.settings</c>. Menu ids are looked up by key.</item>
 /// <item>LT1, an active leave type in O1, and a balance of 100 days on it for M1, E1 and E2.</item>
 /// <item>Pending requests on separate single days, one per case that changes a request (see the constants).</item>
-/// <item>Attachments with a small real file each, written where the API stores and reads leave attachments
-/// (see <see cref="AttachmentRoot"/>), so allowed downloads return 200.</item>
+/// <item>Attachments with a small real file each, written under the factory's private root
+/// (<see cref="EmsApiFactory.PrivateRootPath"/>, where the API stores and reads leave attachments since B08),
+/// so allowed downloads return 200.</item>
 /// </list>
 /// </summary>
 public static class LeaveAccessSeed
@@ -60,20 +61,14 @@ public static class LeaveAccessSeed
     public static DateTime FreeDay(int slot)
         => new DateTime(2027, 3, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(slot);
 
+    /// <summary>The storage key saved on the row, relative to the private root (B08).</summary>
     public static string AttachmentRelativePath(int requestId, int attachmentId)
-        => $"/attachments/Leave/{requestId}/b06-{attachmentId}.txt";
+        => $"Leave/{requestId}/b06-{attachmentId}.txt";
 
-    /// <summary>
-    /// Where the API keeps leave attachment files: the web root, or <c>ContentRoot/wwwroot</c> when the test host
-    /// has no web root (the same rule <c>LocalLeaveAttachmentStorage</c> and the download action use).
-    /// </summary>
-    public static string AttachmentRoot(string? webRootPath, string contentRootPath)
-        => webRootPath ?? Path.Combine(contentRootPath, "wwwroot");
+    public static string PhysicalPath(string privateRoot, string storageKey)
+        => Path.Combine(privateRoot, storageKey.Replace('/', Path.DirectorySeparatorChar));
 
-    public static string PhysicalPath(string webRoot, string relativePath)
-        => Path.Combine(webRoot, relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-
-    internal static async Task AddRowsAsync(AppDbContext db, string webRoot)
+    internal static async Task AddRowsAsync(AppDbContext db, string privateRoot)
     {
         var now = DateTime.UtcNow;
         var o1 = TestSeed.O1.Id;
@@ -130,18 +125,18 @@ public static class LeaveAccessSeed
             });
         }
 
-        AddAttachment(db, webRoot, AttachmentE1, RequestE1Read, now);
-        AddAttachment(db, webRoot, AttachmentE2, RequestE2Read, now);
-        AddAttachment(db, webRoot, AttachmentE1DeleteSelf, RequestE1Read, now);
-        AddAttachment(db, webRoot, AttachmentE1DeleteOfficer, RequestE1Read, now);
+        AddAttachment(db, privateRoot, AttachmentE1, RequestE1Read, now);
+        AddAttachment(db, privateRoot, AttachmentE2, RequestE2Read, now);
+        AddAttachment(db, privateRoot, AttachmentE1DeleteSelf, RequestE1Read, now);
+        AddAttachment(db, privateRoot, AttachmentE1DeleteOfficer, RequestE1Read, now);
     }
 
     /// <summary>Removes every attachment folder this fixture's requests own, including files uploaded by cases.</summary>
-    internal static void DeleteFiles(string webRoot)
+    internal static void DeleteFiles(string privateRoot)
     {
         foreach (var requestId in RequestIds)
         {
-            var folder = Path.Combine(webRoot, "attachments", "Leave", requestId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            var folder = Path.Combine(privateRoot, "Leave", requestId.ToString(System.Globalization.CultureInfo.InvariantCulture));
             if (Directory.Exists(folder))
                 Directory.Delete(folder, recursive: true);
         }
@@ -162,10 +157,10 @@ public static class LeaveAccessSeed
         });
     }
 
-    private static void AddAttachment(AppDbContext db, string webRoot, int attachmentId, int requestId, DateTime now)
+    private static void AddAttachment(AppDbContext db, string privateRoot, int attachmentId, int requestId, DateTime now)
     {
         var relativePath = AttachmentRelativePath(requestId, attachmentId);
-        var physicalPath = PhysicalPath(webRoot, relativePath);
+        var physicalPath = PhysicalPath(privateRoot, relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
         File.WriteAllText(physicalPath, $"B06 test attachment {attachmentId}");
 

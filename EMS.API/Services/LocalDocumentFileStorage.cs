@@ -1,18 +1,20 @@
+using System.Globalization;
 using EMS.Domain.Enums;
 
 namespace EMS.API.Services;
 
 /// <summary>
-/// Stores employee documents under wwwroot/attachments/Employee; database holds only web-relative paths.
+/// Validates employee document uploads and stores them in the private store (<see cref="PrivateFileStore"/>).
+/// The database holds only the storage key relative to <c>Storage:PrivateRoot</c>; files are never public.
 /// </summary>
 public sealed class LocalDocumentFileStorage
 {
-    private readonly IWebHostEnvironment _env;
+    private readonly PrivateFileStore _store;
     private const long MaxBytes = 15 * 1024 * 1024;
 
-    public LocalDocumentFileStorage(IWebHostEnvironment env)
+    public LocalDocumentFileStorage(PrivateFileStore store)
     {
-        _env = env;
+        _store = store;
     }
 
     public static bool TryResolveFileKind(string contentType, string fileName, out DocumentFileKind kind)
@@ -57,9 +59,10 @@ public sealed class LocalDocumentFileStorage
     }
 
     /// <summary>
-    /// Saves under attachments/Employee/{employeeId|unassigned}/Documents and returns path starting with /attachments/...
+    /// Saves under <c>{PrivateRoot}/Employee/{employeeId|unassigned}/Documents</c> and returns the storage key
+    /// relative to the private root (for example <c>Employee/5/Documents/{guid}.pdf</c>).
     /// </summary>
-    public async Task<(string RelativePath, string ContentType, DocumentFileKind Kind)> SaveAsync(
+    public async Task<(string StorageKey, string ContentType, DocumentFileKind Kind)> SaveAsync(
         int? employeeId,
         IFormFile file,
         CancellationToken cancellationToken = default)
@@ -68,38 +71,11 @@ public sealed class LocalDocumentFileStorage
         if (!TryResolveFileKind(file.ContentType, file.FileName, out var kind))
             throw new InvalidOperationException("Could not determine file kind.");
 
-        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-        var folder = employeeId is int id ? id.ToString() : "unassigned";
-        var dir = Path.Combine(webRoot, "attachments", "Employee", folder, "Documents");
-        Directory.CreateDirectory(dir);
-
-        var ext = Path.GetExtension(file.FileName);
-        var safeName = $"{Guid.NewGuid():N}{ext}";
-        var physical = Path.Combine(dir, safeName);
-
-        await using (var stream = File.Create(physical))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        var relative = $"/attachments/Employee/{folder}/Documents/{safeName}".Replace('\\', '/');
-        return (relative, file.ContentType, kind);
+        var folder = employeeId is int id ? id.ToString(CultureInfo.InvariantCulture) : "unassigned";
+        var key = await _store.SaveAsync($"{PrivateFileStore.EmployeeFolder}/{folder}/Documents", file, cancellationToken);
+        return (key, file.ContentType, kind);
     }
 
-    public void TryDelete(string? webRelativePath)
-    {
-        if (string.IsNullOrWhiteSpace(webRelativePath) ||
-            (!webRelativePath.StartsWith("/attachments/", StringComparison.Ordinal) &&
-             !webRelativePath.StartsWith("/uploads/", StringComparison.Ordinal)))
-            return;
-
-        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-        var relative = webRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var full = Path.GetFullPath(Path.Combine(webRoot, relative));
-        var root = Path.GetFullPath(webRoot);
-        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            return;
-        if (File.Exists(full))
-            File.Delete(full);
-    }
+    /// <summary>Deletes the stored file for a storage key. Unsafe keys and keys outside the private root are ignored.</summary>
+    public void TryDelete(string? storageKey) => _store.TryDelete(storageKey);
 }

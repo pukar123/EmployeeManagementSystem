@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { documentService } from "../services/documentService";
 import { documentKeys } from "../services/query-keys";
-import type { CreateDocumentPayload, UpdateDocumentRequest } from "../types/document.types";
+import type { CreateDocumentPayload, Document, UpdateDocumentRequest } from "../types/document.types";
 
 export function useDocumentMutations(employeeId: number) {
   const queryClient = useQueryClient();
@@ -27,8 +27,7 @@ export function useDocumentMutations(employeeId: number) {
   });
 
   const download = useMutation({
-    mutationFn: ({ id, fileName }: { id: number; fileName: string }) =>
-      documentService.download(id, fileName),
+    mutationFn: (doc: Pick<Document, "downloadUrl" | "originalFileName">) => documentService.download(doc),
   });
 
   return { create, update, remove, download };

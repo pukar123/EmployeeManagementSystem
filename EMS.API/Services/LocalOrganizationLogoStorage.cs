@@ -1,7 +1,8 @@
 namespace EMS.API.Services;
 
 /// <summary>
-/// Persists organization logos under wwwroot/attachments/Organization; database stores only the web-relative path.
+/// Persists organisation logos under wwwroot/attachments/Organization; database stores only the public web-relative path.
+/// Logos are the only public uploads: static file middleware serves only <c>/attachments/Organization</c>.
 /// </summary>
 public sealed class LocalOrganizationLogoStorage
 {
@@ -66,8 +67,10 @@ public sealed class LocalOrganizationLogoStorage
 
         var trimmed = webRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
         var fullPath = Path.GetFullPath(Path.Combine(webRoot, trimmed));
-        var rootFull = Path.GetFullPath(webRoot);
-        if (!fullPath.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+        // Only files inside the public logo folder may be deleted. The trailing separator in IsInside stops a
+        // sibling folder (for example "Organization-evil") from passing the check.
+        var logoRoot = Path.GetFullPath(Path.Combine(webRoot, "attachments", "Organization"));
+        if (!PrivateFileStore.IsInside(fullPath, logoRoot))
             return;
 
         try

@@ -18,7 +18,7 @@ const postFormDataMock = vi.fn<PostFormDataMock>(async () => ({
   fileKind: 1,
   originalFileName: "contract.pdf",
   contentType: "application/pdf",
-  storedRelativePath: "/attachments/Employee/5/Documents/x.pdf",
+  downloadUrl: "/api/Documents/1/file",
   createdAtUtc: "2026-01-01T00:00:00Z",
   updatedAtUtc: "2026-01-01T00:00:00Z",
 }));
@@ -33,7 +33,7 @@ vi.mock("@/shared/api/http-client", async (importOriginal) => {
 
 import { emsHttpClient } from "@/shared/api/http-client";
 import { documentService } from "./documentService";
-import { documentFileApiUrl, downloadDocumentFile } from "../utils/document-download";
+import { downloadDocumentFile } from "../utils/document-download";
 import { fileKindLabel } from "../utils/file-kind-labels";
 import { DocumentFileKind } from "../types/document.types";
 
@@ -119,29 +119,31 @@ describe("documentService", () => {
 });
 
 describe("document download helpers", () => {
-  it("builds authenticated file URL", () => {
-    expect(documentFileApiUrl(42)).toBe(`${EMS_ORIGIN}/api/Documents/42/file`);
-  });
-
-  it("downloads blob with filename from content-disposition", async () => {
+  it("requests the document's downloadUrl through emsHttpClient as a blob", async () => {
     const blob = new Blob(["content"], { type: "application/pdf" });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        blob: async () => blob,
-        headers: {
-          get: (name: string) =>
-            name.toLowerCase() === "content-disposition" ? 'attachment; filename="signed.pdf"' : null,
-        },
-      })),
-    );
+    const seen: Array<{ url: string; responseType?: string; authorization?: unknown }> = [];
+    emsHttpClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      seen.push({
+        url: `${(config.baseURL ?? "").replace(/\/$/, "")}${config.url ?? ""}`,
+        responseType: config.responseType,
+        authorization: config.headers?.Authorization,
+      });
+      return {
+        data: blob,
+        status: 200,
+        statusText: "OK",
+        headers: { "content-disposition": 'attachment; filename="signed.pdf"' },
+        config,
+      };
+    };
 
-    const result = await downloadDocumentFile(7, "fallback.pdf");
+    const result = await downloadDocumentFile({ downloadUrl: "/api/Documents/7/file", originalFileName: "fallback.pdf" });
+
+    expect(seen).toEqual([
+      { url: `${EMS_ORIGIN}/api/Documents/7/file`, responseType: "blob", authorization: "Bearer access-token" },
+    ]);
     expect(result.blob).toBe(blob);
     expect(result.fileName).toBe("signed.pdf");
-
-    vi.unstubAllGlobals();
   });
 });
 

@@ -5,7 +5,8 @@ import type {
   DocumentType,
   UpdateDocumentRequest,
 } from "../types/document.types";
-import { downloadDocumentFile, triggerBlobDownload } from "../utils/document-download";
+import { triggerBlobDownload } from "@/shared/api/download-file";
+import { downloadDocumentFile } from "../utils/document-download";
 
 const PATH = "/api/Documents";
 
@@ -40,8 +41,8 @@ export const documentService = {
     await emsHttpClient.delete(`${PATH}/${id}`);
   },
 
-  download: async (documentId: number, fallbackFileName: string): Promise<void> => {
-    const { blob, fileName } = await downloadDocumentFile(documentId, fallbackFileName);
+  download: async (doc: Pick<Document, "downloadUrl" | "originalFileName">): Promise<void> => {
+    const { blob, fileName } = await downloadDocumentFile(doc);
     triggerBlobDownload(blob, fileName);
   },
 };

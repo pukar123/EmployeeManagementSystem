@@ -1,13 +1,19 @@
+using System.Globalization;
+
 namespace EMS.API.Services;
 
+/// <summary>
+/// Validates leave attachment uploads and stores them in the private store (<see cref="PrivateFileStore"/>).
+/// The database holds only the storage key relative to <c>Storage:PrivateRoot</c>; files are never public.
+/// </summary>
 public sealed class LocalLeaveAttachmentStorage
 {
-    private readonly IWebHostEnvironment _env;
+    private readonly PrivateFileStore _store;
     private const long MaxBytes = 15 * 1024 * 1024;
 
-    public LocalLeaveAttachmentStorage(IWebHostEnvironment env)
+    public LocalLeaveAttachmentStorage(PrivateFileStore store)
     {
-        _env = env;
+        _store = store;
     }
 
     public static void ValidateContentOrThrow(IFormFile file)
@@ -18,43 +24,22 @@ public sealed class LocalLeaveAttachmentStorage
             throw new InvalidOperationException($"File exceeds maximum size ({MaxBytes / (1024 * 1024)} MB).");
     }
 
-    public async Task<(string RelativePath, string ContentType, string FileName, long Size)> SaveAsync(
+    /// <summary>
+    /// Saves under <c>{PrivateRoot}/Leave/{leaveRequestId}</c> and returns the storage key relative to the private
+    /// root (for example <c>Leave/12/{guid}.pdf</c>).
+    /// </summary>
+    public async Task<(string StorageKey, string ContentType, string FileName, long Size)> SaveAsync(
         int leaveRequestId,
         IFormFile file,
         CancellationToken cancellationToken = default)
     {
         ValidateContentOrThrow(file);
 
-        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-        var dir = Path.Combine(webRoot, "attachments", "Leave", leaveRequestId.ToString());
-        Directory.CreateDirectory(dir);
-
-        var ext = Path.GetExtension(file.FileName);
-        var safeName = $"{Guid.NewGuid():N}{ext}";
-        var physical = Path.Combine(dir, safeName);
-
-        await using (var stream = File.Create(physical))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        var relative = $"/attachments/Leave/{leaveRequestId}/{safeName}".Replace('\\', '/');
-        return (relative, file.ContentType, file.FileName, file.Length);
+        var folderKey = $"{PrivateFileStore.LeaveFolder}/{leaveRequestId.ToString(CultureInfo.InvariantCulture)}";
+        var key = await _store.SaveAsync(folderKey, file, cancellationToken);
+        return (key, file.ContentType, file.FileName, file.Length);
     }
 
-    public void TryDelete(string? webRelativePath)
-    {
-        if (string.IsNullOrWhiteSpace(webRelativePath) ||
-            !webRelativePath.StartsWith("/attachments/", StringComparison.Ordinal))
-            return;
-
-        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-        var relative = webRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var full = Path.GetFullPath(Path.Combine(webRoot, relative));
-        var root = Path.GetFullPath(webRoot);
-        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            return;
-        if (File.Exists(full))
-            File.Delete(full);
-    }
+    /// <summary>Deletes the stored file for a storage key. Unsafe keys and keys outside the private root are ignored.</summary>
+    public void TryDelete(string? storageKey) => _store.TryDelete(storageKey);
 }

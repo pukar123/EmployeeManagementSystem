@@ -70,6 +70,8 @@ Connection strings and other settings live under `EMS.API` (`appsettings.json`, 
 | `Registration:AllowSelfRegistration` | Public self-registration (`false` by default; invitations are the way in) |
 | `AuthRateLimiting:*` | Sign-in and password-recovery rate limits (on by default; settings listed in [Pukar.Usermanagement/README.md](Pukar.Usermanagement/README.md#sign-in-and-registration-protection)) |
 | `ConnectionStrings:MongoLogs` | Optional; enables Serilog MongoDB sink and MongoDB health check when set |
+| `Storage:PrivateRoot` | Folder for private uploads (default `App_Data/private`, relative to the content root); see [File storage](#file-storage) |
+| `Storage:MovePublicFilesOnStartup` | Runs the repeatable move of old public files into the private root at start-up (`false` by default, `true` in Development and Docker Compose) |
 
 For local development, prefer [User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) so credentials are not committed:
 
@@ -80,6 +82,13 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "YOUR_SQL_CONNECTI
 ```
 
 Replace placeholders in `appsettings*.json` with your own values for any environment you use.
+
+## File storage
+
+- **Private files** (employee documents and leave attachments) are stored under `Storage:PrivateRoot` (default `EMS.API/App_Data/private`), outside `wwwroot`, as `Employee/{employeeId}/Documents/...` and `Leave/{leaveRequestId}/...`. The database keeps only the storage key relative to that folder. They are downloaded only through the signed-in, access-checked endpoints `GET /api/Documents/{id}/file` and `GET /api/LeaveAttachments/{id}/file`; API responses carry a `downloadUrl`, never a storage path. The API refuses to start if the private root is inside the web root.
+- **Public files** are organisation logos only, under `wwwroot/attachments/Organization/{id}/`. Static files serve only `/attachments/Organization`; nothing else under `wwwroot` is reachable by URL.
+- **Docker Compose** mounts the named volume `ems-private-files` at `/app/App_Data/private`, so private files survive a container rebuild. Logos have no volume yet and are lost on rebuild, as before.
+- **Moving old files.** Files uploaded before private storage lived under `wwwroot/attachments/Employee` and `wwwroot/attachments/Leave`. With `Storage:MovePublicFilesOnStartup=true` (already on in Development and Docker Compose) the API moves them into the private root at start-up, updates each row's stored path and logs one summary line (moved, already private, paths updated, missing, skipped, orphans moved, conflicts). It never overwrites a file and leaves a row unchanged when its file is missing. To run it again, restart the API: a second run moves nothing. To turn it off, set the setting to `false`. Old containers had no volume, so their files cannot be recovered by this step.
 
 ## Database migrations
 

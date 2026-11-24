@@ -13,6 +13,7 @@ import type {
   RejectLeaveRequestPayload,
   CreateLeaveTypePayload,
   UpdateLeaveTypePayload,
+  LeaveAttachment,
 } from "../types/leave.types";
 
 export const leaveService = {
@@ -88,11 +89,11 @@ export const leaveService = {
     return data;
   },
 
-  uploadAttachment: async (leaveRequestId: number, file: File) => {
+  uploadAttachment: async (leaveRequestId: number, file: File): Promise<LeaveAttachment> => {
     const formData = new FormData();
     formData.append("leaveRequestId", String(leaveRequestId));
     formData.append("file", file);
-    return postFormData<{ id: number; fileName: string; storagePath: string }>(
+    return postFormData<LeaveAttachment>(
       "/api/LeaveAttachments",
       formData,
     );
