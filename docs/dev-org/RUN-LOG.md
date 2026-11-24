@@ -100,3 +100,17 @@
 - PR: see the B07 pull request into development
 - Needs the CEO: delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub; consider moving B28/B29 (self-promotion to admin; personal-details leak) and B36 (time zone) up the order.
 
+## 2026-11-24 — B08 Private storage and authorised downloads for documents and leave attachments
+- Outcome: Done
+- What changed:
+  - Employee documents and leave attachments (often medical certificates) used to sit in the public web folder, so anyone with the link could download them without signing in. They now live in a private folder outside the web folder, and the old public links return "not found". The organisation logo stays public.
+  - Files can only be downloaded through signed-in download links, which keep the existing permission checks; the app no longer sends storage paths to the browser.
+  - A safe, repeatable step moves existing files into private storage at start-up (on in Development and Docker; off by default in Production). It never overwrites and copes with missing files. No database change was needed.
+  - One shared path check now guards every file read, write, delete and move, which also fixes a small folder-name loophole left from B06.
+  - Docker keeps private files in their own volume, and your attachment-storage rule files now describe the public/private split.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 547 of 547 .NET tests passed (52 new, including old public links returning 404 and logos still working). Frontend lint, 55 tests and build passed in the team workspace. Tests now use temporary folders instead of writing into the project.
+- Reviewer: strengths — one path-safety check used everywhere; only the logo folder is public; the API refuses to start if private storage is misconfigured inside the web folder; no personal file names in logs. No new Medium or worse issues. Low items folded into existing tasks: file names in downloads (B10); Docker non-root volume, backup and a start-up warning (B14); docs refresh (B16). Documents still need per-employee access checks (B09, next).
+- PR: see the B08 pull request into development
+- Needs the CEO: when you next run EMS in Production, turn on `Storage:MovePublicFilesOnStartup` once so older files are moved; delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
+

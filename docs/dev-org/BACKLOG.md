@@ -118,7 +118,8 @@ Acceptance:
 - Integration tests cover self, other-employee, manager and admin cases.
 
 ## B08 — Private storage and authorised downloads for documents and leave attachments
-Status: Todo
+Status: Done
+Done-note: 2026-11-24 feature/b08-private-file-storage
 Risk: High
 Areas: backend, frontend
 Depends-on: B04
@@ -153,6 +154,7 @@ Depends-on: B08
 Sources: C6
 Goal: Uploads currently accept dangerous file types and keep the uploaded file extension. Create one shared upload checker used by documents, leave attachments and the logo: allow only listed types, check the extension, the declared type and the file's actual content signature together, and save with an extension the server chooses. Drop SVG for logos. Downloads are sent as attachments with "do not guess the type" protection.
 Acceptance:
+- (Reviewer 2026-11-24) User-supplied file names and extensions no longer reach the stored file key or the download Content-Disposition unsanitised; add nosniff on downloads.
 - An HTML file renamed or declared as PDF is rejected.
 - Valid PDF, Word and image files are accepted and saved with the server's extension.
 - SVG logos are rejected; PNG and JPEG are accepted.
@@ -210,6 +212,7 @@ Depends-on: B01
 Sources: C9, C10, C21
 Goal: Remove the committed database password, signing key and default admin password; provide an example settings file and use user secrets or the `.env` file instead. The API refuses to start if the signing key is the example value. Fix the Docker build so it includes every project it needs, use a Docker-specific environment whose seed admin password comes from `.env`, wait for the database to be healthy, keep database ports local-only and put the Mongo admin tool behind an optional profile with a password.
 Acceptance:
+- (Reviewer 2026-11-24) If the container runs as non-root, the image creates and owns the private-files volume folder; document backing up the `ems-private-files` volume; add a logo volume; log a warning at start-up in Production if old public files exist and the move step is off.
 - No real secrets remain in tracked settings files; an example file documents each value.
 - The API refuses to start with the example signing key.
 - `docker compose up` from a clean clone with a filled-in `.env` builds and starts the API and web app.
@@ -237,6 +240,7 @@ Depends-on: B14
 Sources: C11, C13, C19, C23, D5, D7
 Goal: Bring the docs in line with the code. Rewrite the top of the README as a clear summary of a personal portfolio project, with a feature list, "run in a few minutes" using the fixed Docker setup, a build-status badge, and a short "design decisions" section that honestly explains trade-offs (including EF Core in the application layer). Align the coding rules, DEV-ORG version line and leave docs; remove Redis from the stack claims; mark retired documents as historical; check and correct the first-password description. Fix the two screens that show raw IDs to show names.
 Acceptance:
+- (Reviewer 2026-11-24) Refresh docs/dev-org/02-system-inventory.md for private storage and the changes since B01.
 - README states it is a personal portfolio project and matches the current single-host design.
 - No document claims Redis is used; DEV-ORG shows net9.0.
 - Leave docs no longer say approval is deferred.
@@ -367,6 +371,7 @@ Depends-on: B03
 Sources: Reviewer 2026-11-19 (B03 review)
 Goal: The "who can do what" tests can only send requests without a body, and the test API writes into the source tree's `EMS.API/wwwroot`. Add support for JSON and file-upload bodies in access cases, and point the test API at a temporary folder that is cleaned up, before the document and upload tasks (B08–B10). If B04 already adds body support, only the file area remains.
 Acceptance:
+- (2026-11-24) The temporary file area part was delivered in B08 (each test factory gets temporary web and private folders); only request-body extras remain if any.
 - An access case can send a JSON body and a file upload.
 - Tests never write inside the repository folders.
 
