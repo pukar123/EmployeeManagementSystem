@@ -14,16 +14,16 @@ public class LeaveAttachmentsController : ControllerBase
 {
     private readonly ILeaveAttachmentService _attachmentService;
     private readonly LocalLeaveAttachmentStorage _storage;
-    private readonly IWebHostEnvironment _env;
+    private readonly PrivateFileStore _store;
 
     public LeaveAttachmentsController(
         ILeaveAttachmentService attachmentService,
         LocalLeaveAttachmentStorage storage,
-        IWebHostEnvironment env)
+        PrivateFileStore store)
     {
         _attachmentService = attachmentService;
         _storage = storage;
-        _env = env;
+        _store = store;
     }
 
     [HttpGet("request/{leaveRequestId:int}")]
@@ -59,13 +59,13 @@ public class LeaveAttachmentsController : ControllerBase
             await _attachmentService.EnsureCanAttachToRequestAsync(request.LeaveRequestId, cancellationToken);
 
             var file = await _storage.SaveAsync(request.LeaveRequestId, request.File, cancellationToken);
-            relativePath = file.RelativePath;
+            relativePath = file.StorageKey;
             var created = await _attachmentService.AddAsync(
                 request.LeaveRequestId,
                 file.FileName,
                 file.ContentType,
                 file.Size,
-                file.RelativePath,
+                file.StorageKey,
                 cancellationToken);
             return Ok(created);
         }
@@ -88,8 +88,9 @@ public class LeaveAttachmentsController : ControllerBase
     {
         try
         {
-            var attachment = await _attachmentService.GetByIdAsync(id, cancellationToken);
-            _storage.TryDelete(attachment.StoragePath);
+            var stored = await _attachmentService.GetStoredFileAsync(id, cancellationToken);
+            // An unsafe or legacy path deletes nothing on disk; the row is still removed.
+            _storage.TryDelete(stored.StoragePath);
             var deleted = await _attachmentService.DeleteAsync(id, cancellationToken);
             return deleted ? NoContent() : NotFound();
         }
@@ -104,15 +105,11 @@ public class LeaveAttachmentsController : ControllerBase
     {
         try
         {
-            var attachment = await _attachmentService.GetByIdAsync(id, cancellationToken);
-            var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-            var relative = attachment.StoragePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-            var full = Path.GetFullPath(Path.Combine(webRoot, relative));
-            var root = Path.GetFullPath(webRoot);
-            if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(full))
+            var stored = await _attachmentService.GetStoredFileAsync(id, cancellationToken);
+            if (!_store.TryResolve(stored.StoragePath, out var full) || !System.IO.File.Exists(full))
                 return NotFound();
 
-            return PhysicalFile(full, attachment.ContentType, attachment.FileName);
+            return PhysicalFile(full, FileDownloadHeaders.SafeContentType(stored.ContentType), FileDownloadHeaders.SafeFileName(stored.FileName));
         }
         catch (BusinessRuleException ex)
         {

@@ -22,7 +22,8 @@ export type Document = {
   fileKind: DocumentFileKind;
   originalFileName: string;
   contentType: string;
-  storedRelativePath: string;
+  /** Authorised download endpoint relative to the API origin; request it with `downloadApiFile`, never a plain link. */
+  downloadUrl: string;
   createdAtUtc: string;
   updatedAtUtc: string;
 };

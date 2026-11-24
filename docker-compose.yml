@@ -99,6 +99,11 @@ services:
       # Only needed for the retained internal service-token compatibility endpoints.
       ServiceClients__Ems__ClientId: ems
       ServiceClients__Ems__Secret: "${EMS_UM_SERVICE_CLIENT_SECRET:-}"
+      # Private uploads (employee documents, leave attachments) live outside wwwroot on a named volume.
+      Storage__PrivateRoot: /app/App_Data/private
+      Storage__MovePublicFilesOnStartup: "true"
+    volumes:
+      - ems-private-files:/app/App_Data/private
     ports:
       - "5246:8080"
     depends_on:
@@ -131,6 +136,8 @@ volumes:
   ems-mongo-data:
     driver: local
   ems-redis-data:
+    driver: local
+  ems-private-files:
     driver: local
 
 networks:

@@ -8,17 +8,15 @@ alwaysApply: false
 
 ## Storage model
 
-- **Do not** store image bytes in the database for organization logos.
-- Persist only a **web-relative path** (e.g. `/attachments/Organization/{id}/logo-....png`) in `Organization.LogoRelativePath`.
-- Save files on the **server filesystem** under the web root (e.g. `wwwroot/attachments/Organization/{id}/`), served via static files middleware.
+- **Do not** store image bytes in the database for organisation logos.
+- Organisation logos are **public** files (see `shared-attachment-storage-convention.mdc`). Persist only a **web-relative path** (e.g. `/attachments/Organization/{id}/logo-....png`) in `Organization.LogoRelativePath`.
+- Save logo files on the **server filesystem** under `wwwroot/attachments/Organization/{id}/`. Static file middleware serves **only** `/attachments/Organization`; nothing else under `wwwroot` is public.
 
 ## Folder convention (project standard)
 
-- Keep all uploaded files under a single root: `wwwroot/attachments/`.
-- Use clear subfolders by domain/entity, such as:
-  - `attachments/Organization/...`
-  - `attachments/Employee/...`
-- Add `wwwroot/attachments/` to `.gitignore` so user uploads are never committed.
+- **Public** uploads (logos only): `wwwroot/attachments/Organization/...`.
+- **Private** uploads (employee documents, leave attachments and anything about a person): under `Storage:PrivateRoot` (default `App_Data/private`), e.g. `Employee/{id}/Documents/...` and `Leave/{id}/...`. These are served only through authorised `GET .../{id}/file` endpoints, and responses return a `downloadUrl`, never a storage path.
+- Keep `EMS.API/wwwroot/attachments/` and `EMS.API/App_Data/` in `.gitignore` and `.dockerignore` so user uploads are never committed or copied into images.
 
 ## API
 

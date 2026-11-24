@@ -35,6 +35,7 @@ using Pukar.Usermanagement.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;
 using Serilog;
@@ -82,20 +83,32 @@ try
                     "Cors:AllowedOrigins must contain at least one origin outside Development.");
             }
 
-            // Retry-After is not a CORS-safelisted response header; expose it so the web app can read
-            // how long to wait after a 429 from the auth endpoints.
-            policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("Retry-After");
+            // Retry-After and Content-Disposition are not CORS-safelisted response headers. Expose them so the web
+            // app can read how long to wait after a 429 from the auth endpoints, and the file name of a download.
+            policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("Retry-After", "Content-Disposition");
         });
     });
 
     builder.Services.Configure<AuthorizationModeOptions>(builder.Configuration.GetSection(AuthorizationModeOptions.SectionName));
     builder.Services.Configure<CorsOptions>(builder.Configuration.GetSection(CorsOptions.SectionName));
+    builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
+
+    // Private uploads (documents, leave attachments) live outside the web root. Resolve and check the folder now,
+    // so a private root inside wwwroot stops the API before it can serve anything.
+    var webRootPath = builder.Environment.WebRootPath ?? Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+    var storageOptions = builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new StorageOptions();
+    var privateRootPath = PrivateFileStore.ResolveRoot(storageOptions.PrivateRoot, builder.Environment.ContentRootPath, webRootPath);
+    Directory.CreateDirectory(Path.Combine(privateRootPath, PrivateFileStore.EmployeeFolder));
+    Directory.CreateDirectory(Path.Combine(privateRootPath, PrivateFileStore.LeaveFolder));
+    builder.Services.AddSingleton(sp => new PrivateFileStore(privateRootPath, sp.GetRequiredService<ILogger<PrivateFileStore>>()));
+    builder.Services.AddScoped<PublicToPrivateFileMover>();
     builder.Services.Configure<EmployeeSchedulingOptions>(
         builder.Configuration.GetSection(EmployeeSchedulingOptions.SectionName));
     builder.Services.Configure<EMS.API.Options.SeedAdminOptions>(
         builder.Configuration.GetSection(EMS.API.Options.SeedAdminOptions.SectionName));
     builder.Services.AddHostedService<EmsRbacSeedHostedService>();
     builder.Services.AddHostedService<RoleKeyBackfillHostedService>();
+    builder.Services.AddHostedService<PrivateFileMoveHostedService>();
     builder.Services.AddHostedService<EmployeeScheduledChangeWorker>();
     builder.Services.AddHostedService<ScheduledChangeReminderWorker>();
     builder.Services.AddHostedService<DocumentExpiryNotificationWorker>();
@@ -270,12 +283,16 @@ try
 
     app.UseHttpsRedirection();
 
-    var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
-    Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Organization"));
-    Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Employee"));
-    Directory.CreateDirectory(Path.Combine(webRootPath, "attachments", "Leave"));
+    var logoRootPath = Path.Combine(webRootPath, "attachments", "Organization");
+    Directory.CreateDirectory(logoRootPath);
 
-    app.UseStaticFiles();
+    // Only public organisation logos are served as static files, so this may run before authentication.
+    // Nothing else under wwwroot is served: other paths fall through to routing and return 404.
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        RequestPath = "/attachments/Organization",
+        FileProvider = new PhysicalFileProvider(logoRootPath),
+    });
 
     app.UseCors("EmsWeb");
 

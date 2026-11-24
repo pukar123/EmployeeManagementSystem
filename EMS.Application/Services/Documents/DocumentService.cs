@@ -1,4 +1,5 @@
 using EMS.Application.DTOs.Document;
+using EMS.Application.DTOs.Files;
 using EMS.Application.Mapping;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
@@ -55,6 +56,21 @@ public sealed class DocumentService : IDocumentService
             .Include(d => d.EmployeeDocuments)
             .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
         return entity is null ? null : DocumentMapper.ToResponse(entity);
+    }
+
+    public async Task<StoredFileModel?> GetStoredFileAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _documents.GetQueryable()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
+        return entity is null
+            ? null
+            : new StoredFileModel
+            {
+                StoragePath = entity.StoredRelativePath,
+                ContentType = entity.ContentType,
+                FileName = entity.OriginalFileName,
+            };
     }
 
     public async Task<DocumentResponseModel> CreateAsync(

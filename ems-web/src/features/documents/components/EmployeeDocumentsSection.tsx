@@ -44,7 +44,7 @@ export function EmployeeDocumentsSection({
   const handleDownload = (doc: Document) => {
     setDownloadBusyId(doc.id);
     download.mutate(
-      { id: doc.id, fileName: doc.originalFileName },
+      doc,
       {
         onSuccess: () => toast.success("Download started."),
         onError: (e) => toast.error(getErrorMessage(e)),

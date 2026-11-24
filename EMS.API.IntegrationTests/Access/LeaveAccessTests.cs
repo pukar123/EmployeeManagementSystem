@@ -4,9 +4,7 @@ using EMS.API.IntegrationTests.Harness;
 using EMS.Application.DTOs.Leave;
 using EMS.Application.Services.Leave;
 using EMS.Domain.Enums;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace EMS.API.IntegrationTests.Access;
 
@@ -32,7 +30,7 @@ public sealed class LeaveAccessTests : AccessTestFixture
     private const string LeaveRequests = "/api/LeaveRequests";
     private const string Eligibility = "/api/EmployeePortal/eligibility";
 
-    private string _webRoot = string.Empty;
+    private string _privateRoot = string.Empty;
 
     // Callers (see TestUsers). Properties, not fields: each TestUsers call gives a fresh unlinked user id.
     private static TestUser LeaveUserE1 => TestUsers.LinkedTo(TestSeed.E1, LeaveAccessSeed.LeaveUserRole);
@@ -46,16 +44,15 @@ public sealed class LeaveAccessTests : AccessTestFixture
     [OneTimeSetUp]
     public async Task AddLeaveRowsAsync()
     {
-        var env = Factory.Services.GetRequiredService<IWebHostEnvironment>();
-        _webRoot = LeaveAccessSeed.AttachmentRoot(env.WebRootPath, env.ContentRootPath);
-        await Factory.ChangeDatabaseAsync(db => LeaveAccessSeed.AddRowsAsync(db, _webRoot));
+        _privateRoot = Factory.PrivateRootPath;
+        await Factory.ChangeDatabaseAsync(db => LeaveAccessSeed.AddRowsAsync(db, _privateRoot));
     }
 
     [OneTimeTearDown]
     public void DeleteAttachmentFiles()
     {
-        if (!string.IsNullOrEmpty(_webRoot))
-            LeaveAccessSeed.DeleteFiles(_webRoot);
+        if (!string.IsNullOrEmpty(_privateRoot))
+            LeaveAccessSeed.DeleteFiles(_privateRoot);
     }
 
     private static IEnumerable<TestCaseData> StatusCases()
@@ -346,12 +343,12 @@ public sealed class LeaveAccessTests : AccessTestFixture
 
     private int FileCount(int leaveRequestId)
     {
-        var folder = Path.Combine(_webRoot, "attachments", "Leave", leaveRequestId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var folder = Path.Combine(_privateRoot, "Leave", leaveRequestId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         return Directory.Exists(folder) ? Directory.GetFiles(folder).Length : 0;
     }
 
     private string PhysicalPathOf(int requestId, int attachmentId)
-        => LeaveAccessSeed.PhysicalPath(_webRoot, LeaveAccessSeed.AttachmentRelativePath(requestId, attachmentId));
+        => LeaveAccessSeed.PhysicalPath(_privateRoot, LeaveAccessSeed.AttachmentRelativePath(requestId, attachmentId));
 
     private static CreateLeaveRequestRequestModel NewRequest(int employeeId, int slot) => new()
     {

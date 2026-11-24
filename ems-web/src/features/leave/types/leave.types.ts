@@ -180,3 +180,15 @@ export type ApproveLeaveRequestPayload = {
 export type RejectLeaveRequestPayload = {
   reason: string;
 };
+
+/** A leave request attachment. Download it through `downloadUrl` with `downloadApiFile`; storage paths are never sent. */
+export type LeaveAttachment = {
+  id: number;
+  leaveRequestId: number;
+  fileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  downloadUrl: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+};

@@ -7,7 +7,13 @@ public class LeaveRequestAttachmentResponseModel
     public string FileName { get; set; } = string.Empty;
     public string ContentType { get; set; } = string.Empty;
     public long FileSizeBytes { get; set; }
-    public string StoragePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Authorised download endpoint relative to the API origin (<c>/api/LeaveAttachments/{id}/file</c>). The storage
+    /// path is never returned: clients download through this endpoint with a signed-in request.
+    /// </summary>
+    public string DownloadUrl { get; set; } = string.Empty;
+
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 }

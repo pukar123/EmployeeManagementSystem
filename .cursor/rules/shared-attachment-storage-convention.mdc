@@ -1,5 +1,5 @@
 ---
-description: Reusable attachment storage convention for any project
+description: Reusable attachment storage convention for any project (public vs private files)
 globs: "**/*"
 alwaysApply: false
 ---
@@ -10,39 +10,63 @@ Use this rule in any backend project that accepts file uploads.
 
 ## Goals
 
-- Keep uploads organized under one root folder.
+- Keep uploads organised under clear root folders.
+- Never let private files be reached without signing in.
 - Avoid committing user files to git.
-- Keep database records small by storing paths, not binary file content.
+- Keep database records small by storing paths or storage keys, not binary file content.
 
-## Required pattern
+## Two kinds of files
 
-- Use a single upload root folder named `attachments` under your static/public web root.
-  - Example: `wwwroot/attachments/` (ASP.NET)
-  - Equivalent in other frameworks is acceptable if it is the public static folder.
-- Create subfolders by domain/entity/resource name, for example:
-  - `attachments/Employee/`
-  - `attachments/Organization/`
-  - `attachments/Department/`
-- If needed, add one more level for identifiers or file types:
-  - `attachments/Employee/{id}/Documents/`
-  - `attachments/Organization/{id}/`
+Decide for every upload whether it is **public** or **private** before writing any code.
+
+- **Public**: safe for anyone to see without signing in, for example an organisation logo or branding image.
+- **Private**: everything else, including employee documents, IDs, visas, contracts, leave and medical evidence, and any file about a person. **If in doubt, it is private.**
+
+## Public files
+
+- Store under the public static folder in `attachments/{Domain}/...`.
+  - Example (ASP.NET): `wwwroot/attachments/Organization/{id}/`.
+- Serve only the specific public subfolders with static file middleware (for example `RequestPath = "/attachments/Organization"`). Do not serve the whole web root.
+- Persist a web-relative path (for example `/attachments/Organization/{id}/logo-....png`) and return it in API responses so clients can build a full URL from the environment's API base URL.
+
+## Private files
+
+- Store **outside** the public static folder, under one private root read from configuration.
+  - Example (ASP.NET): `Storage:PrivateRoot`, default `App_Data/private` relative to the content root.
+  - The app must refuse to start if the private root is inside the public static folder.
+- Mirror the domain layout under the private root, for example:
+  - `{PrivateRoot}/Employee/{id}/Documents/`
+  - `{PrivateRoot}/Leave/{id}/`
+- Persist only a storage key relative to the private root (for example `Employee/5/Documents/{guid}.pdf`). Never persist absolute paths.
+- **Never** return the storage key or path in API responses. Return a download URL for an API endpoint instead (for example `/api/Documents/{id}/file`).
+- Serve private files only through an authorised download endpoint that checks the caller may access the record, then streams the file with the stored content type and a `Content-Disposition: attachment` file name.
+- Clients download private files with an authenticated request (for example an HTTP client call with `responseType: "blob"`), never with a plain link or `<img src>`, because the browser does not send the bearer token on those.
+
+## Path safety (mandatory)
+
+- Resolve every stored key through one helper that:
+  - rejects empty, rooted, drive, UNC or `..` keys, and keys outside the allowed top-level folders;
+  - compares the canonical full path against the canonical root **plus a trailing directory separator**.
+- Use the same helper for download, delete and move. A file outside the root is treated as not found.
+
+## Moving files between public and private
+
+- When a file type changes from public to private, provide a documented, repeatable move step. Running it twice must do no harm. It must update stored paths, log counts, and continue when a file is missing.
 
 ## API and persistence guidance
 
-- Save files on disk/object storage; do not store raw file bytes in relational tables unless there is a strict requirement.
-- Persist only a relative path or storage key in the database.
-- Return this relative path in API responses so clients can compose a full URL from environment-specific base URLs.
+- Save files on disk or object storage. Do not store raw file bytes in relational tables unless there is a strict requirement.
 
-## Git hygiene (mandatory)
+## Git and container hygiene (mandatory)
 
-- Add upload folders to `.gitignore`.
-- Ignore the entire upload root, not individual files.
-  - Preferred: `**/attachments/`
-  - If project-specific: `YourApi/wwwroot/attachments/`
-- If migrating from older folders like `uploads`, ignore those too until fully retired.
+- Add every upload root to `.gitignore` and `.dockerignore`. Ignore the whole folder, not individual files.
+  - Examples: `YourApi/wwwroot/attachments/`, `YourApi/App_Data/`.
+- If migrating from older folders like `uploads`, ignore those too until they are fully retired.
+- In containers, mount the private root on a named volume so files survive a rebuild.
+- Tests must use temporary public and private roots and clean them up. They must never write into the repository.
 
 ## Operational checks
 
-- Ensure upload directories are created at app startup when required.
-- Validate file size and extension/content type before saving.
-- Use safe delete logic that prevents path traversal (only delete inside the configured root).
+- Create the upload directories at app start-up when required.
+- Validate file size and type before saving.
+- Use safe delete logic that only deletes inside the configured root (see Path safety).

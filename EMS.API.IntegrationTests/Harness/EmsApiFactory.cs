@@ -28,6 +28,8 @@ namespace EMS.API.IntegrationTests.Harness;
 /// The real role sync service is wrapped (not replaced) by a recorder, see <see cref="RoleSyncRecorder"/>.
 /// A test-only startup filter lets a request choose its client IP (<see cref="TestClientIpStartupFilter"/>),
 /// so rate-limit tests can act as several clients; production code never reads that header.
+/// Each factory has its own temporary web root and private storage root (see <see cref="WebRootPath"/> and
+/// <see cref="PrivateRootPath"/>), deleted again when the factory is disposed, so no test writes into the repository.
 /// </summary>
 public sealed class EmsApiFactory : WebApplicationFactory<Program>
 {
@@ -48,11 +50,13 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
         typeof(IntegrationOutboxDispatcher),
         typeof(UserManagementSeedHostedService),
         typeof(UserManagementIdempotencyCleanupHostedService),
+        typeof(PrivateFileMoveHostedService),
     ];
 
     private readonly string _appDatabaseName = $"ems-access-tests-{Guid.NewGuid():N}";
     private readonly string _userManagementDatabaseName = $"um-access-tests-{Guid.NewGuid():N}";
     private readonly IReadOnlyDictionary<string, string?> _settings;
+    private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), $"ems-tests-{Guid.NewGuid():N}");
 
     /// <param name="settings">
     /// Extra host settings for this host only, applied after the harness defaults
@@ -61,7 +65,17 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
     public EmsApiFactory(IReadOnlyDictionary<string, string?>? settings = null)
     {
         _settings = settings ?? new Dictionary<string, string?>();
+        WebRootPath = Path.Combine(_tempRoot, "wwwroot");
+        PrivateRootPath = Path.Combine(_tempRoot, "private");
+        Directory.CreateDirectory(WebRootPath);
+        Directory.CreateDirectory(PrivateRootPath);
     }
+
+    /// <summary>This host's temporary web root (public static files). Deleted when the factory is disposed.</summary>
+    public string WebRootPath { get; }
+
+    /// <summary>This host's temporary <c>Storage:PrivateRoot</c>. Deleted when the factory is disposed.</summary>
+    public string PrivateRootPath { get; }
 
     /// <summary>Starts the host and seeds <see cref="TestSeed"/>. Call once per fixture.</summary>
     public async Task InitialiseAsync(CancellationToken cancellationToken = default)
@@ -148,6 +162,11 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
         // not from Cors:AllowedOrigins, and refuses to start outside Development without one.
         builder.UseSetting("Cors:0", "http://localhost");
 
+        // Temporary public and private roots for this host only, so uploads never land in the repository.
+        builder.UseSetting(WebHostDefaults.WebRootKey, WebRootPath);
+        builder.UseSetting("Storage:PrivateRoot", PrivateRootPath);
+        builder.UseSetting("Storage:MovePublicFilesOnStartup", "false");
+
         foreach (var (key, value) in _settings)
             builder.UseSetting(key, value);
 
@@ -163,6 +182,23 @@ public sealed class EmsApiFactory : WebApplicationFactory<Program>
 
             services.AddSingleton<IStartupFilter, TestClientIpStartupFilter>();
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (!disposing)
+            return;
+
+        try
+        {
+            if (Directory.Exists(_tempRoot))
+                Directory.Delete(_tempRoot, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A locked file only leaves a folder in the temp directory; it must not fail the test run.
+        }
     }
 
     private static void RemoveHostedServices(IServiceCollection services)

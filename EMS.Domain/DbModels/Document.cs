@@ -26,7 +26,10 @@ public class Document
     /// <summary>MIME type of the stored file.</summary>
     public string ContentType { get; set; } = string.Empty;
 
-    /// <summary>Web-relative path under wwwroot (e.g. /uploads/documents/...).</summary>
+    /// <summary>
+    /// Storage key relative to <c>Storage:PrivateRoot</c> (e.g. <c>Employee/5/Documents/{guid}.pdf</c>). Never public
+    /// and never returned to clients. Rows saved before B08 may hold <c>/attachments/Employee/...</c> until the move step runs.
+    /// </summary>
     public string StoredRelativePath { get; set; } = string.Empty;
 
     public DateTime CreatedAtUtc { get; set; }
