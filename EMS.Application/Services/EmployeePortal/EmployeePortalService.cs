@@ -2,6 +2,7 @@ using EMS.Application.DTOs.EmployeePortal;
 using EMS.Application.DTOs.Shift;
 using EMS.Application.DTOs.Task;
 using EMS.Application.Services.Attendance;
+using EMS.Application.Services.Documents;
 using EMS.Application.Services.Leave;
 using EMS.Application.Services.Shifts;
 using EMS.Application.Services.Tasks;
@@ -17,6 +18,7 @@ public sealed class EmployeePortalService : IEmployeePortalService
     private readonly ILinkedEmployeeService _linkedEmployeeService;
     private readonly ILeaveEmployeeAccessService _leaveEmployeeAccessService;
     private readonly IAttendanceEmployeeAccessService _attendanceEmployeeAccessService;
+    private readonly IDocumentAdminAccessService _documentAdminAccessService;
     private readonly IShiftService _shiftService;
     private readonly ITaskService _taskService;
     private readonly ILeaveRequestService _leaveRequestService;
@@ -26,6 +28,7 @@ public sealed class EmployeePortalService : IEmployeePortalService
         ILinkedEmployeeService linkedEmployeeService,
         ILeaveEmployeeAccessService leaveEmployeeAccessService,
         IAttendanceEmployeeAccessService attendanceEmployeeAccessService,
+        IDocumentAdminAccessService documentAdminAccessService,
         IShiftService shiftService,
         ITaskService taskService,
         ILeaveRequestService leaveRequestService,
@@ -34,6 +37,7 @@ public sealed class EmployeePortalService : IEmployeePortalService
         _linkedEmployeeService = linkedEmployeeService;
         _leaveEmployeeAccessService = leaveEmployeeAccessService;
         _attendanceEmployeeAccessService = attendanceEmployeeAccessService;
+        _documentAdminAccessService = documentAdminAccessService;
         _shiftService = shiftService;
         _taskService = taskService;
         _leaveRequestService = leaveRequestService;
@@ -46,6 +50,7 @@ public sealed class EmployeePortalService : IEmployeePortalService
         var canManageOthers = await _leaveEmployeeAccessService.CanManageOtherEmployeesLeaveAsync(cancellationToken);
         var canManageOthersAttendance =
             await _attendanceEmployeeAccessService.CanManageOtherEmployeesAttendanceAsync(cancellationToken);
+        var canManageAllDocuments = await _documentAdminAccessService.IsDocumentAdminAsync(cancellationToken);
 
         return new EmployeePortalEligibilityResponseModel
         {
@@ -54,6 +59,7 @@ public sealed class EmployeePortalService : IEmployeePortalService
             LinkedOrganizationId = employee?.OrganizationId,
             CanManageOtherEmployeesLeave = canManageOthers,
             CanManageOtherEmployeesAttendance = canManageOthersAttendance,
+            CanManageAllDocuments = canManageAllDocuments,
         };
     }
 

@@ -32,6 +32,9 @@ public sealed class EmsRbacSeedHostedService : IHostedService
                 new MenuSeedRow("home", "Home", "/", null, 0, "home"),
                 new MenuSeedRow("employees", "Employees", "/employees", null, 10, "users"),
                 new MenuSeedRow("manager.team", "My team", "/manager/team", null, 12, "users"),
+                // B09: grants "document admin" (list every document; upload, change and delete anyone's documents).
+                // Top level with its own page: a child of "employees" would turn the Employees link into a group.
+                new MenuSeedRow("documents.admin", "Documents", "/documents", null, 15, "file-text"),
                 new MenuSeedRow("departments", "Departments", "/departments", null, 20, "building2"),
                 new MenuSeedRow("attendance", "Attendance", "/attendance", null, 30, "clock3"),
                 // B07: grants "attendance admin" (record and read anyone's attendance). Also the sidebar link to the

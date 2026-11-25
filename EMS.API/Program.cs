@@ -184,6 +184,8 @@ try
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<IJobPositionService, JobPositionService>();
     builder.Services.AddScoped<IPositionRoleService, PositionRoleService>();
+    builder.Services.AddScoped<IDocumentAdminAccessService, DocumentAdminAccessService>();
+    builder.Services.AddScoped<IDocumentAccessService, DocumentAccessService>();
     builder.Services.AddScoped<IDocumentService, DocumentService>();
     builder.Services.AddScoped<ISiteService, SiteService>();
     builder.Services.AddScoped<IEmployeeSiteService, EmployeeSiteService>();

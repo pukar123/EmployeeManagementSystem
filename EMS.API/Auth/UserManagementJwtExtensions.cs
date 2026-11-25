@@ -78,8 +78,8 @@ public static class UserManagementJwtExtensions
         services.AddAuthorization(auth =>
         {
             // These admin policies use the same admin test. The separate names are seams for finer roles later.
-            // LeaveAdmin and AttendanceAdmin are not in this list: since B06 and B07 they mean "admin or leave.admin menu"
-            // and "admin or attendance.admin menu" (see below).
+            // LeaveAdmin, AttendanceAdmin and DocumentAdmin are not in this list: since B06, B07 and B09 they mean
+            // "admin or leave.admin menu", "admin or attendance.admin menu" and "admin or documents.admin menu" (see below).
             foreach (var policyName in AdminPolicyNames)
                 auth.AddPolicy(policyName, policy => policy.RequireAssertion(context => AdminClaimCheck.IsAdmin(context.User)));
 
@@ -93,6 +93,11 @@ public static class UserManagementJwtExtensions
                 .RequireAuthenticatedUser()
                 .AddRequirements(new AttendanceAdminRequirement()));
 
+            // DocumentAdmin follows the Application layer's single document admin check (IDocumentAdminAccessService).
+            auth.AddPolicy(AuthorizationPolicyNames.DocumentAdmin, policy => policy
+                .RequireAuthenticatedUser()
+                .AddRequirements(new DocumentAdminRequirement()));
+
             auth.AddPolicy(ServiceScopes.UsersRead, p => RequireScope(p, ServiceScopes.UsersRead));
             auth.AddPolicy(ServiceScopes.UsersManage, p => RequireScope(p, ServiceScopes.UsersManage));
             auth.AddPolicy(ServiceScopes.RolesRead, p => RequireScope(p, ServiceScopes.RolesRead));
@@ -103,6 +108,7 @@ public static class UserManagementJwtExtensions
         // Scoped: the handler uses the request's identity and the EMS database through the Application check.
         services.AddScoped<IAuthorizationHandler, LeaveAdminAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, AttendanceAdminAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, DocumentAdminAuthorizationHandler>();
 
         return services;
     }

@@ -5,8 +5,9 @@ namespace EMS.API.Auth;
 
 /// <summary>
 /// The one test for "this signed-in user is an admin", shared by the admin policies so they cannot drift apart
-/// (all except <see cref="AuthorizationPolicyNames.LeaveAdmin"/> and <see cref="AuthorizationPolicyNames.AttendanceAdmin"/>,
-/// which use the Application leave and attendance admin checks since B06 and B07):
+/// (all except <see cref="AuthorizationPolicyNames.LeaveAdmin"/>, <see cref="AuthorizationPolicyNames.AttendanceAdmin"/> and
+/// <see cref="AuthorizationPolicyNames.DocumentAdmin"/>, which use the Application leave, attendance and document admin
+/// checks since B06, B07 and B09):
 /// a <see cref="ClaimTypes.Role"/> claim equal to <c>Admin</c>, or a <c>roles</c> claim equal to <c>ADMIN</c>
 /// (both compared case-insensitively).
 /// </summary>
