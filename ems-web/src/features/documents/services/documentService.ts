@@ -2,7 +2,9 @@ import { emsHttpClient, postFormData } from "@/shared/api/http-client";
 import type {
   CreateDocumentPayload,
   Document,
+  DocumentListParams,
   DocumentType,
+  PagedDocuments,
   UpdateDocumentRequest,
 } from "../types/document.types";
 import { triggerBlobDownload } from "@/shared/api/download-file";
@@ -10,14 +12,29 @@ import { downloadDocumentFile } from "../utils/document-download";
 
 const PATH = "/api/Documents";
 
+function toQueryParams(params: DocumentListParams): Record<string, number> {
+  const query: Record<string, number> = { page: params.page, pageSize: params.pageSize };
+  if (params.documentTypeId != null && params.documentTypeId > 0) query.documentTypeId = params.documentTypeId;
+  return query;
+}
+
 export const documentService = {
   getTypes: async (): Promise<DocumentType[]> => {
     const { data } = await emsHttpClient.get<DocumentType[]>(`${PATH}/types`);
     return data;
   },
 
-  listByEmployee: async (employeeId: number): Promise<Document[]> => {
-    const { data } = await emsHttpClient.get<Document[]>(PATH, { params: { employeeId } });
+  /** One page of an employee's documents (self, their direct manager or a document admin). */
+  listByEmployee: async (employeeId: number, params: DocumentListParams): Promise<PagedDocuments> => {
+    const { data } = await emsHttpClient.get<PagedDocuments>(PATH, {
+      params: { employeeId, ...toQueryParams(params) },
+    });
+    return data;
+  },
+
+  /** One page of every document, including those with no owner. Document admins only. */
+  list: async (params: DocumentListParams): Promise<PagedDocuments> => {
+    const { data } = await emsHttpClient.get<PagedDocuments>(PATH, { params: toQueryParams(params) });
     return data;
   },
 

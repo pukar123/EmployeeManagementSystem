@@ -11,21 +11,31 @@ namespace EMS.Application.Services.Documents;
 
 public sealed class DocumentService : IDocumentService
 {
+    /// <summary>Largest page of documents (the same as the employee directory).</summary>
+    public const int MaxPageSize = 100;
+
+    public const string PageMessage = "Page must be 1 or greater.";
+
+    public const string PageSizeMessage = "PageSize must be between 1 and 100.";
+
     private readonly IBaseRepository<Document> _documents;
     private readonly IBaseRepository<DocumentType> _documentTypes;
     private readonly IBaseRepository<Employee> _employees;
     private readonly IBaseRepository<EmployeeDocument> _employeeDocuments;
+    private readonly IDocumentAccessService _access;
 
     public DocumentService(
         IBaseRepository<Document> documents,
         IBaseRepository<DocumentType> documentTypes,
         IBaseRepository<Employee> employees,
-        IBaseRepository<EmployeeDocument> employeeDocuments)
+        IBaseRepository<EmployeeDocument> employeeDocuments,
+        IDocumentAccessService access)
     {
         _documents = documents;
         _documentTypes = documentTypes;
         _employees = employees;
         _employeeDocuments = employeeDocuments;
+        _access = access;
     }
 
     public async Task<IReadOnlyList<DocumentTypeResponseModel>> GetDocumentTypesAsync(CancellationToken cancellationToken = default)
@@ -37,29 +47,62 @@ public sealed class DocumentService : IDocumentService
         return types.Select(t => new DocumentTypeResponseModel { Id = t.Id, Name = t.Name, IsActive = t.IsActive }).ToList();
     }
 
-    public async Task<IReadOnlyList<DocumentResponseModel>> GetAllAsync(int? employeeId, CancellationToken cancellationToken = default)
+    public async Task<PagedDocumentResponseModel> GetPageAsync(DocumentListQueryModel query, CancellationToken cancellationToken = default)
     {
-        var q = _documents.GetQueryable()
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.Page < 1)
+            throw new BusinessRuleException(PageMessage);
+        if (query.PageSize < 1 || query.PageSize > MaxPageSize)
+            throw new BusinessRuleException(PageSizeMessage);
+
+        // The access decision comes before any document is queried.
+        if (query.EmployeeId is int requestedEmployeeId)
+            await _access.EnsureCanViewEmployeeDocumentsAsync(requestedEmployeeId, cancellationToken);
+        else
+            await _access.EnsureIsDocumentAdminAsync(cancellationToken);
+
+        var scoped = _documents.GetQueryable().AsNoTracking();
+        if (query.EmployeeId is int eid)
+            scoped = scoped.Where(d => d.EmployeeDocuments.Any(ed => ed.EmployeeId == eid && ed.IsActive && !ed.IsDeleted));
+        if (query.DocumentTypeId is int typeId)
+            scoped = scoped.Where(d => d.DocumentTypeId == typeId);
+
+        // Count, order and page in the database; only the requested page is loaded.
+        var totalCount = await scoped.CountAsync(cancellationToken);
+        var page = await scoped
+            .OrderByDescending(d => d.UpdatedAtUtc)
+            .ThenByDescending(d => d.Id)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
             .Include(d => d.DocumentType)
-            .Include(d => d.EmployeeDocuments)
-            .AsQueryable();
-        if (employeeId is int eid)
-            q = q.Where(d => d.EmployeeDocuments.Any(ed => ed.EmployeeId == eid && ed.IsActive && !ed.IsDeleted));
-        var list = await q.OrderByDescending(d => d.UpdatedAtUtc).ToListAsync(cancellationToken);
-        return list.Select(DocumentMapper.ToResponse).ToList();
+            .Include(d => d.EmployeeDocuments.Where(ed => ed.IsActive && !ed.IsDeleted))
+                .ThenInclude(ed => ed.Employee)
+            .ToListAsync(cancellationToken);
+
+        return new PagedDocumentResponseModel
+        {
+            Items = page.Select(DocumentMapper.ToResponse).ToList(),
+            TotalCount = totalCount,
+            Page = query.Page,
+            PageSize = query.PageSize,
+        };
     }
 
     public async Task<DocumentResponseModel?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _documents.GetQueryable()
-            .Include(d => d.DocumentType)
-            .Include(d => d.EmployeeDocuments)
-            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
+        if (!await _access.EnsureCanViewDocumentAsync(id, cancellationToken))
+            return null;
+
+        var entity = await LoadForResponseAsync(id, cancellationToken);
         return entity is null ? null : DocumentMapper.ToResponse(entity);
     }
 
     public async Task<StoredFileModel?> GetStoredFileAsync(int id, CancellationToken cancellationToken = default)
     {
+        // Checked before the stored file is looked at, so a refused caller learns nothing about the file.
+        if (!await _access.EnsureCanViewDocumentAsync(id, cancellationToken))
+            return null;
+
         var entity = await _documents.GetQueryable()
             .AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
@@ -85,6 +128,8 @@ public sealed class DocumentService : IDocumentService
         DocumentFileKind fileKind,
         CancellationToken cancellationToken = default)
     {
+        await _access.EnsureIsDocumentAdminAsync(cancellationToken);
+
         if (fileKind == DocumentFileKind.None)
             throw new BusinessRuleException("Unsupported or missing file type.");
 
@@ -136,15 +181,15 @@ public sealed class DocumentService : IDocumentService
             throw;
         }
 
-        var reloaded = await _documents.GetQueryable()
-            .Include(d => d.DocumentType)
-            .Include(d => d.EmployeeDocuments)
-            .FirstAsync(d => d.Id == entity.Id, cancellationToken);
+        var reloaded = await LoadForResponseAsync(entity.Id, cancellationToken)
+            ?? throw new InvalidOperationException("The new document could not be read back.");
         return DocumentMapper.ToResponse(reloaded);
     }
 
     public async Task<DocumentResponseModel?> UpdateAsync(int id, UpdateDocumentRequestModel request, CancellationToken cancellationToken = default)
     {
+        await _access.EnsureIsDocumentAdminAsync(cancellationToken);
+
         var entity = await _documents.GetQueryable()
             .Include(d => d.DocumentType)
             .Include(d => d.EmployeeDocuments)
@@ -162,32 +207,61 @@ public sealed class DocumentService : IDocumentService
         entity.DocumentTypeId = request.DocumentTypeId;
         entity.IssueDate = request.IssueDate;
         entity.ExpiryDate = request.ExpiryDate;
-        entity.UpdatedAtUtc = DateTime.UtcNow;
 
+        var now = DateTime.UtcNow;
         var existingLinks = await _employeeDocuments.GetQueryable()
             .Where(ed => ed.DocumentId == id)
             .ToListAsync(cancellationToken);
 
+        // (EmployeeId, DocumentId) is unique, so a link is never inserted twice: an unchanged owner keeps its link,
+        // and a former owner's retired link is turned back on instead of adding a new one.
+        EmployeeDocument? keep = null;
+        if (request.EmployeeId is int ownerId)
+        {
+            keep = existingLinks
+                .Where(link => link.EmployeeId == ownerId)
+                .OrderByDescending(link => link.IsActive && !link.IsDeleted)
+                .ThenByDescending(link => link.Id)
+                .FirstOrDefault();
+        }
+
         foreach (var link in existingLinks)
         {
+            if (ReferenceEquals(link, keep))
+            {
+                if (link.IsActive && !link.IsDeleted)
+                    continue;
+
+                link.IsActive = true;
+                link.IsDeleted = false;
+                link.UpdatedAtUtc = now;
+                _employeeDocuments.Update(link);
+                continue;
+            }
+
+            if (!link.IsActive && link.IsDeleted)
+                continue;
+
             link.IsActive = false;
             link.IsDeleted = true;
-            link.UpdatedAtUtc = DateTime.UtcNow;
+            link.UpdatedAtUtc = now;
             _employeeDocuments.Update(link);
         }
 
-        if (request.EmployeeId is int employeeId)
+        if (request.EmployeeId is int newOwnerId && keep is null)
         {
             await _employeeDocuments.AddAsync(new EmployeeDocument
             {
-                EmployeeId = employeeId,
+                EmployeeId = newOwnerId,
                 DocumentId = id,
                 IsActive = true,
                 IsDeleted = false,
-                CreatedAtUtc = DateTime.UtcNow,
-                UpdatedAtUtc = DateTime.UtcNow,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
             }, cancellationToken);
         }
+
+        entity.UpdatedAtUtc = now;
 
         await using var updateTransaction = await _documents.BeginTransactionAsync(cancellationToken);
         try
@@ -202,15 +276,15 @@ public sealed class DocumentService : IDocumentService
             throw;
         }
 
-        var reloaded = await _documents.GetQueryable()
-            .Include(d => d.DocumentType)
-            .Include(d => d.EmployeeDocuments)
-            .FirstAsync(d => d.Id == id, cancellationToken);
+        var reloaded = await LoadForResponseAsync(id, cancellationToken)
+            ?? throw new InvalidOperationException("The updated document could not be read back.");
         return DocumentMapper.ToResponse(reloaded);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
+        await _access.EnsureIsDocumentAdminAsync(cancellationToken);
+
         var entity = await _documents.GetByIdAsync(id, cancellationToken);
         if (entity is null)
             return false;
@@ -218,4 +292,13 @@ public sealed class DocumentService : IDocumentService
         await _documents.SaveChangesAsync(cancellationToken);
         return true;
     }
+
+    /// <summary>One document with what its response needs: the type, and the active link with its employee's name.</summary>
+    private Task<Document?> LoadForResponseAsync(int id, CancellationToken cancellationToken)
+        => _documents.GetQueryable()
+            .AsNoTracking()
+            .Include(d => d.DocumentType)
+            .Include(d => d.EmployeeDocuments.Where(ed => ed.IsActive && !ed.IsDeleted))
+                .ThenInclude(ed => ed.Employee)
+            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
 }

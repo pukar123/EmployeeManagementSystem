@@ -8,6 +8,9 @@ public class DocumentResponseModel
 
     public int? EmployeeId { get; set; }
 
+    /// <summary>"First Last" of the owning employee, or null when the document has no owner.</summary>
+    public string? EmployeeDisplayName { get; set; }
+
     public int DocumentTypeId { get; set; }
 
     public string DocumentTypeName { get; set; } = string.Empty;

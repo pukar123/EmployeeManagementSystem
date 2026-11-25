@@ -14,6 +14,8 @@ export type DocumentType = {
 export type Document = {
   id: number;
   employeeId: number | null;
+  /** "First Last" of the owning employee; null when the document has no owner. */
+  employeeDisplayName: string | null;
   documentTypeId: number;
   documentTypeName: string;
   name: string;
@@ -43,4 +45,20 @@ export type UpdateDocumentRequest = {
   employeeId?: number | null;
   issueDate?: string | null;
   expiryDate?: string | null;
+};
+
+/** One page of documents from `GET /api/Documents` (B09: the list is always paged). */
+export type PagedDocuments = {
+  items: Document[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+/** Paging and filter for a documents list. The server allows a page size of 1 to 100 (default 25). */
+export type DocumentListParams = {
+  page: number;
+  pageSize: number;
+  documentTypeId?: number | null;
 };

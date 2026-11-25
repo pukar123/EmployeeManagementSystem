@@ -37,6 +37,8 @@ export type EmployeePortalEligibility = {
   canManageOtherEmployeesLeave: boolean;
   /** True for attendance admins (admin, or the attendance.admin menu): they may record and read anyone's attendance. */
   canManageOtherEmployeesAttendance: boolean;
+  /** True for document admins (admin, or the documents.admin menu): they may list all documents and upload, edit and delete. */
+  canManageAllDocuments: boolean;
 };
 
 export type EmployeePortalSummary = {

@@ -20,4 +20,11 @@ public class EmployeePortalEligibilityResponseModel
     /// the user's own attendance (and a manager's direct reports in reports).
     /// </summary>
     public bool CanManageOtherEmployeesAttendance { get; set; }
+
+    /// <summary>
+    /// When true, the user is a document admin (admin, or a role granted the <c>documents.admin</c> menu) and may list
+    /// every document and upload, change and delete documents for anyone. When false, the user sees only their own
+    /// documents (and a manager their direct reports'), read-only.
+    /// </summary>
+    public bool CanManageAllDocuments { get; set; }
 }

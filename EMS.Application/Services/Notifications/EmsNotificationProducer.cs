@@ -210,6 +210,9 @@ public sealed class EmsNotificationProducer : IEmsNotificationProducer
             await _notifications.CreateBulkAsync(requests, cancellationToken);
         }, cancellationToken);
 
+    /// <summary>Where a document expiry notification takes the employee: "My documents" on the employee portal.</summary>
+    public const string DocumentExpiringActionUrl = "/employee-portal#my-documents";
+
     public Task NotifyDocumentExpiringAsync(
         Document document,
         int employeeId,
@@ -229,7 +232,9 @@ public sealed class EmsNotificationProducer : IEmsNotificationProducer
                     TypeKey = EmsNotificationTypeKeys.DocumentExpiring,
                     Title = "Document expiring soon",
                     Body = $"Document \"{document.Name}\" expires on {expiryText} ({daysUntilExpiry} day(s) remaining).",
-                    ActionUrl = "/documents",
+                    // The recipient is the document's own employee: "/documents" is the document-admin page (B09),
+                    // so link to their read-only "My documents" on the employee portal.
+                    ActionUrl = DocumentExpiringActionUrl,
                     Severity = daysUntilExpiry <= 7 ? NotificationSeverity.High : NotificationSeverity.Normal,
                     DedupeKey = $"document-expiring:{document.Id}:{daysUntilExpiry}",
                     MetadataJson = JsonSerializer.Serialize(new { documentId = document.Id, employeeId }),

@@ -39,6 +39,7 @@ import { EmployeeTransferDialog } from "./EmployeeTransferDialog";
 import { EmployeeUpcomingChanges } from "./EmployeeUpcomingChanges";
 import { EmployeeInvitationPanel } from "./EmployeeInvitationPanel";
 import { EmployeeDocumentsSection } from "@/features/documents/components/EmployeeDocumentsSection";
+import { useDocumentAccess } from "@/features/documents/hooks";
 import { EmployeeOnboardingProgress } from "./EmployeeOnboardingProgress";
 
 type ProfileTab = "overview" | "employment" | "history" | "access" | "documents";
@@ -85,6 +86,8 @@ export function profileToEmployee(profile: EmployeeProfile): Employee {
 export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
   const queryClient = useQueryClient();
   const { capabilities, isLoading: capabilitiesLoading } = useEmployeeCapabilities();
+  // Documents follow the B09 document admin rule, not the employees.* capabilities.
+  const documentAccess = useDocumentAccess();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -526,9 +529,8 @@ export function EmployeeProfilePage({ employeeId }: EmployeeProfilePageProps) {
       {activeTab === "documents" ? (
         <EmployeeDocumentsSection
           employeeId={employeeId}
-          canView={capabilities.view}
-          canManage={capabilities.manage}
-          enabled={activeTab === "documents"}
+          canManage={documentAccess.canManageAll}
+          enabled={activeTab === "documents" && !documentAccess.isLoading}
         />
       ) : null}
 

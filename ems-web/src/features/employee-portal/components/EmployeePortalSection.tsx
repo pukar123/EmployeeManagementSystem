@@ -6,6 +6,7 @@ import { getErrorMessage } from "@/shared/api/http-client";
 import { Button } from "@/shared/components/Button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { EmployeeDocumentsSection } from "@/features/documents/components/EmployeeDocumentsSection";
 import { useEmployeePortal, useStartShift, useStartTask } from "../hooks";
 import { shiftStatusLabel } from "../utils/shiftDisplay";
 import { taskPriorityLabels, taskStatusLabels } from "@/features/tasks/utils/taskDisplay";
@@ -282,6 +283,19 @@ export function EmployeePortalSection() {
           <p className="text-sm text-muted-foreground">No recent leave requests.</p>
         )}
       </section>
+
+      {data.employeeId != null ? (
+        // Anchor target for the document expiry notification ("/employee-portal#my-documents").
+        <div id="my-documents" className="scroll-mt-20">
+          <EmployeeDocumentsSection
+            employeeId={data.employeeId}
+            canManage={false}
+            enabled
+            title="My documents"
+            description="Your contracts, identification, certificates, and other files. Download only."
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
