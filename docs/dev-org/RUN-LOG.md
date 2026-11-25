@@ -114,3 +114,18 @@
 - PR: see the B08 pull request into development
 - Needs the CEO: when you next run EMS in Production, turn on `Storage:MovePublicFilesOnStartup` once so older files are moved; delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
 
+## 2026-11-25 — B09 Access checks and paging for documents
+- Outcome: Done (2 build rounds)
+- What changed:
+  - Before, any signed-in user could list or download any employee's documents. Now employees see their own documents, managers can view their current direct reports' documents (read-only), and only document admins can upload, edit, delete or see everyone's.
+  - "Document admin" means an admin, or a role an admin gives the new "Documents" menu (given to ADMIN automatically; nobody else by default).
+  - Document lists are now paged (25 per page by default, up to 100).
+  - New "Documents" admin page listing all documents with employee names, and a read-only "My documents" section on the employee portal (employees couldn't see their own documents before).
+  - Fixed an older bug where editing a document's details failed on a real SQL Server database, and the document-expiry notification now opens the employee's own documents instead of the admin page.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 665 of 665 .NET tests passed (118 new, including about 40 "who can do what" cases for documents). Frontend lint, 59 tests and build passed in the team workspace.
+- Reviewer: strengths — every document action checked on the server; same pattern as leave and attendance; paging done in the database without extra queries. Cons — managers can open their reports' passports, visas and medical files (Medium, new task B41 "restricted document types"); document admins aren't limited to their own organisation (added to B33); the edit bug fix needs a SQL Server test (added to B27).
+- Release note: roles that could see staff details (`employees.view`/`employees.manage`) no longer see documents unless an admin gives them the new Documents menu.
+- PR: see the B09 pull request into development
+- Needs the CEO: decide whether any HR role should get the Documents menu; delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
+

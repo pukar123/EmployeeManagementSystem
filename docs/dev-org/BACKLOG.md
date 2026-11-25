@@ -133,7 +133,8 @@ Acceptance:
 - The attachment storage rule file is updated to separate public and private files.
 
 ## B09 — Access checks and paging for documents
-Status: Todo
+Status: Done
+Done-note: 2026-11-25 feature/b09-document-access
 Risk: High
 Areas: backend, frontend
 Depends-on: B08
@@ -383,6 +384,7 @@ Depends-on: B03
 Sources: Reviewer 2026-11-19 (B03 review)
 Goal: The in-memory test database ignores case-insensitive matching, foreign keys and the clash protection (row versions), so tests of sign-in lockout, accrual and balance protection could pass falsely. Add an opt-in fixture that runs selected integration tests against the SQL Server container in CI, and list the InMemory limits in the test README. Should be done before B12.
 Acceptance:
+- (Reviewer 2026-11-25) Include a SQL Server test that editing a document without changing its owner does not break the unique employee-document link index.
 - Tests marked for SQL Server run in CI against a real SQL Server and pass.
 - A test proves a concurrent update is rejected on SQL Server.
 - README lists the InMemory limits and when to use the SQL Server fixture.
@@ -453,6 +455,7 @@ Depends-on: B06
 Sources: Reviewer 2026-11-22 (B06 review)
 Goal: Since B06 a role given the `leave.admin` menu counts as a leave admin, but nothing limits that person to their own organisation: they can run accrual or year reset, edit leave types and see the summary and any employee's leave across organisations. Scope leave-admin actions to the caller's linked employee's organisation (full admins keep cross-organisation access).
 Acceptance:
+- (Reviewer 2026-11-25) Document admins (roles given the `documents.admin` menu) are limited to their own organisation too.
 - (Reviewer 2026-11-23) The same organisation limit applies to attendance admins (roles given the `attendance.admin` menu): manual entries, acting for others, reports and exports stay within their own organisation.
 - A non-admin leave admin gets 403 for another organisation's leave operations, types, summary and employees' leave.
 - Within their own organisation everything works as today; admins are unaffected.
@@ -537,3 +540,16 @@ Goal: PDF and Excel attendance exports show an EmployeeId column and no names, w
 Acceptance:
 - Exports show employee number and name; no raw database ID column.
 - Export tests updated.
+
+## B41 — Restricted document types managers can't open
+Status: Todo
+Risk: High
+Areas: backend, frontend, migration
+Depends-on: B09
+Sources: Reviewer 2026-11-25 (B09 review)
+Goal: Since B09, managers can view and download their direct reports' documents, including passports, visas and medical files. Add an "restricted" flag to document types (set on identity, visa and medical types by default) so managers see that such a document exists but can't open or download it; the employee and document admins still can.
+Acceptance:
+- Document types have a restricted flag, editable by document admins.
+- A manager gets the document listed without a download link and 403 on download for restricted types; non-restricted types work as today.
+- Employees and document admins are unaffected; tests cover each case.
+
