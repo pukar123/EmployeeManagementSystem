@@ -285,13 +285,16 @@ export function EmployeePortalSection() {
       </section>
 
       {data.employeeId != null ? (
-        <EmployeeDocumentsSection
-          employeeId={data.employeeId}
-          canManage={false}
-          enabled
-          title="My documents"
-          description="Your contracts, identification, certificates, and other files. Download only."
-        />
+        // Anchor target for the document expiry notification ("/employee-portal#my-documents").
+        <div id="my-documents" className="scroll-mt-20">
+          <EmployeeDocumentsSection
+            employeeId={data.employeeId}
+            canManage={false}
+            enabled
+            title="My documents"
+            description="Your contracts, identification, certificates, and other files. Download only."
+          />
+        </div>
       ) : null}
     </div>
   );

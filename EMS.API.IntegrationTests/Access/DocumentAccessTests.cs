@@ -273,6 +273,33 @@ public sealed class DocumentAccessTests : AccessTestFixture
     }
 
     [Test]
+    public async Task B09_19b_Admin_EditKeepingTheSameOwner_KeepsOneLink()
+    {
+        // Review M1: the profile Edit modal always sends the current owner. InMemory does not enforce the unique
+        // (EmployeeId, DocumentId) index, so the link rows are counted directly.
+        var user = TestUsers.Admin;
+        var id = DocumentAccessSeed.DocE2SameOwnerEdit;
+
+        await ExpectStatusAsync(user, HttpMethod.Put, One(id), HttpStatusCode.OK, ValidUpdate(E2, "B09-19b first edit"));
+        var body = await ExpectStatusAsync(user, HttpMethod.Put, One(id), HttpStatusCode.OK, ValidUpdate(E2, "B09-19b second edit"));
+
+        var json = ParseJson(body, user, HttpMethod.Put, One(id));
+        var links = await Factory.QueryDatabaseAsync(db => db.EmployeeDocuments.AsNoTracking()
+            .Where(ed => ed.DocumentId == id)
+            .Select(ed => new { ed.EmployeeId, ed.IsActive, ed.IsDeleted })
+            .ToListAsync());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(json.GetProperty("name").GetString(), Is.EqualTo("B09-19b second edit"));
+            Assert.That(json.GetProperty("employeeId").GetInt32(), Is.EqualTo(E2));
+            Assert.That(links, Has.Count.EqualTo(1), "Editing with the same owner must not add a second link.");
+            Assert.That(links[0].EmployeeId, Is.EqualTo(E2));
+            Assert.That(links[0].IsActive && !links[0].IsDeleted, Is.True);
+        });
+    }
+
+    [Test]
     public async Task B09_30_31_PagesAreOrderedAndDoNotOverlap()
     {
         var user = TestUsers.Admin;

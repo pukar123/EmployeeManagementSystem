@@ -126,6 +126,35 @@ public class EmsNotificationProducerTests
             Times.Once);
     }
 
+    [Test]
+    public async Task NotifyDocumentExpiringAsync_LinksEmployeeToMyDocumentsOnThePortal()
+    {
+        // B09: "/documents" is the document-admin page, so the employee is sent to "My documents" on the portal.
+        var notifications = new Mock<INotificationService>();
+        var employees = new Mock<IBaseRepository<Employee>>();
+        employees.Setup(x => x.GetQueryable()).Returns((IQueryable<Employee>)new List<Employee>
+        {
+            new() { Id = 10, ExternalIdentityKey = "55" },
+        }.BuildMock());
+
+        var sut = CreateProducer(notifications.Object, employees.Object);
+        await sut.NotifyDocumentExpiringAsync(
+            new Document { Id = 4, Name = "Passport", ExpiryDate = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            employeeId: 10,
+            daysUntilExpiry: 5,
+            CancellationToken.None);
+
+        notifications.Verify(
+            x => x.CreateAsync(
+                It.Is<CreateNotificationRequestModel>(m =>
+                    m.RecipientUserId == 55
+                    && m.TypeKey == EmsNotificationTypeKeys.DocumentExpiring
+                    && m.ActionUrl == "/employee-portal#my-documents"
+                    && m.ActionUrl != "/documents"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static EmsNotificationProducer CreateProducer(
         INotificationService notifications,
         IBaseRepository<Employee> employees)

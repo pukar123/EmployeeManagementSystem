@@ -17,7 +17,8 @@ namespace EMS.API.IntegrationTests.Access;
 /// <item>Document types T1 "Contract" and T2 "Passport".</item>
 /// <item>Documents 8701 to 8706 (owners E1, E1, E2, M1, none, and E1 through a deleted link, which counts as no owner),
 /// each with a file in the private root holding <see cref="ContentOf"/>.</item>
-/// <item>8711 to 8714, owned by E2, one per change case (denied update and delete, admin update and delete).</item>
+/// <item>8711 to 8715, owned by E2, one per change case (denied update and delete, admin update and delete, admin edit
+/// keeping the same owner).</item>
 /// <item>P1, an employee in O1 with no manager, who owns the 30 paging documents 8731 to 8760, each with its own
 /// <c>UpdatedAtUtc</c>.</item>
 /// </list>
@@ -41,6 +42,9 @@ public static class DocumentAccessSeed
     public const int DocE2DeniedDelete = 8712;
     public const int DocE2AdminUpdate = 8713;
     public const int DocE2AdminDelete = 8714;
+
+    /// <summary>Owned by E2; an admin edits it keeping the same owner (one link per employee and document).</summary>
+    public const int DocE2SameOwnerEdit = 8715;
 
     public const int FirstPagingDoc = 8731;
     public const int PagingDocCount = 30;
@@ -89,6 +93,7 @@ public static class DocumentAccessSeed
             (DocE2DeniedDelete, e2, TypeContract, false),
             (DocE2AdminUpdate, e2, TypeContract, false),
             (DocE2AdminDelete, e2, TypeContract, false),
+            (DocE2SameOwnerEdit, e2, TypeContract, false),
         };
 
         foreach (var (id, owner, type, linkDeleted) in seeded)

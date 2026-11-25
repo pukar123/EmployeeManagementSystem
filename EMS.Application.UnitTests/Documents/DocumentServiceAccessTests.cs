@@ -100,6 +100,87 @@ public class DocumentServiceAccessTests
         });
     }
 
+    // ----- Update keeps one link per (employee, document) (unique index on SQL Server) -----
+
+    [Test]
+    public async Task Update_SameOwner_KeepsTheExistingLink_AndAddsNone()
+    {
+        var ctx = new Context(isDocumentAdmin: true);
+        var linkBefore = ctx.Links.Items.Single(l => l.DocumentId == DocOfB);
+
+        var result = await ctx.Sut.UpdateAsync(
+            DocOfB,
+            new UpdateDocumentRequestModel { Name = "Renamed", DocumentTypeId = TypePassport, EmployeeId = EmployeeB },
+            CancellationToken.None);
+
+        var links = ctx.Links.Items.Where(l => l.DocumentId == DocOfB).ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(result?.Name, Is.EqualTo("Renamed"));
+            Assert.That(links, Has.Count.EqualTo(1), "No second (employee, document) link may be added.");
+            Assert.That(links[0], Is.SameAs(linkBefore));
+            Assert.That(links[0].IsActive && !links[0].IsDeleted, Is.True, "The existing link stays active.");
+        });
+        ctx.LinksMock.Verify(x => x.AddAsync(It.IsAny<EmployeeDocument>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Update_ChangedOwner_RetiresTheOldLink_AndAddsOneNew()
+    {
+        var ctx = new Context(isDocumentAdmin: true);
+
+        await ctx.Sut.UpdateAsync(
+            DocOfB,
+            new UpdateDocumentRequestModel { Name = "Moved", DocumentTypeId = TypeContract, EmployeeId = EmployeeA },
+            CancellationToken.None);
+
+        var links = ctx.Links.Items.Where(l => l.DocumentId == DocOfB).ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(links, Has.Count.EqualTo(2));
+            Assert.That(links.Count(l => l.EmployeeId == EmployeeA), Is.EqualTo(1), "One link to the new owner.");
+            Assert.That(links.Single(l => l.EmployeeId == EmployeeA).IsActive, Is.True);
+            Assert.That(links.Single(l => l.EmployeeId == EmployeeB).IsDeleted, Is.True, "The old owner's link is retired.");
+            Assert.That(links.Count(l => l.IsActive && !l.IsDeleted), Is.EqualTo(1));
+        });
+        ctx.LinksMock.Verify(x => x.AddAsync(It.IsAny<EmployeeDocument>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task Update_BackToAFormerOwner_ReactivatesTheirLink_AndAddsNone()
+    {
+        var ctx = new Context(isDocumentAdmin: true);
+
+        // DeletedLinkToA has only a retired link to A.
+        await ctx.Sut.UpdateAsync(
+            Context.DeletedLinkToA,
+            new UpdateDocumentRequestModel { Name = "Back", DocumentTypeId = TypeContract, EmployeeId = EmployeeA },
+            CancellationToken.None);
+
+        var links = ctx.Links.Items.Where(l => l.DocumentId == Context.DeletedLinkToA).ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(links, Has.Count.EqualTo(1), "The former owner's link is reused, not duplicated.");
+            Assert.That(links[0].IsActive && !links[0].IsDeleted, Is.True);
+        });
+        ctx.LinksMock.Verify(x => x.AddAsync(It.IsAny<EmployeeDocument>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Update_ClearOwner_RetiresTheLink_AndAddsNone()
+    {
+        var ctx = new Context(isDocumentAdmin: true);
+
+        await ctx.Sut.UpdateAsync(
+            DocOfB,
+            new UpdateDocumentRequestModel { Name = "Unassigned", DocumentTypeId = TypeContract, EmployeeId = null },
+            CancellationToken.None);
+
+        var link = ctx.Links.Items.Single(l => l.DocumentId == DocOfB);
+        Assert.That(link.IsActive || !link.IsDeleted, Is.False, "The only link is retired.");
+        ctx.LinksMock.Verify(x => x.AddAsync(It.IsAny<EmployeeDocument>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ----- Paged list -----
 
     [TestCase(0, 25, DocumentService.PageMessage)]
@@ -263,11 +344,12 @@ public class DocumentServiceAccessTests
                 .ReturnsAsync((int id, CancellationToken _) => Documents.Items.Any(d => d.Id == id));
 
             DocumentsMock = Documents.CreateMock();
+            LinksMock = Links.CreateMock();
             Sut = new DocumentService(
                 DocumentsMock.Object,
                 Types.CreateMock().Object,
                 Employees.CreateMock().Object,
-                Links.CreateMock().Object,
+                LinksMock.Object,
                 Access.Object);
         }
 
@@ -276,6 +358,7 @@ public class DocumentServiceAccessTests
         public InMemoryRepositoryMock<Employee> Employees { get; }
         public InMemoryRepositoryMock<EmployeeDocument> Links { get; }
         public Mock<IBaseRepository<Document>> DocumentsMock { get; }
+        public Mock<IBaseRepository<EmployeeDocument>> LinksMock { get; }
         public Mock<IDocumentAccessService> Access { get; }
         public DocumentService Sut { get; }
 

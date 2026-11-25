@@ -207,32 +207,61 @@ public sealed class DocumentService : IDocumentService
         entity.DocumentTypeId = request.DocumentTypeId;
         entity.IssueDate = request.IssueDate;
         entity.ExpiryDate = request.ExpiryDate;
-        entity.UpdatedAtUtc = DateTime.UtcNow;
 
+        var now = DateTime.UtcNow;
         var existingLinks = await _employeeDocuments.GetQueryable()
             .Where(ed => ed.DocumentId == id)
             .ToListAsync(cancellationToken);
 
+        // (EmployeeId, DocumentId) is unique, so a link is never inserted twice: an unchanged owner keeps its link,
+        // and a former owner's retired link is turned back on instead of adding a new one.
+        EmployeeDocument? keep = null;
+        if (request.EmployeeId is int ownerId)
+        {
+            keep = existingLinks
+                .Where(link => link.EmployeeId == ownerId)
+                .OrderByDescending(link => link.IsActive && !link.IsDeleted)
+                .ThenByDescending(link => link.Id)
+                .FirstOrDefault();
+        }
+
         foreach (var link in existingLinks)
         {
+            if (ReferenceEquals(link, keep))
+            {
+                if (link.IsActive && !link.IsDeleted)
+                    continue;
+
+                link.IsActive = true;
+                link.IsDeleted = false;
+                link.UpdatedAtUtc = now;
+                _employeeDocuments.Update(link);
+                continue;
+            }
+
+            if (!link.IsActive && link.IsDeleted)
+                continue;
+
             link.IsActive = false;
             link.IsDeleted = true;
-            link.UpdatedAtUtc = DateTime.UtcNow;
+            link.UpdatedAtUtc = now;
             _employeeDocuments.Update(link);
         }
 
-        if (request.EmployeeId is int employeeId)
+        if (request.EmployeeId is int newOwnerId && keep is null)
         {
             await _employeeDocuments.AddAsync(new EmployeeDocument
             {
-                EmployeeId = employeeId,
+                EmployeeId = newOwnerId,
                 DocumentId = id,
                 IsActive = true,
                 IsDeleted = false,
-                CreatedAtUtc = DateTime.UtcNow,
-                UpdatedAtUtc = DateTime.UtcNow,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
             }, cancellationToken);
         }
+
+        entity.UpdatedAtUtc = now;
 
         await using var updateTransaction = await _documents.BeginTransactionAsync(cancellationToken);
         try
