@@ -6,8 +6,10 @@ import type { CreateDocumentPayload, Document, UpdateDocumentRequest } from "../
 export function useDocumentMutations(employeeId: number) {
   const queryClient = useQueryClient();
 
+  // Prefix keys, so every page of this employee's documents and of the all-documents list refreshes.
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: documentKeys.byEmployee(employeeId) });
+    void queryClient.invalidateQueries({ queryKey: documentKeys.allList() });
   };
 
   const create = useMutation({

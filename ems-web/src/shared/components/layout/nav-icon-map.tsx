@@ -4,6 +4,7 @@ import {
   Building2,
   Circle,
   Clock3,
+  FileText,
   Home,
   LayoutList,
   MapPin,
@@ -22,6 +23,7 @@ const map: Record<string, LucideIcon> = {
   settings: Settings,
   shield: Shield,
   "layout-list": LayoutList,
+  "file-text": FileText,
 };
 
 export function getNavIcon(iconKey: string | null | undefined): LucideIcon {

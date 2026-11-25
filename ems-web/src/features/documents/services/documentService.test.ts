@@ -11,6 +11,7 @@ const postFormDataMock = vi.fn<PostFormDataMock>(async () => ({
   id: 1,
   employeeId: 5,
   documentTypeId: 2,
+  employeeDisplayName: "Eli Report",
   documentTypeName: "Contract",
   name: "Employment contract",
   issueDate: null,
@@ -35,6 +36,8 @@ import { emsHttpClient } from "@/shared/api/http-client";
 import { documentService } from "./documentService";
 import { downloadDocumentFile } from "../utils/document-download";
 import { fileKindLabel } from "../utils/file-kind-labels";
+import { documentKeys } from "./query-keys";
+import { isForbiddenError, pagingState } from "../utils/document-paging";
 import { DocumentFileKind } from "../types/document.types";
 
 const EMS_ORIGIN = "http://ems.test";
@@ -68,15 +71,45 @@ describe("documentService", () => {
     installCapture(emsHttpClient, requests);
   });
 
-  it("routes list and types requests to EMS", async () => {
+  it("routes list and types requests to EMS with paging parameters", async () => {
     await documentService.getTypes();
-    await documentService.listByEmployee(5);
+    await documentService.listByEmployee(5, { page: 2, pageSize: 25 });
+    await documentService.listByEmployee(5, { page: 1, pageSize: 50, documentTypeId: 3 });
+    await documentService.list({ page: 1, pageSize: 100 });
+    await documentService.list({ page: 3, pageSize: 25, documentTypeId: 4 });
 
     expect(requests.map((r) => ({ method: r.method, url: r.url }))).toEqual([
       { method: "GET", url: `${EMS_ORIGIN}/api/Documents/types` },
       { method: "GET", url: `${EMS_ORIGIN}/api/Documents` },
+      { method: "GET", url: `${EMS_ORIGIN}/api/Documents` },
+      { method: "GET", url: `${EMS_ORIGIN}/api/Documents` },
+      { method: "GET", url: `${EMS_ORIGIN}/api/Documents` },
     ]);
-    expect(requests[1]?.params).toEqual({ employeeId: 5 });
+    expect(requests[1]?.params).toEqual({ employeeId: 5, page: 2, pageSize: 25 });
+    expect(requests[2]?.params).toEqual({ employeeId: 5, page: 1, pageSize: 50, documentTypeId: 3 });
+    // The all-documents list never sends an employeeId.
+    expect(requests[3]?.params).toEqual({ page: 1, pageSize: 100 });
+    expect(requests[4]?.params).toEqual({ page: 3, pageSize: 25, documentTypeId: 4 });
+  });
+
+  it("returns the paged shape from the list endpoint", async () => {
+    const paged = {
+      items: [],
+      totalCount: 30,
+      page: 2,
+      pageSize: 25,
+      totalPages: 2,
+    };
+    emsHttpClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => ({
+      data: paged,
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config,
+    });
+
+    await expect(documentService.listByEmployee(5, { page: 2, pageSize: 25 })).resolves.toEqual(paged);
+    await expect(documentService.list({ page: 2, pageSize: 25 })).resolves.toEqual(paged);
   });
 
   it("routes update and delete to EMS", async () => {
@@ -152,5 +185,27 @@ describe("fileKindLabel", () => {
     expect(fileKindLabel(DocumentFileKind.Pdf)).toBe("PDF");
     expect(fileKindLabel(DocumentFileKind.Word)).toBe("Word");
     expect(fileKindLabel(DocumentFileKind.Image)).toBe("Image");
+  });
+});
+
+describe("document paging helpers", () => {
+  it("shows Previous/Next only when there is more than one page", () => {
+    expect(pagingState(1, 1)).toEqual({ showPaging: false, canGoBack: false, canGoForward: false });
+    expect(pagingState(1, 2)).toEqual({ showPaging: true, canGoBack: false, canGoForward: true });
+    expect(pagingState(2, 2)).toEqual({ showPaging: true, canGoBack: true, canGoForward: false });
+  });
+
+  it("recognises a 403 refusal only", () => {
+    expect(isForbiddenError({ response: { status: 403 } })).toBe(true);
+    expect(isForbiddenError({ response: { status: 404 } })).toBe(false);
+    expect(isForbiddenError(new Error("network"))).toBe(false);
+    expect(isForbiddenError(null)).toBe(false);
+  });
+
+  it("puts the page in the query key under the employee prefix", () => {
+    const pageKey = documentKeys.byEmployeePage(5, { page: 2, pageSize: 25 });
+    expect(pageKey.slice(0, 3)).toEqual([...documentKeys.byEmployee(5)]);
+    expect(pageKey[3]).toEqual({ page: 2, pageSize: 25 });
+    expect(documentKeys.allListPage({ page: 1, pageSize: 25 }).slice(0, 2)).toEqual([...documentKeys.allList()]);
   });
 });
