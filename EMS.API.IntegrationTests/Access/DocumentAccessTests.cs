@@ -479,7 +479,8 @@ public sealed class DocumentAccessTests : AccessTestFixture
         form.Add(new StringContent(employeeId.ToString(CultureInfo.InvariantCulture)), "employeeId");
         form.Add(new StringContent(DocumentAccessSeed.TypeContract.ToString(CultureInfo.InvariantCulture)), "documentTypeId");
         form.Add(new StringContent("B09 upload"), "name");
-        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
+        // B10: a real minimal PDF (text sent as application/pdf is now refused by the upload checker).
+        var file = new ByteArrayContent(UploadTestFiles.Pdf(content));
         file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         form.Add(file, "file", fileName);
 

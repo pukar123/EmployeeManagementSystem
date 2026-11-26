@@ -7,6 +7,7 @@ using EMS.Application.Options;
 using EMS.Application.Services.Authorization;
 using EMS.Application.Services.Departments;
 using EMS.Application.Services.Documents;
+using EMS.Application.Services.Files;
 using EMS.Application.Services.Employees;
 using EMS.Application.Services.EmployeeSites;
 using EMS.Application.Services.Attendance;
@@ -34,6 +35,7 @@ using Pukar.Usermanagement.API.Extensions;
 using Pukar.Usermanagement.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -218,6 +220,8 @@ try
     builder.Services.AddScoped<IEmployeePortalService, EmployeePortalService>();
     builder.Services.AddScoped<IManagerTeamAccessService, ManagerTeamAccessService>();
     builder.Services.AddScoped<IManagerTeamService, ManagerTeamService>();
+    // B10: one shared, stateless upload checker for every upload.
+    builder.Services.AddSingleton<IUploadFileChecker, UploadFileChecker>();
     builder.Services.AddScoped<LocalOrganizationLogoStorage>();
     builder.Services.AddScoped<LocalDocumentFileStorage>();
     builder.Services.AddScoped<LocalLeaveAttachmentStorage>();
@@ -290,10 +294,23 @@ try
 
     // Only public organisation logos are served as static files, so this may run before authentication.
     // Nothing else under wwwroot is served: other paths fall through to routing and return 404.
+    // B10: only raster images are served (PNG, JPEG, WebP, and GIF for logos saved before B10). Every other
+    // extension, including .svg, is not in the map and ServeUnknownFileTypes stays false, so it returns 404.
+    var logoContentTypes = new FileExtensionContentTypeProvider();
+    logoContentTypes.Mappings.Clear();
+    logoContentTypes.Mappings[".png"] = "image/png";
+    logoContentTypes.Mappings[".jpg"] = "image/jpeg";
+    logoContentTypes.Mappings[".jpeg"] = "image/jpeg";
+    logoContentTypes.Mappings[".webp"] = "image/webp";
+    logoContentTypes.Mappings[".gif"] = "image/gif";
     app.UseStaticFiles(new StaticFileOptions
     {
         RequestPath = "/attachments/Organization",
         FileProvider = new PhysicalFileProvider(logoRootPath),
+        ContentTypeProvider = logoContentTypes,
+        ServeUnknownFileTypes = false,
+        OnPrepareResponse = context =>
+            context.Context.Response.Headers[FileDownloadHeaders.NoSniffHeader] = FileDownloadHeaders.NoSniffValue,
     });
 
     app.UseCors("EmsWeb");

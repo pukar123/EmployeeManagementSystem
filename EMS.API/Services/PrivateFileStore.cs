@@ -133,28 +133,49 @@ public sealed class PrivateFileStore
         => TryResolve(storedPath, out var full) && File.Exists(full);
 
     /// <summary>
-    /// Saves <paramref name="file"/> as <c>{folderKey}/{guid}{ext}</c> and returns that storage key.
+    /// Saves <paramref name="content"/> as <c>{folderKey}/{guid}{serverExtension}</c> and returns that storage key.
     /// <paramref name="folderKey"/> is, for example, <c>Employee/5/Documents</c> or <c>Leave/12</c>.
+    /// <paramref name="serverExtension"/> comes from the upload checker (B10), never from the uploaded file name:
+    /// only a lower-case dot followed by 3 or 4 letters is accepted, otherwise nothing is written.
     /// </summary>
-    public async Task<string> SaveAsync(string folderKey, IFormFile file, CancellationToken cancellationToken = default)
+    public async Task<string> SaveAsync(
+        string folderKey,
+        Stream content,
+        string serverExtension,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(file);
+        ArgumentNullException.ThrowIfNull(content);
+        if (!IsServerExtension(serverExtension))
+            throw new InvalidOperationException("The file could not be stored. The file type is not supported.");
 
-        var ext = Path.GetExtension(file.FileName);
-        var key = $"{folderKey.Trim('/')}/{Guid.NewGuid():N}{ext}";
+        var key = $"{folderKey.Trim('/')}/{Guid.NewGuid():N}{serverExtension}";
         if (!TryResolve(key, out var fullPath))
             throw new InvalidOperationException("The file could not be stored. Check the file name and try again.");
 
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
 
-        await using (var stream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536,
-                         FileOptions.Asynchronous))
+        if (content.CanSeek)
+            content.Position = 0;
+
+        try
         {
-            await file.CopyToAsync(stream, cancellationToken);
+            await using var stream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536,
+                FileOptions.Asynchronous);
+            await content.CopyToAsync(stream, cancellationToken);
+        }
+        catch
+        {
+            // A part-written file must not be left behind.
+            TryDelete(key);
+            throw;
         }
 
         return key;
     }
+
+    /// <summary>True for a lower-case dot followed by 3 or 4 ASCII letters (for example <c>.pdf</c>, <c>.docx</c>).</summary>
+    public static bool IsServerExtension(string? extension)
+        => extension is { Length: 4 or 5 } && extension[0] == '.' && extension[1..].All(char.IsAsciiLetterLower);
 
     /// <summary>Deletes the file for a stored path if it is safe and exists. Never throws for IO errors.</summary>
     public void TryDelete(string? storedPath)

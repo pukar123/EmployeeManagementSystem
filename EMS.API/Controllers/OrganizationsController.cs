@@ -1,6 +1,9 @@
 using EMS.API.Auth;
+using EMS.API.Filters;
 using EMS.API.Services;
+using EMS.Application.DTOs.Files;
 using EMS.Application.DTOs.Organization;
+using EMS.Application.Services.Files;
 using EMS.Application.Mapping;
 using Pukar.Shared;
 using EMS.Application.Services.Organizations;
@@ -15,13 +18,16 @@ public class OrganizationsController : ControllerBase
 {
     private readonly IOrganizationService _organizationService;
     private readonly LocalOrganizationLogoStorage _logoStorage;
+    private readonly ILogger<OrganizationsController> _logger;
 
     public OrganizationsController(
         IOrganizationService organizationService,
-        LocalOrganizationLogoStorage logoStorage)
+        LocalOrganizationLogoStorage logoStorage,
+        ILogger<OrganizationsController> logger)
     {
         _organizationService = organizationService;
         _logoStorage = logoStorage;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -66,33 +72,56 @@ public class OrganizationsController : ControllerBase
         return updated is null ? NotFound() : Ok(updated);
     }
 
-    /// <summary>Upload a logo image; file is stored on disk under wwwroot/attachments/Organization. Logos are public: only the public logo path (served by static files at /attachments/Organization) is saved in the database.</summary>
+    /// <summary>
+    /// Upload a logo image (B10: PNG, JPEG or WebP, up to 5 MB; never SVG); the file is stored on disk under
+    /// wwwroot/attachments/Organization. Logos are public: only the public logo path (served by static files at
+    /// /attachments/Organization) is saved in the database. The new logo is checked and saved, and the database
+    /// updated, before the old file is deleted, so a refused upload leaves the current logo unchanged.
+    /// </summary>
     [Authorize(Policy = AuthorizationPolicyNames.OrganizationAdmin)]
     [HttpPost("{id:int}/logo")]
-    [RequestSizeLimit(6 * 1024 * 1024)]
+    [UploadRequestSizeLimit(UploadPurpose.OrganizationLogo)]
     [RequestFormLimits(MultipartBodyLengthLimit = 6 * 1024 * 1024)]
     public async Task<ActionResult<OrganizationResponseModel>> UploadLogo(
         int id,
         IFormFile? file,
         CancellationToken cancellationToken)
     {
-        if (file is null || file.Length == 0)
+        // A missing file part is "A logo file is required."; a zero-byte file is refused by the checker as file_empty.
+        if (file is null)
             return BadRequest(new { message = "A logo file is required." });
 
         var existing = await _organizationService.GetByIdAsync(id, cancellationToken);
         if (existing is null)
             return NotFound();
 
+        string? newPath = null;
+        var saved = false;
         try
         {
-            _logoStorage.TryDeleteFile(existing.LogoRelativePath);
-            var relativePath = await _logoStorage.SaveLogoAsync(id, file, cancellationToken);
-            var updated = await _organizationService.UpdateLogoRelativePathAsync(id, relativePath, cancellationToken);
-            return updated is null ? NotFound() : Ok(updated);
+            newPath = await _logoStorage.SaveLogoAsync(id, file, cancellationToken);
+            var updated = await _organizationService.UpdateLogoRelativePathAsync(id, newPath, cancellationToken);
+            if (updated is null)
+                return NotFound();
+
+            saved = true;
+            if (!string.Equals(existing.LogoRelativePath, newPath, StringComparison.Ordinal))
+                _logoStorage.TryDeleteFile(existing.LogoRelativePath);
+            return Ok(updated);
+        }
+        catch (UploadRejectedException ex)
+        {
+            return UploadErrorResults.Rejected(_logger, User, ex);
         }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        finally
+        {
+            // Any failure after the new file was written removes it; the old file and database path are untouched.
+            if (!saved && newPath is not null)
+                _logoStorage.TryDeleteFile(newPath);
         }
     }
 

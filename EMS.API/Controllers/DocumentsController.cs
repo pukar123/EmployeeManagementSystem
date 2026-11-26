@@ -1,7 +1,9 @@
 using EMS.API.Auth;
+using EMS.API.Filters;
 using EMS.Application.DTOs.Document;
 using EMS.Application.DTOs.Files;
 using EMS.Application.Services.Documents;
+using EMS.Application.Services.Files;
 using EMS.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +16,8 @@ namespace EMS.API.Controllers;
 /// document admins, decided in the Application layer; an access denial is 403. Uploads, changes and deletes need the
 /// <see cref="AuthorizationPolicyNames.DocumentAdmin"/> policy, which runs before the action, so a refused upload
 /// never writes a file. Document types stay readable by every signed-in user.
+/// B10: uploads go through the shared upload checker (PDF, Word (.docx), PNG or JPEG, up to 15 MB); downloads are
+/// always attachments with a sanitised name, an allow-listed content type and <c>X-Content-Type-Options: nosniff</c>.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -22,15 +26,18 @@ public class DocumentsController : ControllerBase
     private readonly IDocumentService _documents;
     private readonly LocalDocumentFileStorage _storage;
     private readonly PrivateFileStore _store;
+    private readonly ILogger<DocumentsController> _logger;
 
     public DocumentsController(
         IDocumentService documents,
         LocalDocumentFileStorage storage,
-        PrivateFileStore store)
+        PrivateFileStore store,
+        ILogger<DocumentsController> logger)
     {
         _documents = documents;
         _storage = storage;
         _store = store;
+        _logger = logger;
     }
 
     [HttpGet("types")]
@@ -71,16 +78,20 @@ public class DocumentsController : ControllerBase
         }
     }
 
-    /// <summary>Upload a document (PDF, Word, or image). Metadata via form fields.</summary>
+    /// <summary>
+    /// Upload a document (PDF, Word (.docx), PNG or JPEG, up to 15 MB). Metadata via form fields. A refused file is
+    /// 400 (<c>file_empty</c>, <c>file_type_not_allowed</c>) or 413 (<c>file_too_large</c>, <c>request_too_large</c>).
+    /// </summary>
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicyNames.DocumentAdmin)]
-    [RequestSizeLimit(16 * 1024 * 1024)]
+    [UploadRequestSizeLimit(UploadPurpose.EmployeeDocument)]
     [RequestFormLimits(MultipartBodyLengthLimit = 16 * 1024 * 1024)]
     public async Task<ActionResult<DocumentResponseModel>> Create(
         [FromForm] CreateDocumentForm form,
         CancellationToken cancellationToken)
     {
-        if (form.File is null || form.File.Length == 0)
+        // A missing file part is "A file is required."; a zero-byte file is refused by the checker as file_empty.
+        if (form.File is null)
             return BadRequest(new { message = "A file is required." });
 
         if (string.IsNullOrWhiteSpace(form.Name))
@@ -89,11 +100,9 @@ public class DocumentsController : ControllerBase
         string? relativePath = null;
         try
         {
-            LocalDocumentFileStorage.ValidateContentOrThrow(form.File);
+            // The checker runs inside SaveAsync before anything is written.
             var savedFile = await _storage.SaveAsync(form.EmployeeId, form.File, cancellationToken);
             relativePath = savedFile.StorageKey;
-            var contentType = savedFile.ContentType;
-            var kind = savedFile.Kind;
 
             var issue = ParseOptionalDate(form.IssueDate);
             var expiry = ParseOptionalDate(form.ExpiryDate);
@@ -104,12 +113,16 @@ public class DocumentsController : ControllerBase
                 form.Name.Trim(),
                 issue,
                 expiry,
-                form.File.FileName,
-                contentType,
+                savedFile.FileName,
+                savedFile.ContentType,
                 relativePath,
-                kind,
+                savedFile.Kind,
                 cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+        catch (UploadRejectedException ex)
+        {
+            return UploadErrorResults.Rejected(_logger, User, ex);
         }
         catch (InvalidOperationException ex)
         {
@@ -172,6 +185,8 @@ public class DocumentsController : ControllerBase
     [HttpGet("{id:int}/file")]
     public async Task<IActionResult> Download(int id, CancellationToken cancellationToken)
     {
+        Response.Headers[FileDownloadHeaders.NoSniffHeader] = FileDownloadHeaders.NoSniffValue;
+
         StoredFileModel? stored;
         try
         {
@@ -186,7 +201,11 @@ public class DocumentsController : ControllerBase
         if (stored is null || !_store.TryResolve(stored.StoragePath, out var full) || !System.IO.File.Exists(full))
             return NotFound();
 
-        return PhysicalFile(full, FileDownloadHeaders.SafeContentType(stored.ContentType), FileDownloadHeaders.SafeFileName(stored.FileName));
+        // PhysicalFile with a download name writes Content-Disposition: attachment with both filename and filename*.
+        return PhysicalFile(
+            full,
+            FileDownloadHeaders.SafeContentType(stored.ContentType),
+            FileDownloadHeaders.SafeFileName(stored.FileName, stored.StoragePath));
     }
 
     /// <summary>403 for a document access denial (checked first), otherwise 400 as before.</summary>
