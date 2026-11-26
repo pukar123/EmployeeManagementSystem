@@ -1,12 +1,11 @@
 import { z } from "zod";
+import { DOCUMENT_UPLOAD_RULE, hasAllowedType } from "@/shared/constants/upload-rules";
 
-export const MAX_DOCUMENT_FILE_BYTES = 16 * 1024 * 1024;
-
-const allowedExtensions = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
+/** 15 MB, the server's limit for employee documents (B10). */
+export const MAX_DOCUMENT_FILE_BYTES = DOCUMENT_UPLOAD_RULE.maxBytes;
 
 function isAllowedFile(file: File): boolean {
-  const name = file.name.toLowerCase();
-  return allowedExtensions.some((ext) => name.endsWith(ext));
+  return hasAllowedType(file, DOCUMENT_UPLOAD_RULE);
 }
 
 const optionalDateString = z.string().optional().or(z.literal(""));
@@ -19,8 +18,8 @@ export const uploadDocumentFormSchema = z.object({
   file: z
     .custom<File>((val) => val instanceof File, "A file is required")
     .refine((file) => file.size > 0, "A file is required")
-    .refine((file) => file.size <= MAX_DOCUMENT_FILE_BYTES, "File must be 16 MB or smaller")
-    .refine(isAllowedFile, "File must be PDF, Word, or an image"),
+    .refine((file) => file.size <= MAX_DOCUMENT_FILE_BYTES, "File must be 15 MB or smaller")
+    .refine(isAllowedFile, "File must be a PDF, Word (.docx), PNG or JPEG file"),
 });
 
 export type UploadDocumentFormValues = z.infer<typeof uploadDocumentFormSchema>;

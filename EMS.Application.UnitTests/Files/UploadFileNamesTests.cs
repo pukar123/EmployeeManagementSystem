@@ -24,7 +24,8 @@ public sealed class UploadFileNamesTests
         var result = Sanitise("invoice\u202Efdp.exe.pdf");
         Assert.Multiple(() =>
         {
-            Assert.That(result, Does.Not.Contain("\u202E"));
+            // Ordinal check: a culture-aware Contains treats U+202E as ignorable and always "finds" it.
+            Assert.That(result.IndexOf('\u202E'), Is.EqualTo(-1));
             Assert.That(result, Does.EndWith(".pdf"));
             Assert.That(result, Is.EqualTo("invoicefdp.exe.pdf"));
         });
@@ -72,6 +73,7 @@ public sealed class UploadFileNamesTests
     [TestCase(null)]
     [TestCase("...")]
     [TestCase("\u202E\r\n")]
+    [TestCase(".pdf")]
     public void N07_NothingLeft_UsesTheFallback(string? name) => Assert.That(Sanitise(name), Is.EqualTo("document.pdf"));
 
     [Test]
@@ -103,6 +105,10 @@ public sealed class UploadFileNamesTests
     }
 
     [Test]
+    public void TrailingDotsAndSpaces_DoNotKeepTheOldExtension()
+        => Assert.That(Sanitise("a.pdf. "), Is.EqualTo("a.pdf"));
+
+    [Test]
     public void LoneSurrogate_IsRemovedWithoutAnException()
         => Assert.That(Sanitise("a\uD800b.pdf"), Is.EqualTo("ab.pdf"));
 
@@ -112,6 +118,8 @@ public sealed class UploadFileNamesTests
     [TestCase("A.PDF", ".pdf")]
     [TestCase("invoice\u202Efdp.exe", ".exe")]
     [TestCase("noextension", "")]
+    [TestCase("a.pdf. ", ".pdf")]
+    [TestCase(".pdf", ".pdf")]
     [TestCase(null, "")]
     public void ExtensionOf_ReturnsTheLastExtensionOfTheCleanedName(string? name, string expected)
         => Assert.That(UploadFileNames.ExtensionOf(name), Is.EqualTo(expected));

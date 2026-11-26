@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
 import { getErrorMessage } from "@/shared/api/http-client";
+import { DOCUMENT_UPLOAD_RULE } from "@/shared/constants/upload-rules";
 import { useDocumentMutations } from "../hooks";
 import { useDocumentTypes } from "../hooks/useDocumentTypes";
 import {
@@ -17,9 +18,6 @@ import type { DocumentType } from "../types/document.types";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
-
-const FILE_ACCEPT =
-  ".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.bmp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*";
 
 type UploadDocumentModalProps = {
   open: boolean;
@@ -148,7 +146,7 @@ export function UploadDocumentModal({ open, employeeId, onClose, onUploaded }: U
           <input
             ref={fileInputRef}
             type="file"
-            accept={FILE_ACCEPT}
+            accept={DOCUMENT_UPLOAD_RULE.accept}
             className="sr-only"
             id="doc-upload-file"
             onChange={(e) => {
@@ -167,7 +165,7 @@ export function UploadDocumentModal({ open, employeeId, onClose, onUploaded }: U
               {selectedFile instanceof File ? selectedFile.name : "No file chosen"}
             </span>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">PDF, Word, or image up to 16 MB.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{DOCUMENT_UPLOAD_RULE.hint}</p>
           {errors.file ? <p className="mt-1 text-xs text-destructive">{errors.file.message as string}</p> : null}
         </div>
       </form>

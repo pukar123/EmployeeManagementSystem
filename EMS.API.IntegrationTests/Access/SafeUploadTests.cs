@@ -529,7 +529,7 @@ public sealed class SafeUploadTests : AccessTestFixture
             Assert.That(disposition?.DispositionType, Is.EqualTo("attachment"));
             Assert.That(disposition?.FileName?.Trim('"'), Is.EqualTo(expectedName), "filename");
             Assert.That(disposition?.FileNameStar, Is.EqualTo(expectedName), "filename*");
-            Assert.That(rawDisposition, Does.Not.Contain("\r").And.Not.Contain("\n"), "No header injection.");
+            Assert.That(rawDisposition.IndexOfAny(['\r', '\n']), Is.EqualTo(-1), "No header injection.");
             Assert.That(NoSniff(response), Is.EqualTo("nosniff"));
         });
     }

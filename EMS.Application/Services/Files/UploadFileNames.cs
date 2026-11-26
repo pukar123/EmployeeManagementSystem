@@ -22,7 +22,8 @@ public static class UploadFileNames
     /// </summary>
     public static string SanitiseDisplayName(string? name, string serverExtension, string fallbackBase)
     {
-        var cleaned = TrimSpacesAndDots(CleanName(name));
+        // Trailing spaces and dots go first (so "a.pdf." loses ".pdf"), then the extension, then both ends are trimmed.
+        var cleaned = TrimTrailingSpacesAndDots(CleanName(name));
         var baseName = TrimSpacesAndDots(RemoveExtension(cleaned));
 
         if (baseName.Length > MaxBaseLength)
@@ -45,7 +46,7 @@ public static class UploadFileNames
     /// </summary>
     public static string ExtensionOf(string? fileName)
     {
-        var cleaned = TrimSpacesAndDots(CleanName(fileName));
+        var cleaned = TrimTrailingSpacesAndDots(CleanName(fileName));
         var dot = cleaned.LastIndexOf('.');
         return dot < 0 ? string.Empty : cleaned[dot..].ToLowerInvariant();
     }
@@ -111,6 +112,8 @@ public static class UploadFileNames
     }
 
     private static string TrimSpacesAndDots(string value) => value.Trim(' ', '.');
+
+    private static string TrimTrailingSpacesAndDots(string value) => value.TrimEnd(' ', '.');
 
     /// <summary>Drops surrogate characters that are not part of a valid pair, so NFC normalisation cannot throw.</summary>
     private static string RemoveLoneSurrogates(string value)

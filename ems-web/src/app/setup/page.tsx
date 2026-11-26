@@ -10,6 +10,11 @@ import { organizationService } from "@/features/organizations/services/organizat
 import { useOrganizationContext } from "@/providers/OrganizationProvider";
 import { getErrorMessage } from "@/shared/api/http-client";
 import { Button } from "@/shared/components/Button";
+import {
+  isAllowedLogoFile,
+  LOGO_FILE_INVALID_MESSAGE,
+  LOGO_UPLOAD_RULE,
+} from "@/shared/constants/upload-rules";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card dark:text-foreground";
@@ -29,6 +34,7 @@ export default function SetupPage() {
   const [motto, setMotto] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : null), [logoFile]);
 
   useEffect(() => {
@@ -90,13 +96,20 @@ export default function SetupPage() {
               </div>
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml"
+                accept={LOGO_UPLOAD_RULE.accept}
                 className="sr-only"
                 id="setup-org-logo"
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null;
-                  setLogoFile(f);
                   e.target.value = "";
+                  // A file that fails the browser check is not kept, so the form never submits it.
+                  if (f && !isAllowedLogoFile(f)) {
+                    setLogoFile(null);
+                    setLogoError(LOGO_FILE_INVALID_MESSAGE);
+                    return;
+                  }
+                  setLogoError(null);
+                  setLogoFile(f);
                 }}
                 disabled={createMut.isPending}
               />
@@ -106,6 +119,12 @@ export default function SetupPage() {
               >
                 Choose image
               </label>
+              <p className="text-xs text-muted-foreground">{LOGO_UPLOAD_RULE.hint}</p>
+              {logoError ? (
+                <p className="text-xs text-destructive" role="alert">
+                  {logoError}
+                </p>
+              ) : null}
             </div>
 
             <div className="min-w-0 flex-1 space-y-4">
