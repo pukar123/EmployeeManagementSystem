@@ -1,6 +1,7 @@
 using EMS.Application.DTOs.Document;
 using EMS.Application.DTOs.Files;
 using EMS.Application.Mapping;
+using EMS.Application.Services.Files;
 using EMS.Domain.DbModels;
 using EMS.Domain.Enums;
 using EMS.Domain.Repositories.Interface;
@@ -147,7 +148,12 @@ public sealed class DocumentService : IDocumentService
             IssueDate = issueDate,
             ExpiryDate = expiryDate,
             FileKind = fileKind,
-            OriginalFileName = originalFileName.Trim(),
+            // Defence in depth (B10): the upload endpoint already passes a sanitised name; cleaning again is cheap
+            // and idempotent, and keeps any other caller safe.
+            OriginalFileName = UploadFileNames.SanitiseDisplayName(
+                originalFileName,
+                UploadFileNames.ServerExtensionOfKey(storedRelativePath),
+                UploadRules.EmployeeDocument.FallbackBaseName),
             ContentType = contentType,
             StoredRelativePath = storedRelativePath,
             CreatedAtUtc = now,

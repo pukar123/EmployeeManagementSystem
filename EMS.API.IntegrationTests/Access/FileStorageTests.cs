@@ -166,7 +166,7 @@ public sealed class FileStorageTests : AccessTestFixture
     {
         var webFilesBefore = CountFiles(Factory.WebRootPath);
 
-        var (id, json) = await UploadDocumentAsync("b08-05 contract.pdf", "B08-05 content");
+        var (id, json) = await UploadDocumentAsync("b08-05 contract.pdf", UploadTestFiles.Pdf("B08-05 content"));
 
         var folder = Path.Combine(Factory.PrivateRootPath, "Employee", E1.ToString(CultureInfo.InvariantCulture), "Documents");
         var storedKey = await StoredDocumentPathAsync(id);
@@ -188,7 +188,7 @@ public sealed class FileStorageTests : AccessTestFixture
     public async Task B08_06_DocumentDownload_ReturnsFileWithHeaders()
     {
         const string fileName = "b08-06 contract.pdf";
-        const string content = "B08-06 content";
+        var content = UploadTestFiles.Pdf("B08-06 content");
         var (_, json) = await UploadDocumentAsync(fileName, content);
         var downloadUrl = json.GetProperty("downloadUrl").GetString()!;
 
@@ -206,7 +206,8 @@ public sealed class FileStorageTests : AccessTestFixture
     public async Task B08_08_LeaveAttachmentUpload_IsStoredPrivatelyAndReturnsDownloadUrl()
     {
         var webFilesBefore = CountFiles(Factory.WebRootPath);
-        var json = await UploadLeaveAttachmentAsync(EmployeeE1, RequestE1, "b08-08.txt", "B08-08 evidence");
+        // B10: a real PDF (text files are no longer accepted as leave attachments).
+        var json = await UploadLeaveAttachmentAsync(EmployeeE1, RequestE1, "b08-08.pdf", UploadTestFiles.Pdf("B08-08 evidence"));
         var id = json.GetProperty("id").GetInt32();
         var storedKey = await Factory.QueryDatabaseAsync(db => db.LeaveRequestAttachments.AsNoTracking()
             .Where(a => a.Id == id).Select(a => a.StoragePath).SingleAsync());
@@ -249,8 +250,10 @@ public sealed class FileStorageTests : AccessTestFixture
     {
         var path = $"/api/LeaveAttachments/{SeededAttachmentE1}/file";
 
+        // B10: the seeded row is a legacy text/plain attachment. It still downloads, but as application/octet-stream
+        // (text/plain is not on the download allow-list) with nosniff, so the browser never renders it.
         using (var own = await ExpectRawStatusAsync(EmployeeE1, path, HttpStatusCode.OK))
-            await AssertFileResponseAsync(own, SeededAttachmentContent, "text/plain", "b08 evidence.txt");
+            await AssertFileResponseAsync(own, Encoding.UTF8.GetBytes(SeededAttachmentContent), "application/octet-stream", "b08 evidence.txt");
 
         using (var admin = await ExpectRawStatusAsync(TestUsers.Admin, path, HttpStatusCode.OK))
             Assert.That(await admin.Content.ReadAsStringAsync(), Is.EqualTo(SeededAttachmentContent));
@@ -299,7 +302,7 @@ public sealed class FileStorageTests : AccessTestFixture
     [Test]
     public async Task B08_13_DocumentDelete_RemovesPrivateFile()
     {
-        var (id, _) = await UploadDocumentAsync("b08-13.pdf", "B08-13 content");
+        var (id, _) = await UploadDocumentAsync("b08-13.pdf", UploadTestFiles.Pdf("B08-13 content"));
         var storedKey = await StoredDocumentPathAsync(id);
         Assert.That(File.Exists(PrivatePath(storedKey)), Is.True, "Precondition: the uploaded file exists.");
 
@@ -321,7 +324,7 @@ public sealed class FileStorageTests : AccessTestFixture
         UpdatedAtUtc = now,
     };
 
-    private async Task<(int Id, JsonElement Json)> UploadDocumentAsync(string fileName, string content)
+    private async Task<(int Id, JsonElement Json)> UploadDocumentAsync(string fileName, byte[] content)
     {
         const string path = "/api/Documents";
         var user = TestUsers.Admin;
@@ -330,7 +333,7 @@ public sealed class FileStorageTests : AccessTestFixture
         form.Add(new StringContent(E1.ToString(CultureInfo.InvariantCulture)), "employeeId");
         form.Add(new StringContent(DocumentTypeId.ToString(CultureInfo.InvariantCulture)), "documentTypeId");
         form.Add(new StringContent("B08 contract"), "name");
-        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
+        var file = new ByteArrayContent(content);
         file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         form.Add(file, "file", fileName);
 
@@ -343,14 +346,14 @@ public sealed class FileStorageTests : AccessTestFixture
         return (json.GetProperty("id").GetInt32(), json);
     }
 
-    private async Task<JsonElement> UploadLeaveAttachmentAsync(TestUser user, int leaveRequestId, string fileName, string content)
+    private async Task<JsonElement> UploadLeaveAttachmentAsync(TestUser user, int leaveRequestId, string fileName, byte[] content)
     {
         const string path = "/api/LeaveAttachments";
         using var client = Factory.CreateClientAs(user);
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(leaveRequestId.ToString(CultureInfo.InvariantCulture)), "leaveRequestId");
-        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
-        file.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
+        var file = new ByteArrayContent(content);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         form.Add(file, "file", fileName);
 
         using var response = await client.PostAsync(path, form);
@@ -376,9 +379,9 @@ public sealed class FileStorageTests : AccessTestFixture
         return response;
     }
 
-    private static async Task AssertFileResponseAsync(HttpResponseMessage response, string expectedBody, string expectedType, string expectedName)
+    private static async Task AssertFileResponseAsync(HttpResponseMessage response, byte[] expectedBody, string expectedType, string expectedName)
     {
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsByteArrayAsync();
         var disposition = response.Content.Headers.ContentDisposition;
 
         Assert.Multiple(() =>
@@ -388,6 +391,8 @@ public sealed class FileStorageTests : AccessTestFixture
             Assert.That(disposition?.DispositionType, Is.EqualTo("attachment"));
             Assert.That(disposition?.FileName?.Trim('"'), Is.EqualTo(expectedName), "filename");
             Assert.That(disposition?.FileNameStar, Is.EqualTo(expectedName), "filename*");
+            Assert.That(response.Headers.TryGetValues("X-Content-Type-Options", out var noSniff) ? string.Join(",", noSniff) : null,
+                Is.EqualTo("nosniff"), "X-Content-Type-Options");
         });
     }
 

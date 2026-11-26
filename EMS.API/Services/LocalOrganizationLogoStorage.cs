@@ -1,3 +1,7 @@
+using System.Globalization;
+using EMS.Application.DTOs.Files;
+using EMS.Application.Services.Files;
+
 namespace EMS.API.Services;
 
 /// <summary>
@@ -6,50 +10,57 @@ namespace EMS.API.Services;
 /// </summary>
 public sealed class LocalOrganizationLogoStorage
 {
-    private const long MaxBytes = 5 * 1024 * 1024;
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg",
-    };
-
     private readonly IWebHostEnvironment _environment;
+    private readonly IUploadFileChecker _checker;
     private readonly ILogger<LocalOrganizationLogoStorage> _logger;
 
-    public LocalOrganizationLogoStorage(IWebHostEnvironment environment, ILogger<LocalOrganizationLogoStorage> logger)
+    public LocalOrganizationLogoStorage(
+        IWebHostEnvironment environment,
+        IUploadFileChecker checker,
+        ILogger<LocalOrganizationLogoStorage> logger)
     {
         _environment = environment;
+        _checker = checker;
         _logger = logger;
     }
 
     /// <summary>
-    /// Saves the file and returns a path starting with /attachments/ suitable for static file middleware.
+    /// Checks the file with the shared upload checker (B10: PNG, JPEG or WebP, up to 5 MB; never SVG), then saves it
+    /// as <c>logo-{guid}{server extension}</c> and returns a path starting with /attachments/ for static file
+    /// middleware. A refused file throws <see cref="UploadRejectedException"/> before anything is written. This does
+    /// not delete the current logo: the caller deletes it only after the database points to the new one.
     /// </summary>
     public async Task<string> SaveLogoAsync(int organizationId, IFormFile file, CancellationToken cancellationToken = default)
     {
-        if (file.Length == 0)
-            throw new ArgumentException("Empty file.", nameof(file));
-        if (file.Length > MaxBytes)
-            throw new InvalidOperationException($"File exceeds maximum size of {MaxBytes / 1024 / 1024} MB.");
+        ArgumentNullException.ThrowIfNull(file);
 
-        var ext = Path.GetExtension(file.FileName);
-        if (string.IsNullOrEmpty(ext) || !AllowedExtensions.Contains(ext))
-            throw new InvalidOperationException("Allowed types: PNG, JPG, JPEG, WEBP, GIF, SVG.");
+        await using var content = file.OpenReadStream();
+        var checkedFile = _checker.Check(UploadPurpose.OrganizationLogo, content, file.FileName, file.ContentType, file.Length);
 
         var webRoot = _environment.WebRootPath
                       ?? throw new InvalidOperationException("WebRootPath is not set. Ensure wwwroot exists.");
-        var orgDir = Path.Combine(webRoot, "attachments", "Organization", organizationId.ToString());
+        var orgFolder = organizationId.ToString(CultureInfo.InvariantCulture);
+        var orgDir = Path.Combine(webRoot, "attachments", "Organization", orgFolder);
         Directory.CreateDirectory(orgDir);
 
-        var fileName = $"logo-{Guid.NewGuid():N}{ext}";
+        var fileName = $"logo-{Guid.NewGuid():N}{checkedFile.Extension}";
         var physicalPath = Path.Combine(orgDir, fileName);
 
-        await using (var stream = new FileStream(physicalPath, FileMode.Create, FileAccess.Write, FileShare.None, 65536,
-                       FileOptions.Asynchronous))
+        content.Position = 0;
+        try
         {
-            await file.CopyToAsync(stream, cancellationToken);
+            await using var stream = new FileStream(physicalPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536,
+                FileOptions.Asynchronous);
+            await content.CopyToAsync(stream, cancellationToken);
+        }
+        catch
+        {
+            // A part-written logo must not be left behind.
+            TryDeletePhysical(physicalPath);
+            throw;
         }
 
-        var relative = $"/attachments/Organization/{organizationId}/{fileName}".Replace('\\', '/');
+        var relative = $"/attachments/Organization/{orgFolder}/{fileName}";
         _logger.LogInformation("Saved organization logo for org {OrgId} at {Path}", organizationId, relative);
         return relative;
     }
@@ -73,6 +84,11 @@ public sealed class LocalOrganizationLogoStorage
         if (!PrivateFileStore.IsInside(fullPath, logoRoot))
             return;
 
+        TryDeletePhysical(fullPath);
+    }
+
+    private void TryDeletePhysical(string fullPath)
+    {
         try
         {
             if (File.Exists(fullPath))
@@ -80,7 +96,7 @@ public sealed class LocalOrganizationLogoStorage
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not delete old logo file {Path}", fullPath);
+            _logger.LogWarning(ex, "Could not delete logo file {Path}", fullPath);
         }
     }
 }

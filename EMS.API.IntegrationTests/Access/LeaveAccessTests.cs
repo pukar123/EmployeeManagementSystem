@@ -305,9 +305,10 @@ public sealed class LeaveAccessTests : AccessTestFixture
         using var client = Factory.CreateClientAs(user);
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(leaveRequestId.ToString(System.Globalization.CultureInfo.InvariantCulture)), "leaveRequestId");
-        var file = new ByteArrayContent("B06 uploaded evidence"u8.ToArray());
-        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
-        form.Add(file, "file", "b06-upload.txt");
+        // B10: a real minimal PDF (text files are no longer accepted as leave attachments).
+        var file = new ByteArrayContent(UploadTestFiles.Pdf("B06 uploaded evidence"));
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "b06-upload.pdf");
 
         using var response = await client.PostAsync(path, form);
         var body = await response.Content.ReadAsStringAsync();

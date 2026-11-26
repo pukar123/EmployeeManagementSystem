@@ -1,6 +1,7 @@
 using System.Globalization;
 using EMS.Application.DTOs.Files;
 using EMS.Application.DTOs.Leave;
+using EMS.Application.Services.Files;
 using EMS.Domain.DbModels;
 using EMS.Domain.Repositories.Interface;
 using Pukar.Shared;
@@ -61,7 +62,12 @@ public sealed class LeaveAttachmentService : ILeaveAttachmentService
         var entity = new LeaveRequestAttachment
         {
             LeaveRequestId = request.Id,
-            FileName = fileName,
+            // Defence in depth (B10): the upload endpoint already passes a sanitised name; cleaning again is cheap
+            // and idempotent, and keeps any other caller safe.
+            FileName = UploadFileNames.SanitiseDisplayName(
+                fileName,
+                UploadFileNames.ServerExtensionOfKey(storagePath),
+                UploadRules.LeaveAttachment.FallbackBaseName),
             ContentType = contentType,
             FileSizeBytes = fileSizeBytes,
             StoragePath = storagePath,

@@ -148,7 +148,8 @@ Acceptance:
 - Integration tests cover the four cases.
 
 ## B10 — Safe upload rules
-Status: Todo
+Status: Done
+Done-note: 2026-11-26 feature/b10-safe-uploads
 Risk: High
 Areas: backend
 Depends-on: B08
@@ -213,6 +214,7 @@ Depends-on: B01
 Sources: C9, C10, C21
 Goal: Remove the committed database password, signing key and default admin password; provide an example settings file and use user secrets or the `.env` file instead. The API refuses to start if the signing key is the example value. Fix the Docker build so it includes every project it needs, use a Docker-specific environment whose seed admin password comes from `.env`, wait for the database to be healthy, keep database ports local-only and put the Mongo admin tool behind an optional profile with a password.
 Acceptance:
+- (Reviewer 2026-11-26) Any proxy in front of the API allows request bodies of at least 16 MB; smoke-test a 15 MB document upload through the Next.js rewrites.
 - (Reviewer 2026-11-24) If the container runs as non-root, the image creates and owns the private-files volume folder; document backing up the `ems-private-files` volume; add a logo volume; log a warning at start-up in Production if old public files exist and the move step is off.
 - No real secrets remain in tracked settings files; an example file documents each value.
 - The API refuses to start with the example signing key.
@@ -228,6 +230,7 @@ Depends-on: B01
 Sources: C15, C10
 Goal: Upgrade the vulnerable direct frontend packages (Next.js, axios, zod), move build-only tools (shadcn CLI, SVG loader) to development dependencies, turn on Dependabot for npm, NuGet and GitHub Actions, and add a secret scan (Gitleaks) to the workflow.
 Acceptance:
+- (Reviewer 2026-11-26) Downloads and logo files also send a `Content-Security-Policy: sandbox` header.
 - The production dependency audit shows no critical or high issues in direct packages (any remaining are listed with a reason).
 - Frontend lint, tests and build still pass.
 - Dependabot configuration is present for npm, NuGet and Actions.

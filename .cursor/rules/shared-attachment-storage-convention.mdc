@@ -27,6 +27,7 @@ Decide for every upload whether it is **public** or **private** before writing a
 - Store under the public static folder in `attachments/{Domain}/...`.
   - Example (ASP.NET): `wwwroot/attachments/Organization/{id}/`.
 - Serve only the specific public subfolders with static file middleware (for example `RequestPath = "/attachments/Organization"`). Do not serve the whole web root.
+- Public files are raster images only (for example PNG, JPEG, WebP). Never accept or serve SVG or HTML as a public file. Limit the static file content-type map to those image extensions and add `X-Content-Type-Options: nosniff`.
 - Persist a web-relative path (for example `/attachments/Organization/{id}/logo-....png`) and return it in API responses so clients can build a full URL from the environment's API base URL.
 
 ## Private files
@@ -37,9 +38,9 @@ Decide for every upload whether it is **public** or **private** before writing a
 - Mirror the domain layout under the private root, for example:
   - `{PrivateRoot}/Employee/{id}/Documents/`
   - `{PrivateRoot}/Leave/{id}/`
-- Persist only a storage key relative to the private root (for example `Employee/5/Documents/{guid}.pdf`). Never persist absolute paths.
+- Persist only a storage key relative to the private root (for example `Employee/5/Documents/{guid}.pdf`). The file name is a server-generated GUID and the extension is chosen by the server from the checked file type, never taken from the upload. Never persist absolute paths.
 - **Never** return the storage key or path in API responses. Return a download URL for an API endpoint instead (for example `/api/Documents/{id}/file`).
-- Serve private files only through an authorised download endpoint that checks the caller may access the record, then streams the file with the stored content type and a `Content-Disposition: attachment` file name.
+- Serve private files only through an authorised download endpoint that checks the caller may access the record, then streams the file with the stored content type (only from an allow-list; anything else is `application/octet-stream`), `Content-Disposition: attachment` with a sanitised file name in both `filename` and `filename*` (RFC 6266/5987) forms, and `X-Content-Type-Options: nosniff`.
 - Clients download private files with an authenticated request (for example an HTTP client call with `responseType: "blob"`), never with a plain link or `<img src>`, because the browser does not send the bearer token on those.
 
 ## Path safety (mandatory)
@@ -52,6 +53,14 @@ Decide for every upload whether it is **public** or **private** before writing a
 ## Moving files between public and private
 
 - When a file type changes from public to private, provide a documented, repeatable move step. Running it twice must do no harm. It must update stored paths, log counts, and continue when a file is missing.
+
+## Upload checks (mandatory)
+
+- Every upload goes through one shared upload checker with an allow-list per purpose. A file is accepted only when its extension, its declared content type and its content signature (magic bytes) all match the same allowed type.
+- Office files (for example `.docx`) are zip files: check the zip signature and the required entries (for `.docx`, `[Content_Types].xml` and `word/document.xml`, and no `word/vbaProject.bin`). Read only the entry list; never extract.
+- Reject empty files. Each purpose has a maximum size; over the limit is 413, a wrong type is 400 with a message naming the allowed types.
+- Keep the original file name only as display metadata: strip path parts, control and bidi characters, cap the length, and use the server's extension.
+- Check the file before writing anything. Replace an existing file only after the new one is saved.
 
 ## API and persistence guidance
 
@@ -68,5 +77,5 @@ Decide for every upload whether it is **public** or **private** before writing a
 ## Operational checks
 
 - Create the upload directories at app start-up when required.
-- Validate file size and type before saving.
+- Validate file size and type before saving, using the shared upload checker (see Upload checks).
 - Use safe delete logic that only deletes inside the configured root (see Path safety).

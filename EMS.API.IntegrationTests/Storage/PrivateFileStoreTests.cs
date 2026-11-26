@@ -1,6 +1,5 @@
 using System.Text;
 using EMS.API.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EMS.API.IntegrationTests.Storage;
@@ -82,9 +81,9 @@ public sealed class PrivateFileStoreTests
     {
         var bytes = Encoding.UTF8.GetBytes("U4 content");
         using var stream = new MemoryStream(bytes);
-        var file = new FormFile(stream, 0, bytes.Length, "file", "evidence.pdf");
 
-        var key = await _store.SaveAsync("Employee/5/Documents", file);
+        // B10: the extension is the server's (from the upload checker), never the uploaded file name's.
+        var key = await _store.SaveAsync("Employee/5/Documents", stream, ".pdf");
 
         Assert.Multiple(() =>
         {
@@ -99,10 +98,25 @@ public sealed class PrivateFileStoreTests
     public void U4_SaveAsync_RefusesUnsafeFolder()
     {
         using var stream = new MemoryStream([1]);
-        var file = new FormFile(stream, 0, 1, "file", "a.pdf");
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => _store.SaveAsync("Leave/../..", file));
-        Assert.ThrowsAsync<InvalidOperationException>(() => _store.SaveAsync("Organization/1", file));
+        Assert.ThrowsAsync<InvalidOperationException>(() => _store.SaveAsync("Leave/../..", stream, ".pdf"));
+        Assert.ThrowsAsync<InvalidOperationException>(() => _store.SaveAsync("Organization/1", stream, ".pdf"));
+    }
+
+    [TestCase(".PDF")]
+    [TestCase(".html.")]
+    [TestCase("pdf")]
+    [TestCase(".p")]
+    [TestCase(".exe/../x")]
+    [TestCase("")]
+    [TestCase(null)]
+    public void B10_SaveAsync_RefusesAnExtensionThatIsNotAServerExtension(string? extension)
+    {
+        using var stream = new MemoryStream([1]);
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => _store.SaveAsync("Leave/12", stream, extension!));
+        Assert.That(Directory.Exists(_temp.Combine("private/Leave/12")) &&
+                    Directory.GetFiles(_temp.Combine("private/Leave/12")).Length > 0, Is.False, "Nothing may be written.");
     }
 
     [Test]

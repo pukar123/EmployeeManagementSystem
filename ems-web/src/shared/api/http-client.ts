@@ -175,6 +175,9 @@ attachAuthInterceptors(userManagementHttpClient);
 
 export type ApiErrorBody = { message?: string; title?: string; code?: string };
 
+/** Shown for a 413 without a message (for example cut off by Kestrel or a proxy before EMS could answer). */
+export const FILE_TOO_LARGE_MESSAGE = "The file is too large to upload.";
+
 /** POST multipart to EMS.API (e.g. file upload). Avoids axios default JSON Content-Type on FormData. */
 export async function postFormData<T>(urlPath: string, formData: FormData): Promise<T> {
   const base = emsApiBaseUrl.replace(/\/$/, "");
@@ -188,15 +191,23 @@ export async function postFormData<T>(urlPath: string, formData: FormData): Prom
   if (!res.ok) {
     const text = await res.text();
     let message = `Request failed (${res.status})`;
+    let hasServerMessage = false;
     try {
       const body = JSON.parse(text) as unknown;
       if (body && typeof body === "object" && body !== null && "message" in body) {
         const m = (body as ApiErrorBody).message;
-        if (typeof m === "string") message = m;
+        if (typeof m === "string" && m.length > 0) {
+          message = m;
+          hasServerMessage = true;
+        }
       }
     } catch {
-      if (text.length > 0 && text.length < 500) message = text;
+      if (text.length > 0 && text.length < 500 && res.status !== 413) {
+        message = text;
+        hasServerMessage = true;
+      }
     }
+    if (res.status === 413 && !hasServerMessage) message = FILE_TOO_LARGE_MESSAGE;
     throw new Error(message);
   }
   return res.json() as Promise<T>;
@@ -240,6 +251,8 @@ export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const ax = error as AxiosError<unknown>;
     const data = ax.response?.data;
+    // A 413 without a JSON message (empty, or a plain text/HTML page from a proxy) gets the friendly text.
+    if (ax.response?.status === 413 && typeof data === "string") return FILE_TOO_LARGE_MESSAGE;
     if (typeof data === "string" && data.length > 0) {
       const trimmed = data.trim().toLowerCase();
       if (trimmed.startsWith("<!doctype html") || trimmed.startsWith("<html")) {
@@ -249,8 +262,9 @@ export function getErrorMessage(error: unknown): string {
     }
     if (data && typeof data === "object" && data !== null && "message" in data) {
       const m = (data as ApiErrorBody).message;
-      if (typeof m === "string") return m;
+      if (typeof m === "string" && (m.length > 0 || ax.response?.status !== 413)) return m;
     }
+    if (ax.response?.status === 413) return FILE_TOO_LARGE_MESSAGE;
     return ax.message || "Request failed";
   }
   if (error instanceof Error) return error.message;

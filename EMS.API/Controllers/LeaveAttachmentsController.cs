@@ -1,5 +1,8 @@
+using EMS.API.Filters;
 using EMS.API.Services;
+using EMS.Application.DTOs.Files;
 using EMS.Application.DTOs.Leave;
+using EMS.Application.Services.Files;
 using EMS.Application.Services.Leave;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,15 +18,18 @@ public class LeaveAttachmentsController : ControllerBase
     private readonly ILeaveAttachmentService _attachmentService;
     private readonly LocalLeaveAttachmentStorage _storage;
     private readonly PrivateFileStore _store;
+    private readonly ILogger<LeaveAttachmentsController> _logger;
 
     public LeaveAttachmentsController(
         ILeaveAttachmentService attachmentService,
         LocalLeaveAttachmentStorage storage,
-        PrivateFileStore store)
+        PrivateFileStore store,
+        ILogger<LeaveAttachmentsController> logger)
     {
         _attachmentService = attachmentService;
         _storage = storage;
         _store = store;
+        _logger = logger;
     }
 
     [HttpGet("request/{leaveRequestId:int}")]
@@ -42,8 +48,12 @@ public class LeaveAttachmentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Upload a leave attachment (B10: PDF, PNG or JPEG, up to 15 MB). Access is checked first (403), then the file
+    /// (400 <c>file_empty</c> / <c>file_type_not_allowed</c>, 413 <c>file_too_large</c>).
+    /// </summary>
     [HttpPost]
-    [RequestSizeLimit(16 * 1024 * 1024)]
+    [UploadRequestSizeLimit(UploadPurpose.LeaveAttachment)]
     [RequestFormLimits(MultipartBodyLengthLimit = 16 * 1024 * 1024)]
     public async Task<ActionResult<LeaveRequestAttachmentResponseModel>> Upload(
         [FromForm] CreateLeaveAttachmentForm request,
@@ -68,6 +78,10 @@ public class LeaveAttachmentsController : ControllerBase
                 file.StorageKey,
                 cancellationToken);
             return Ok(created);
+        }
+        catch (UploadRejectedException ex)
+        {
+            return UploadErrorResults.Rejected(_logger, User, ex);
         }
         catch (InvalidOperationException ex)
         {
@@ -103,13 +117,19 @@ public class LeaveAttachmentsController : ControllerBase
     [HttpGet("{id:int}/file")]
     public async Task<IActionResult> Download(int id, CancellationToken cancellationToken)
     {
+        Response.Headers[FileDownloadHeaders.NoSniffHeader] = FileDownloadHeaders.NoSniffValue;
+
         try
         {
             var stored = await _attachmentService.GetStoredFileAsync(id, cancellationToken);
             if (!_store.TryResolve(stored.StoragePath, out var full) || !System.IO.File.Exists(full))
                 return NotFound();
 
-            return PhysicalFile(full, FileDownloadHeaders.SafeContentType(stored.ContentType), FileDownloadHeaders.SafeFileName(stored.FileName));
+            // PhysicalFile with a download name writes Content-Disposition: attachment with both filename and filename*.
+            return PhysicalFile(
+                full,
+                FileDownloadHeaders.SafeContentType(stored.ContentType),
+                FileDownloadHeaders.SafeFileName(stored.FileName, stored.StoragePath));
         }
         catch (BusinessRuleException ex)
         {

@@ -11,6 +11,7 @@ alwaysApply: false
 - **Do not** store image bytes in the database for organisation logos.
 - Organisation logos are **public** files (see `shared-attachment-storage-convention.mdc`). Persist only a **web-relative path** (e.g. `/attachments/Organization/{id}/logo-....png`) in `Organization.LogoRelativePath`.
 - Save logo files on the **server filesystem** under `wwwroot/attachments/Organization/{id}/`. Static file middleware serves **only** `/attachments/Organization`; nothing else under `wwwroot` is public.
+- Allowed logo types are PNG, JPEG and WebP, up to 5 MB, checked by the shared upload checker (`IUploadFileChecker`, purpose `OrganizationLogo`). **SVG is not allowed.** The saved name is `logo-{guid}{server extension}`. Static files serve only `.png`, `.jpg`, `.jpeg`, `.webp` (and legacy `.gif`) from this folder, with `X-Content-Type-Options: nosniff`.
 
 ## Folder convention (project standard)
 
@@ -22,8 +23,10 @@ alwaysApply: false
 
 - Logo upload: `POST /api/Organizations/{id}/logo` with multipart field name **`file`**.
 - After upload, responses include **`logoRelativePath`** for clients to build a full URL with **`NEXT_PUBLIC_API_BASE_URL`**.
+- The new logo is checked and saved, and the database updated, before the old logo file is deleted. A rejected upload leaves the current logo unchanged. Errors: 400 `file_type_not_allowed` / `file_empty`, 413 `file_too_large`.
 
 ## Web (`ems-web`)
 
 - Use **`resolveOrganizationLogoUrl`** from `src/shared/utils/organization-logo-url.ts` for `<img src>` (API host + relative path).
 - Prefer **`postFormData`** in `http-client` for multipart uploads so default JSON `Content-Type` does not break `FormData`.
+- Logo pickers use `accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"` from the shared upload rules constants and check type and size before uploading.
