@@ -59,6 +59,53 @@ internal static class TestFiles
         return buffer.ToArray();
     }
 
+    /// <summary>A docx (the two Word entries) padded with empty entries to <paramref name="totalEntries"/> in all.</summary>
+    public static byte[] DocxWithEntryCount(int totalEntries)
+    {
+        using var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            archive.CreateEntry("[Content_Types].xml");
+            archive.CreateEntry("word/document.xml");
+            for (var i = 2; i < totalEntries; i++)
+                archive.CreateEntry($"p/{i}");
+        }
+
+        return buffer.ToArray();
+    }
+
+    /// <summary>
+    /// <paramref name="zip"/> with a ZIP64 End Of Central Directory locator (<c>50 4B 06 07</c>) inserted just before
+    /// its End Of Central Directory record. The central directory offset stays valid, as it comes earlier.
+    /// </summary>
+    public static byte[] WithZip64Locator(byte[] zip)
+    {
+        var recordAt = EndOfCentralDirectoryOffset(zip);
+        byte[] locator = [0x50, 0x4B, 0x06, 0x07, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
+        return [.. zip[..recordAt], .. locator, .. zip[recordAt..]];
+    }
+
+    /// <summary><paramref name="zip"/> with the End Of Central Directory total entry count set to <paramref name="count"/>.</summary>
+    public static byte[] WithDeclaredEntryCount(byte[] zip, ushort count)
+    {
+        var copy = (byte[])zip.Clone();
+        var recordAt = EndOfCentralDirectoryOffset(copy);
+        BitConverter.TryWriteBytes(copy.AsSpan(recordAt + 8, 2), count);
+        BitConverter.TryWriteBytes(copy.AsSpan(recordAt + 10, 2), count);
+        return copy;
+    }
+
+    private static int EndOfCentralDirectoryOffset(byte[] zip)
+    {
+        for (var i = zip.Length - 22; i >= 0; i--)
+        {
+            if (zip[i] == 0x50 && zip[i + 1] == 0x4B && zip[i + 2] == 0x05 && zip[i + 3] == 0x06)
+                return i;
+        }
+
+        throw new InvalidOperationException("Not a zip.");
+    }
+
     /// <summary>Zip local-file signature followed by bytes that are not a zip.</summary>
     public static byte[] BrokenZip() => [0x50, 0x4B, 0x03, 0x04, .. Enumerable.Repeat((byte)0x41, 200)];
 

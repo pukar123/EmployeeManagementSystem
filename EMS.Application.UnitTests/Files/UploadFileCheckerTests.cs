@@ -116,12 +116,38 @@ public sealed class UploadFileCheckerTests
         yield return Refused("D19 docx bytes named .pdf", doc, "a.pdf", "application/pdf", TestFiles.Docx());
         yield return Refused("D20 WebP document", doc, "a.webp", "image/webp", TestFiles.WebP());
         yield return Refused("D21 PNG declared image/jpeg", doc, "a.png", "image/jpeg", TestFiles.Png());
+        yield return Refused("D22 docx with word/VBAProject.bin (other case)", doc, "a.docx", TestFiles.DocxType, TestFiles.Docx("word/VBAProject.bin"));
+        yield return Refused("D23 docx with 10,001 entries", doc, "a.docx", TestFiles.DocxType, TestFiles.DocxWithEntryCount(10_001));
+        yield return Refused("D24 ZIP64 docx", doc, "a.docx", TestFiles.DocxType, TestFiles.WithZip64Locator(TestFiles.Docx()));
+        yield return Refused("D25 docx whose record declares 0xFFFF entries (ZIP64 marker)", doc, "a.docx", TestFiles.DocxType,
+            TestFiles.WithDeclaredEntryCount(TestFiles.Docx(), ushort.MaxValue));
+        yield return Refused("D26 docx whose record declares 60,000 entries", doc, "a.docx", TestFiles.DocxType,
+            TestFiles.WithDeclaredEntryCount(TestFiles.Docx(), 60_000));
     }
 
     [TestCaseSource(nameof(Disguised))]
     public void D_DisguisedOrNotAllowedFile_IsRefusedWithoutAnyOtherException(
         UploadPurpose purpose, string name, string? type, byte[] bytes)
         => AssertRefused(purpose, name, type, bytes, UploadRejectionReason.TypeNotAllowed);
+
+    [Test]
+    public void D23b_DocxWithExactly10000Entries_IsAccepted()
+    {
+        var result = Check(UploadPurpose.EmployeeDocument, "a.docx", TestFiles.DocxType, TestFiles.DocxWithEntryCount(10_000));
+        Assert.That(result.FileKind, Is.EqualTo(DocumentFileKind.Word));
+    }
+
+    [Test]
+    public void D26b_DeclaredEntryCountOverTheLimit_IsRefusedAndTheStreamIsReset()
+    {
+        // The record claims 60,000 entries (over the limit, below the ZIP64 marker). The early record check refuses it
+        // with the normal rejection, never an exception, and leaves the stream at position 0.
+        var bytes = TestFiles.WithDeclaredEntryCount(TestFiles.Docx(), 60_000);
+        using var stream = new MemoryStream(bytes);
+        Assert.Throws<UploadRejectedException>(() =>
+            _checker.Check(UploadPurpose.EmployeeDocument, stream, "a.docx", TestFiles.DocxType, bytes.Length));
+        Assert.That(stream.Position, Is.Zero);
+    }
 
     [Test]
     public void D15_ReportExePdf_IsAcceptedAsPdf()

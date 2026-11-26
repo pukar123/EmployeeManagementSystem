@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.IO.Compression;
 using EMS.Application.DTOs.Files;
 using EMS.Domain.Enums;
@@ -16,6 +17,12 @@ public sealed class UploadFileChecker : IUploadFileChecker
     public const int MaxZipEntries = 10_000;
 
     private const int SignatureBytes = 16;
+    private const string MacroEntryName = "word/vbaProject.bin";
+    private const int EndOfCentralDirectorySize = 22;
+    private const int MaxZipCommentLength = ushort.MaxValue;
+    private const int Zip64LocatorSize = 20;
+    private const uint EndOfCentralDirectorySignature = 0x06054B50;
+    private const uint Zip64LocatorSignature = 0x07064B50;
 
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
@@ -105,11 +112,16 @@ public sealed class UploadFileChecker : IUploadFileChecker
     }
 
     /// <summary>
-    /// Opens the zip in read mode and reads only its entry list (nothing is decompressed). It must hold
-    /// <c>[Content_Types].xml</c> and <c>word/document.xml</c>, and must not hold <c>word/vbaProject.bin</c> (macros).
+    /// Checks the zip's End Of Central Directory record first (cheap: at most the last 64 KB), then opens the zip in
+    /// read mode and reads only its entry list (nothing is decompressed). It must hold <c>[Content_Types].xml</c> and
+    /// <c>word/document.xml</c>, and must not hold <c>word/vbaProject.bin</c> in any letter case (macros).
     /// </summary>
     private static bool IsWordDocument(Stream content)
     {
+        // Refused before ZipArchive reads the central directory, so a zip with a huge entry list costs no memory.
+        if (!HasAcceptableEntryCount(content))
+            return false;
+
         content.Position = 0;
         using var archive = new ZipArchive(content, ZipArchiveMode.Read, leaveOpen: true);
         var entries = archive.Entries;
@@ -120,19 +132,75 @@ public sealed class UploadFileChecker : IUploadFileChecker
         var hasDocument = false;
         foreach (var entry in entries)
         {
-            switch (entry.FullName)
-            {
-                case "[Content_Types].xml":
-                    hasContentTypes = true;
-                    break;
-                case "word/document.xml":
-                    hasDocument = true;
-                    break;
-                case "word/vbaProject.bin":
-                    return false;
-            }
+            if (string.Equals(entry.FullName, MacroEntryName, StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (string.Equals(entry.FullName, "[Content_Types].xml", StringComparison.Ordinal))
+                hasContentTypes = true;
+            else if (string.Equals(entry.FullName, "word/document.xml", StringComparison.Ordinal))
+                hasDocument = true;
         }
 
         return hasContentTypes && hasDocument;
+    }
+
+    /// <summary>
+    /// Finds the End Of Central Directory record (signature <c>50 4B 05 06</c>) by searching back from the end of the
+    /// stream over at most 22 bytes plus the largest zip comment (65,535 bytes), and reads its total entry count.
+    /// False when there is no record, the zip spans several disks, it is ZIP64 (a ZIP64 locator before the record,
+    /// or the 0xFFFF / 0xFFFFFFFF markers; a real <c>.docx</c> never needs ZIP64), or it has more than
+    /// <see cref="MaxZipEntries"/> entries. Leaves the stream at position 0.
+    /// </summary>
+    private static bool HasAcceptableEntryCount(Stream content)
+    {
+        try
+        {
+            var length = content.Length;
+            if (length < EndOfCentralDirectorySize)
+                return false;
+
+            var tailLength = (int)Math.Min(length, EndOfCentralDirectorySize + MaxZipCommentLength + Zip64LocatorSize);
+            var tail = new byte[tailLength];
+            content.Position = length - tailLength;
+            if (content.ReadAtLeast(tail, tailLength, throwOnEndOfStream: false) != tailLength)
+                return false;
+
+            var recordAt = -1;
+            var lowest = Math.Max(0, tailLength - EndOfCentralDirectorySize - MaxZipCommentLength);
+            for (var i = tailLength - EndOfCentralDirectorySize; i >= lowest; i--)
+            {
+                if (BinaryPrimitives.ReadUInt32LittleEndian(tail.AsSpan(i)) == EndOfCentralDirectorySignature)
+                {
+                    recordAt = i;
+                    break;
+                }
+            }
+
+            if (recordAt < 0)
+                return false;
+
+            var record = tail.AsSpan(recordAt, EndOfCentralDirectorySize);
+            var diskNumber = BinaryPrimitives.ReadUInt16LittleEndian(record[4..]);
+            var directoryDisk = BinaryPrimitives.ReadUInt16LittleEndian(record[6..]);
+            var entriesOnDisk = BinaryPrimitives.ReadUInt16LittleEndian(record[8..]);
+            var totalEntries = BinaryPrimitives.ReadUInt16LittleEndian(record[10..]);
+            var directorySize = BinaryPrimitives.ReadUInt32LittleEndian(record[12..]);
+            var directoryOffset = BinaryPrimitives.ReadUInt32LittleEndian(record[16..]);
+
+            if (diskNumber != 0 || directoryDisk != 0 || entriesOnDisk != totalEntries)
+                return false;
+
+            // ZIP64 is refused: its markers in the classic record, or a ZIP64 locator just before it.
+            if (totalEntries == ushort.MaxValue || directorySize == uint.MaxValue || directoryOffset == uint.MaxValue)
+                return false;
+            if (recordAt >= Zip64LocatorSize &&
+                BinaryPrimitives.ReadUInt32LittleEndian(tail.AsSpan(recordAt - Zip64LocatorSize)) == Zip64LocatorSignature)
+                return false;
+
+            return totalEntries <= MaxZipEntries;
+        }
+        finally
+        {
+            content.Position = 0;
+        }
     }
 }
