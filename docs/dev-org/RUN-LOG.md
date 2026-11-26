@@ -129,3 +129,18 @@
 - PR: see the B09 pull request into development
 - Needs the CEO: decide whether any HR role should get the Documents menu; delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
 
+## 2026-11-26 — B10 Safe upload rules
+- Outcome: Done (2 build rounds)
+- What changed:
+  - Before, uploads accepted risky file types and kept whatever name and extension the uploader sent. Now one shared upload check is used for employee documents, leave attachments and the organisation logo.
+  - Allowed types: documents PDF, Word (.docx), PNG and JPEG up to 15 MB; leave attachments PDF, PNG and JPEG up to 15 MB; logo PNG, JPEG and WebP up to 5 MB. SVG logos and old .doc files are no longer accepted.
+  - A file is only accepted if its name, its declared type and its actual contents all agree, so a web page renamed as a PDF, a program renamed as a picture or a Word file with macros is refused with a clear message.
+  - Files are saved under names the server chooses; the original name is kept only as a cleaned display name. Downloads are sent as files to save (never opened as web pages) with protective headers, including for older files.
+  - Fixed a bug where uploading a new logo deleted the old one before checking the new one.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 831 of 831 .NET tests passed (166 new, including more than 20 disguised-file cases). Frontend lint, 91 tests and build passed.
+- Reviewer: strengths — one check used everywhere; type, extension and contents must all match; downloads can never run as a web page; no personal file names in logs. One Medium problem introduced (a specially built Word file could use a lot of memory before being refused) was fixed before merge in round 2. Low items folded into B14 (proxy upload size) and B15 (extra protective header).
+- Release note: an existing SVG logo will no longer show; re-upload it as PNG, JPEG or WebP.
+- PR: see the B10 pull request into development
+- Needs the CEO: re-upload the organisation logo if it is an SVG; delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
+
