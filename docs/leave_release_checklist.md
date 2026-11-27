@@ -19,6 +19,7 @@ Use this checklist before releasing the non-workflow leave module.
 - [x] Leave attachment upload/download/delete works.
 - [x] Manual accrual run endpoint executes successfully.
 - [x] Leave-year reset endpoint executes successfully.
+- [ ] Before the next leave-year reset, run the check in [leave-year reset correction](leave-year-reset-correction.md) and correct any balances a pre-B11 reset doubled.
 - [x] Bulk import returns row-level outcomes.
 
 ## Frontend

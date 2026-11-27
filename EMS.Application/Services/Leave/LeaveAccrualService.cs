@@ -133,7 +133,9 @@ public sealed class LeaveAccrualService : ILeaveAccrualService
                 carryForward = Math.Min(carryForward, policy.MaximumCarryForward.Value);
             }
 
-            balance.OpeningBalance = carryForward;
+            // The carried amount lives only in CarryForwardAmount. The available-balance formula adds both
+            // OpeningBalance and CarryForwardAmount, so writing the carry into both counted it twice (B11).
+            balance.OpeningBalance = 0;
             balance.AccruedAmount = 0;
             balance.UsedAmount = 0;
             balance.AdjustedAmount = 0;

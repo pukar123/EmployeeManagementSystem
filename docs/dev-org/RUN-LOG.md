@@ -144,3 +144,15 @@
 - PR: see the B10 pull request into development
 - Needs the CEO: re-upload the organisation logo if it is an SVG; delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
 
+## 2026-11-27 — B11 Fix the leave-year reset double count
+- Outcome: Done
+- What changed:
+  - The leave-year reset counted carried-over leave twice, so everyone started the new year with double their carry (for example 15 days left with a 10-day carry limit became 20 days instead of 10; with no limit it compounded every year). It now counts the carry once and respects the carry limit.
+  - Zero and negative year-end balances carry nothing, as before.
+  - New guide `docs/leave-year-reset-correction.md` explains how to find balances that were already doubled, how to tell them apart from real opening balances, and how to correct them by hand safely. Nothing in the database was changed automatically. The leave release checklist now reminds you to run this check before the next reset.
+- Risk: High (auto-approved by CEO standing decision)
+- Tests: on GitHub, 849 of 849 .NET tests passed (18 new: 16 worked examples with and without a carry limit, zero and negative balances, plus two tests through the year-reset endpoint).
+- Reviewer: strengths — one-line, well-explained fix; nothing else depended on the old behaviour; strong worked-example tests. Cons — running the reset twice after new-year activity still rolls that activity into the carry (Medium, added to B12); the correction guide needed a way to tell doubled rows from real opening balances (added to the guide before merge); notes for the leave ledger (B17) and the portal's "Leave type #id" label (B18).
+- PR: see the B11 pull request into development
+- Needs the CEO: if you have a database that has been through a leave-year reset, follow docs/leave-year-reset-correction.md before the next reset; delete throwaway branches `probe/b01-ci-failure`, `probe/b02-pending-model`, `probe/b03-failing-case` on GitHub.
+
