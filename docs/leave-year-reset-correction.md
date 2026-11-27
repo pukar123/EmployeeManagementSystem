@@ -38,7 +38,8 @@ Why this matches: nothing else in EMS sets `OpeningBalance` (new balances start 
 
 - **Rows reset more than once before the fix.** The carry itself may be inflated (with no limit it doubled on each run). Setting `OpeningBalance` to 0 removes only the latest doubling. Rebuild the right carry from HR records or the approved leave history (there is no leave ledger yet; that is B17). Hints that a row was reset more than once: a carry far above what one year's accrual could give, or several known reset runs.
 - **Rows where `AvailableIfCorrected` is below 0.** The employee has already taken some of the phantom leave. Decide case by case, for example with an `AdjustedAmount` entry recorded with a reason. Do not silently push the balance negative.
-- **Imported or hand-entered opening balances** that happen to equal the carry also match the query. Exclude them after review.
+- **Imported or hand-entered opening balances** that happen to equal the carry also match the query. Exclude them after review. A row doubled by the old reset has `BalanceAsOfUtc` equal to a leave-year start date or an accrual run date, and its `UpdatedAtUtc` lines up with a known year-reset run; a hand edit or import usually matches neither. Treat anything you can't place as legitimate until checked against HR records.
+- **Do this check before the leave ledger (B17) is switched on and before balance adjustments (B19) ship.** Once admins can set opening balances, this fingerprint stops being reliable.
 
 ## 3. Correct the reviewed rows
 
@@ -50,8 +51,13 @@ UPDATE org.LeaveBalances
 SET OpeningBalance = 0, UpdatedAtUtc = SYSUTCDATETIME()
 WHERE Id IN (/* reviewed ids */)
   AND OpeningBalance = CarryForwardAmount;   -- safety: only rows still in the doubled shape
--- re-run the SELECT above for these ids and check AvailableIfCorrected, then:
-COMMIT;  -- or ROLLBACK;
+-- check the UPDATE's row count equals the number of reviewed ids, then compare against step 1:
+SELECT Id,
+       OpeningBalance + AccruedAmount + AdjustedAmount + CarryForwardAmount - UsedAmount AS AvailableNow
+FROM org.LeaveBalances
+WHERE Id IN (/* reviewed ids */);
+-- AvailableNow should equal each row's AvailableIfCorrected from step 1. If it does:
+COMMIT;  -- otherwise ROLLBACK;
 ```
 
 After the update, the balance endpoint's available amount for each corrected row equals the old `AvailableIfCorrected`.

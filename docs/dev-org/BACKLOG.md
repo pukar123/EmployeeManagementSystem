@@ -164,7 +164,8 @@ Acceptance:
 - Unit tests cover each allowed type and at least three disguised files.
 
 ## B11 — Fix the leave-year reset double count
-Status: Todo
+Status: Done
+Done-note: 2026-11-27 feature/b11-year-reset-double-count
 Risk: High
 Areas: backend
 Depends-on: B04
@@ -184,6 +185,7 @@ Depends-on: B11
 Sources: C4, C16
 Goal: Each accrual run adds leave again, even for a period already accrued. Record each completed run by organisation, leave type and period, unique per period, so a repeat run adds nothing and says so. Add a concurrency check to leave balances so an approval and an accrual at the same moment cannot overwrite each other. Load balances in one query instead of one per employee.
 Acceptance:
+- (Reviewer 2026-11-27) Year resets get the same protection: one recorded run per organisation and leave-year start, so repeating a reset does nothing, using the same clash protection as accrual.
 - Running accrual twice for the same period changes balances only once; the second run reports "already accrued".
 - Simultaneous updates to the same balance produce a clear conflict, not a lost update.
 - New migration adds the run record and the concurrency token; it applies cleanly in the workflow.
@@ -260,6 +262,7 @@ Depends-on: B12
 Sources: Idea 8, C4, D1
 Goal: Record every change to a leave balance as a dated entry: opening balance, accrual for a period, leave taken on approval, refund on cancellation, carry-forward and reset. Each entry says what caused it and the rule and inputs used. For now the stored balance is kept and updated alongside the entries, and a check confirms both agree. Existing balances get a single "opening" entry so the history starts from today.
 Acceptance:
+- (Reviewer 2026-11-27) A year reset is recorded as a carry-forward entry (not an opening entry), leave above the cap or a deficit is recorded as a "forfeit" entry, and the backfill flags any balance that still looks doubled (see docs/leave-year-reset-correction.md).
 - Approval, cancellation, accrual and year reset each write a ledger entry in the same save as the balance change.
 - The sum of entries equals the stored balance for every employee and leave type; a check reports any difference.
 - A repeatable backfill creates opening entries for existing balances and does nothing if run twice.
@@ -274,6 +277,7 @@ Depends-on: B17
 Sources: Idea 8
 Goal: Show employees, their managers and leave admins a plain-English list of the entries that make up a leave balance, for example "+2.92 hours accrued for 1–31 October at 38 hours a week". Employees see only their own; access follows the B06 rules.
 Acceptance:
+- (Reviewer 2026-11-27) The portal balance card shows the leave type name, not "Leave type #id".
 - The employee portal leave page has a "Why this balance?" view per leave type.
 - Each line shows date, plain-English description and amount, with a running total that matches the balance.
 - Managers and leave admins can open it from the employee's leave details; others get 403.
